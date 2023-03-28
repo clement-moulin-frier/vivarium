@@ -6,9 +6,9 @@ from bokeh.io import push_notebook, show, output_notebook
 from bokeh.models import HoverTool, Range1d
 from bokeh.plotting import figure
 
-from urllib.parse import urljoin
 import requests
 
+from vivarium.simulator.api import Simulator
 
 import panel as pn
 
@@ -17,21 +17,12 @@ from bokeh.models import ColumnDataSource
 
 pn.extension()
 
-sim_server_url = 'http://localhost:8086'
 
-def get_sim_config(sim_server_url=sim_server_url):
-    sim_config = requests.get(urljoin(sim_server_url, 'get_sim_config'))
-    return sim_config.json()
+simulator = Simulator()
 
-def get_sim_state(sim_server_url=sim_server_url):
-    state = requests.post(urljoin(sim_server_url, 'get_state'))
-    return state.json()
 
-def run():
-    requests.get(urljoin(sim_server_url, 'run'))
-
-sim_config = get_sim_config()
-state = get_sim_state()
+sim_config = simulator.get_sim_config()
+state = simulator.get_sim_state()
 
 box_size = sim_config['box_size']
 map_dim = sim_config['map_dim']
@@ -73,9 +64,6 @@ cds = ColumnDataSource(data={'x': x, 'y': y,
                              'fc': colors
                             })
 
-# In[23]:
-
-
 TOOLS="crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
 
 p = figure(tools=TOOLS)
@@ -90,22 +78,21 @@ r = p.circle('x', 'y', radius='r',
              fill_color='fc', fill_alpha=0.6, line_color=None,
              hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=cds)
 
-
-
 from bokeh.events import ButtonClick
 from bokeh.models import Button, PointDrawTool
 
-button = Button()
+button = Button(name="Start" if simulator.is_started() else "Stop")
 
-global sim_start
-sim_start = False
+
 
 def callback(event):
     global sim_start
-    if sim_start:
-        sim_start = False
+    if simulator.is_started():
+        button.name = "Stop"
+        simulator.stop_sim()
     else:
-        sim_start = True
+        button.name = "Start"
+        simulator.start_sim()
     #print(state['PREY'].positions.at[0,:].set(jnp.array([50., 50.])))
 
 button.on_event(ButtonClick, callback)
@@ -135,6 +122,9 @@ def update_plot():
     global sim_start
     #global state, neighbors, sim_start
 
+
+    if not simulator.is_started():
+        return
     # if not sim_start:
     #     print('stop')
     #     x = cds.data['x']
@@ -156,7 +146,7 @@ def update_plot():
 
     #print('start')
     #run()
-    state = get_sim_state()
+    state = simulator.get_sim_state()
 
     positions = np.array(state['PREY']['positions'])
     #print(positions)
