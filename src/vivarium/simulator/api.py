@@ -1,29 +1,56 @@
+from flask import Flask, jsonify, request, Response
+import queue
+import logging
+
+import numpy as np
+
+import os
+
 import requests
 from urllib.parse import urljoin
+import threading
+from functools import partial
 
+from vivarium.simulator.simulator import SimulatorConfig, Simulator, EntityType
+
+main_thread_queue = queue.Queue()
+app = Flask(__name__)
+app.logger.setLevel(logging.INFO)
 
 sim_server_url = 'http://127.0.0.1:5000' #'http://localhost:8086'
 
-class Simulator:
+pop_config = {EntityType.PREY: 20, EntityType.PREDATOR: 2, EntityType.OBSTACLE: 2}
+
+sim_config = SimulatorConfig()
+
+simulator = Simulator(sim_config, pop_config, proxs_dist_max=sim_config.box_size, proxs_cos_min=0., to_jit=True)
+
+main_thread_queue = queue.Queue()
+
+
+#
+class SimulatorServer:
     def __init__(self, sim_server_url=sim_server_url):
         self.server_url = sim_server_url
+        self.prefix = 'simulator'
     def get_sim_config(self):
-        sim_config = requests.get(urljoin(self.server_url, 'get_sim_config'))
+        sim_config = requests.get(urljoin(self.server_url, os.path.join(self.prefix, 'get_sim_config')))
         return sim_config.json()
 
     def get_sim_state(self):
-        state = requests.post(urljoin(self.server_url, 'get_state'))
+        state = requests.post(urljoin(self.server_url, os.path.join(self.prefix, 'get_state')))
         return state.json()
-    def run(self):
-        requests.get(urljoin(self.server_url, 'run'))
-    def start_sim(self):
-        requests.get(urljoin(self.server_url, 'start'))
+    # def run(self):
+    #     requests.get(urljoin(self.server_url, 'run'))
+    def start(self):
+        requests.get(urljoin(self.server_url, os.path.join(self.prefix, 'start')))
 
-    def stop_sim(self):
-        requests.get(urljoin(self.server_url, 'stop'))
+    def stop(self):
+        requests.get(urljoin(self.server_url, os.path.join(self.prefix, 'stop')))
 
     def is_started(self):
-        req = requests.get(urljoin(self.server_url, 'is_started'))
+        #print(urljoin(self.server_url, os.path.join(self.prefix, 'is_started')))
+        req = requests.get(urljoin(self.server_url, os.path.join(self.prefix, 'is_started')))
         return req.json()['is_started']
 
     def set_motors(self, agent_idx, motors):
@@ -36,16 +63,118 @@ class Simulator:
         req = requests.post(urljoin(self.server_url, 'get_motors'))
         return req.json()
 
+def serialize_state(s):
+    serial_s = {}
 
+
+    serial_pop_kwargs = {}
+    for field, jarray in s._asdict().items():
+        serial_pop_kwargs[field] = np.array(jarray).tolist()
+    # if isinstance(s[type], Population):
+    #     serial_pop = Population(**serial_pop_kwargs)
+    # elif isinstance(s[type], PopulationObstacle):
+    #     serial_pop = PopulationObstacle(**serial_pop_kwargs)
+    serial_s['PREY'] = serial_pop_kwargs
+    return serial_s
+
+
+from dataclasses import asdict
+#
 #@tranquilize()
-@app.route("/get_sim_config", methods=["GET"])
+@app.route("/simulator/get_sim_config", methods=["GET"])
 def get_sim_config():
 
-    sim_config = dict(
-        box_size=box_size,
-        map_dim=map_dim,
-        wheel_diameter=wheel_diameter,
-        base_lenght=base_lenght,
-        pop_config={e_type.name: n for e_type, n in pop_config.items()}
-    )
-    return sim_config
+    return sim_config.get_sim_config()
+
+#@tranquilize(method='post')
+@app.route("/simulator/get_state", methods=["POST"])
+def get_state():
+    return serialize_state(simulator.state)
+
+@app.route("/simulator/start", methods=["GET"])
+def open_session():
+    print('s/o')
+    # ask main thread to start simulator
+    main_thread_queue.put(lambda: simulator.run())
+    return Response(status=200)
+
+@app.route("/simulator/stop", methods=["GET"])
+def close_session():
+    simulator.stop()
+    return Response(status=200)
+
+@app.route("/simulator/is_started", methods=["GET"])
+def is_started():
+    return {'is_started': simulator.is_started}
+
+if __name__ == "__main__":
+    print('START FLASK')
+    # launch flask in a separated thread
+    threading.Thread(target=app.run).start()
+
+    # main thread waits for execute process
+    # especially for start the sgp simulator
+    while True:
+        callback = main_thread_queue.get()  # blocks until an item is available
+        print(callback)
+        callback()
+
+
+#
+#
+#
+# #@tranquilize(method='post')
+# @app.route("/set_motors", methods=["POST"])
+# def set_motors(agent_idx: int, motors: List[float]):
+#     global motor_input
+#     res = np.zeros((pop_config[EntityType.PREY], map_dim))
+#     #print(res[agent_idx, :])
+#     res[agent_idx, :] = np.array(motors)
+#     motor_input = jnp.array(res)
+#     return Response(status=200)
+#
+# #@tranquilize()
+# @app.route("/no_set_motors", methods=["GET"])
+# def no_set_motors():
+#     global motor_input
+#     motor_input = None
+#     return Response(status=200)
+#
+# #@tranquilize(method='post')
+# @app.route("/get_motors", methods=["POST"])
+# def get_motors():
+#     global motor_input
+#     return np.array(motor_input).tolist()
+#
+#
+#
+
+#
+# global sim_start
+# sim_start = False
+#
+# #@tranquilize()
+# @app.route("/start", methods=["GET"])
+#
+# def start():
+#     global sim_start
+#     sim_start = True
+#     return Response(status=200)
+#
+# #@tranquilize()
+# @app.route("/stop", methods=["GET"])
+# def stop():
+#     global sim_start
+#     sim_start = False
+#     return Response(status=200)
+#
+# #@tranquilize()
+# @app.route("/is_started", methods=["GET"])
+# def is_started():
+#     global sim_start
+#     return {'is_started': sim_start}
+#
+# #@tranquilize()
+# @app.route("/run", methods=["GET"])
+#
+#

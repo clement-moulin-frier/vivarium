@@ -1,8 +1,15 @@
 import jax.numpy as jnp
-from jax import ops, vmap
+from jax import ops, vmap, jit
+
+from jax_md import space
+
+from collections import namedtuple
 
 
-@vmap
+Population = namedtuple('Population', ['positions', 'thetas', 'entity_type'])
+
+PopulationObstacle = namedtuple('Population', ['positions', 'thetas', 'entity_type', 'diameters'])
+
 def sensor_fn(displ, theta, dist_max, cos_min):
     dist = jnp.linalg.norm(displ)
     n = jnp.array([jnp.cos( - theta), jnp.sin(- theta)])
@@ -16,30 +23,31 @@ def sensor_fn(displ, theta, dist_max, cos_min):
     right = in_view * (1. - at_left) * prox
     return jnp.array([left, right])
 
+sensor_fn = vmap(sensor_fn, (0, 0, None, None))
 
-
+from jax import debug
 
 def sensor(displ, theta, dist_max, cos_min, neighbors):
     proxs = ops.segment_max(sensor_fn(displ, theta, dist_max, cos_min), neighbors.idx[0], len(neighbors.reference_position))
     return proxs
 
-proxs_dist_max = box_size
-proxs_cos_min = 0.
 
-def lr_2_fwd_rot(left_spd, right_spd, wheel_diameter, base_lenght):
+
+def lr_2_fwd_rot(left_spd, right_spd, base_length, wheel_diameter):
     fwd = (wheel_diameter / 4.) * (left_spd + right_spd)
-    rot = 0.5 * (wheel_diameter / base_lenght) * (right_spd - left_spd)
+    rot = 0.5 * (wheel_diameter / base_length) * (right_spd - left_spd)
     return fwd, rot
 
-def fwd_rot_2_lr(fwd, rot, base_lenght, wheel_diameter):
-    left = ((2.0 * fwd) - (rot * base_lenght)) / (wheel_diameter)
-    right = ((2.0 * fwd) + (rot * base_lenght)) / (wheel_diameter)
+def fwd_rot_2_lr(fwd, rot, base_length, wheel_diameter):
+    left = ((2.0 * fwd) - (rot * base_length)) / (wheel_diameter)
+    right = ((2.0 * fwd) + (rot * base_length)) / (wheel_diameter)
     return left, right
 
-def motor_command(wheel_activation):
-  fwd, rot = lr_2_fwd_rot(wheel_activation[0], wheel_activation[1])
+def motor_command(wheel_activation, base_length, wheel_diameter):
+  fwd, rot = lr_2_fwd_rot(wheel_activation[0], wheel_activation[1], base_length, wheel_diameter)
   return fwd, rot
 
+motor_command = vmap(motor_command, (0, None, None))
 
 def normal(theta):
   return jnp.array([jnp.cos(theta), jnp.sin(theta)])
@@ -50,21 +58,23 @@ normal = vmap(normal)
 def cross(array):
   return jnp.hstack((array[:, -1:], array[:, :1]))
 
+def behavior(proxs):
+    motors = cross(proxs) # Braitenberg simple
+    fwd, rot = vmap(motor_command)(motors)
+    return fwd, rot
 
-def dynamics(shift, displacement, map_dim, speed_mul=1., theta_mul=1., dt=1e-1):
+def dynamics(shift, displacement, map_dim, base_length, wheel_diameter, proxs_dist_max, proxs_cos_min, speed_mul=1., theta_mul=1., dt=1e-1):
   def move(boids, fwd, rot):
     R, theta, *_ = boids
     n = normal(theta)
     return (shift(R, dt * speed_mul * n * jnp.tile(fwd, (map_dim, 1)).T),
             theta + dt * rot * theta_mul)
 
-  @jit
-  def update(_, entity_state, neighbors, behavior):
+  def update(_, entity_state_and_neighbors):
 
-    state, neighbors, external_motors = state_and_neighbors_and_motors
-    boids = entity_state
+    boids, neighs = entity_state_and_neighbors
 
-    neighbors = neighbors.update(boids.positions)
+    neighbors = neighs.update(boids.positions)
 
     senders, receivers = neighbors.idx
     Ra = boids.positions[senders]
@@ -72,41 +82,15 @@ def dynamics(shift, displacement, map_dim, speed_mul=1., theta_mul=1., dt=1e-1):
 
     dR = - space.map_bond(displacement)(Ra, Rb) # Looks like it should be opposite, but don't understand why
 
-    proxs = sensor(dR, boids.thetas[senders], neighbors)
+    proxs = sensor(dR, boids.thetas[senders], proxs_dist_max, proxs_cos_min, neighbors)
 
-    #motors = cross(proxs) # Braitenberg simple
+    motors = cross(proxs) # Braitenberg simple
+    fwd, rot = motor_command(motors, base_length, wheel_diameter)
+    # fwd, rot = behavior(proxs)
 
-    fwd, rot = behavior(proxs, external_motors)
-    print('after beh')
+    new_entity_state = Population(*move(boids, fwd, rot), boids.entity_type)
 
-    state[EntityType.PREY.name] = Population(*move(boids, fwd, rot), jnp.array(EntityType.PREY.value))
-
-    return state, neighbors, external_motors
+    return new_entity_state, neighbors
 
   return update
 
-update = dynamics(dt=1e-1)
-
-def run():
-    global state, neighbors, motor_input
-    print('start run')
-    boids_buffer = []
-
-    while True:
-        if not sim_start:
-            continue
-
-        new_state, neighbors, _ = lax.fori_loop(0, num_lax_loops, update, (state, neighbors, motor_input))
-
-        # If the neighbor list can't fit in the allocation, rebuild it but bigger.
-        if neighbors.did_buffer_overflow:
-            print('REBUILDING')
-            neighbors = neighbor_fn.allocate(state[EntityType.PREY.name].R)
-            state, neighbors = lax.fori_loop(0, 50, update, (state, neighbors))
-            assert not neighbors.did_buffer_overflow
-        else:
-            state = new_state
-
-        boids_buffer += [state[EntityType.PREY.name]]
-    print('stop run')
-    return "test" #np.array(state).tolist()

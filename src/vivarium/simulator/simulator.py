@@ -1,34 +1,3 @@
-# from jax import jit, vmap
-# import jax.numpy as jnp
-# import numpy as np
-# from collections import namedtuple
-# from tranquilizer import tranquilize
-#
-# global x
-#
-# n = 10
-#
-# x = jnp.zeros(10)
-#
-# def compute(i):
-#     j = i + 1
-#
-#     return jnp.array(j)
-#
-# compute = vmap(compute)
-#
-# compute = jit(compute)
-#
-# @tranquilize()
-# def publish():
-#     global x
-#
-#     y = compute(x)
-#
-#     #x = x.at[0].set(y + 1)
-#
-#     return {'arr': np.array(y).tolist()}
-
 import numpy as np
 
 # from jax.config import config ; config.update('jax_enable_x64', True)
@@ -47,6 +16,9 @@ from functools import partial
 from collections import namedtuple
 #import base64
 
+
+from vivarium.simulator.sim_computation import dynamics, Population, PopulationObstacle
+
 import os
 
 from jax_md import space, smap, energy, minimize, quantity, simulate, partition, util
@@ -56,49 +28,48 @@ from jax_md import space, smap, energy, minimize, quantity, simulate, partition,
 # normalize = lambda v: v / np.linalg.norm(v, axis=1, keepdims=True)
 
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+import time
 
 from tranquilizer import tranquilize
 
 
-from flask import Flask, jsonify, request, Response
-import queue
-import logging
-
-main_thread_queue = queue.Queue()
-app = Flask(__name__)
-app.logger.setLevel(logging.INFO)
 
 
-
-
-Population = namedtuple('Population', ['positions', 'thetas', 'entity_type'])
-
-PopulationObstacle = namedtuple('Population', ['positions', 'thetas', 'entity_type', 'diameters'])
 
 EntityType = Enum('EntityType', ['PREY', 'PREDATOR', 'OBSTACLE'])
 
 
 
 @dataclass()
-class SimulatorConfig(box_size = 100.0, map_dim = 2, wheel_diameter = 2., base_lenght = 10.,
-                      key = jax.random.PRNGKey(0), speed_mul = 0.1, theta_mul = 0.1,
-                      num_steps_lax = 50, num_lax_loops = 1):
+class SimulatorConfig():
 
-    displacement, shift = space.periodic(box_size)
-    neighbor_radius = box_size
-    neighbor_fn = partition.neighbor_list(displacement,
-                                          box_size,
-                                          r_cutoff=neighbor_radius,
-                                          dr_threshold=10.,
-                                          capacity_multiplier=1.5,
-                                          format=partition.Sparse)
+    box_size = 100.0
+    map_dim = 2
+    wheel_diameter = 2.
+    base_length = 10.
+    key = jax.random.PRNGKey(0)
+    speed_mul = 0.1
+    theta_mul = 0.1
+
+
+    def get_sim_config(self):
+
+        conf = {'box_size': self.box_size,
+                'map_dim': self.map_dim,
+                'wheel_diameter': self.wheel_diameter,
+                'base_length': self.base_length,
+                'speed_mul': self.speed_mul,
+                'theta_mul': self.theta_mul
+                }
+        return conf
+
     def generate_entities(self, dict_type_to_count):
       pops = {}
       for entity_type, count in dict_type_to_count.items():
         self.key, subkey = jax.random.split(self.key)
-        positions = self.box_size * jax.random.uniform(subkey, (count, map_dim))
-        key, subkey = jax.random.split(key)
+        positions = self.box_size * jax.random.uniform(subkey, (count, self.map_dim))
+        self.key, subkey = jax.random.split(self.key)
         thetas = jax.random.uniform(subkey, (count,), maxval=2 * np.pi)
         pops[entity_type.name] = Population(positions, thetas, jnp.array(entity_type.value))
         if entity_type == EntityType.OBSTACLE:
@@ -108,131 +79,89 @@ class SimulatorConfig(box_size = 100.0, map_dim = 2, wheel_diameter = 2., base_l
             pops[entity_type.name] = Population(positions, thetas, jnp.array(entity_type.value))
       return pops
 
-    def neighbors(self, populations, entity_types: typing.List[EntityType]):
-        assert len(entity_types) == 1, "Only did with a singly entity type for now"
-
-        e = entity_types[0]
-        return self.neighbor_fn.allocate(populations[e.name].positions)
-
-
-pop_config = {EntityType.PREY: 20, EntityType.PREDATOR: 2, EntityType.OBSTACLE: 2}
-
-sim_config = SimulatorConfig()
-
-populations = sim_config.generate_entities(pop_config)
-# global neighbors
-neighbors = sim_config.neighbors(populations, EntityType.PREY)
-
-
-global motor_input
-motor_input = None
-
-from typing import List
-
-#@tranquilize(method='post')
-@app.route("/set_motors", methods=["POST"])
-def set_motors(agent_idx: int, motors: List[float]):
-    global motor_input
-    res = np.zeros((pop_config[EntityType.PREY], map_dim))
-    #print(res[agent_idx, :])
-    res[agent_idx, :] = np.array(motors)
-    motor_input = jnp.array(res)
-    return Response(status=200)
-
-#@tranquilize()
-@app.route("/no_set_motors", methods=["GET"])
-def no_set_motors():
-    global motor_input
-    motor_input = None
-    return Response(status=200)
-
-#@tranquilize(method='post')
-@app.route("/get_motors", methods=["POST"])
-def get_motors():
-    global motor_input
-    return np.array(motor_input).tolist()
-
-def behavior(proxs, external_motors):
-    if external_motors is not None:
-        motors = external_motors
-        #print(motors)
-    else:
-        motors = cross(proxs) # Braitenberg simple
-    fwd, rot = vmap(motor_command)(motors)
-    return fwd, rot
-
-
-global state
-state = populations
-
-def serialize_state(s):
-    serial_s = {}
-
-    for type, pop in s.items():
-        serial_pop_kwargs = {}
-        for field, jarray in pop._asdict().items():
-            serial_pop_kwargs[field] = np.array(jarray).tolist()
-        # if isinstance(s[type], Population):
-        #     serial_pop = Population(**serial_pop_kwargs)
-        # elif isinstance(s[type], PopulationObstacle):
-        #     serial_pop = PopulationObstacle(**serial_pop_kwargs)
-        serial_s[type] = serial_pop_kwargs
-    return serial_s
-
-#@tranquilize(method='post')
-@app.route("/get_state", methods=["POST"])
-
-def get_state():
-    global state
-    print('state')
-    return serialize_state(state)
-
-global sim_start
-sim_start = False
-
-#@tranquilize()
-@app.route("/start", methods=["GET"])
-
-def start():
-    global sim_start
-    sim_start = True
-    return Response(status=200)
-
-#@tranquilize()
-@app.route("/stop", methods=["GET"])
-def stop():
-    global sim_start
-    sim_start = False
-    return Response(status=200)
-
-#@tranquilize()
-@app.route("/is_started", methods=["GET"])
-def is_started():
-    global sim_start
-    return {'is_started': sim_start}
-
-#@tranquilize()
-@app.route("/run", methods=["GET"])
 
 
 
-main_thread_queue = queue.Queue()
 
-@app.route("/start_sim", methods=["GET"])
-def start_sim():
-    main_thread_queue.put(lambda: run())
-    return Response(status=200)
+class Simulator():
+    def __init__(self, sim_config, pop_config, proxs_dist_max, proxs_cos_min, num_steps_lax = 50, num_lax_loops = 1, freq=100., to_jit=True):
 
-import threading
+        self.proxs_dist_max = proxs_dist_max
+        self.proxs_cos_min = proxs_cos_min
+        self.populations = sim_config.generate_entities(pop_config)
+
+        self.displacement, self.shift = space.periodic(sim_config.box_size)
+        neighbor_radius = sim_config.box_size
+        self.neighbor_fn = partition.neighbor_list(self.displacement,
+                                                   sim_config.box_size,
+                                                   r_cutoff=neighbor_radius,
+                                                   dr_threshold=10.,
+                                                   capacity_multiplier=1.5,
+                                                   format=partition.Sparse)
+        # global neighbors
+        self.neighbors = self.neighbor_fn.allocate(self.populations[EntityType.PREY.name].positions)
+
+        self.update_fn = dynamics(self.shift, self.displacement, sim_config.map_dim,
+                                  sim_config.base_length, sim_config.wheel_diameter,
+                                  self.proxs_dist_max, self.proxs_cos_min,
+                                  sim_config.speed_mul, sim_config.theta_mul, 1e-1)
+        self.to_jit = to_jit
+        if self.to_jit:
+            self.update_fn = jit(self.update_fn)
+
+        self.num_steps_lax = num_steps_lax
+        self.num_lax_loops = num_lax_loops
+        self.boids_buffer = []
+
+        self.state = self.populations['PREY']
+
+        self.is_started = False
+
+        self.freq = freq
+
+        # self_is_running = False
+    def run(self):
+
+        self.is_started = True
+        print('Run starts')
+        while True:
+
+            time.sleep(1. / self.freq)
+
+            if not self.is_started:
+                break
+            if self.to_jit:
+                new_state, neighbors = lax.fori_loop(0, self.num_steps_lax, self.update_fn,
+                                                    (self.state, self.neighbors))
+            else:
+                assert False, "not good, modifies self.state"
+                val = (self.state, self.neighbors)
+                for i in range(0, self.num_steps_lax):
+                    val = self.update_fn(i, val)
+                new_state, neighbors = val
+
+            # If the neighbor list can't fit in the allocation, rebuild it but bigger.
+            if neighbors.did_buffer_overflow:
+                print('REBUILDING')
+                neighbors = self.neighbor_fn.allocate(self.state.positions)
+                new_state, neighbors = lax.fori_loop(0, self.num_lax_loops, self.update_fn, (self.state, neighbors))
+                assert not neighbors.did_buffer_overflow
+
+            self.state = new_state
+            # print(self.state.positions[0, :])
+            self.boids_buffer += [self.state]
+
+        print('Run stops')
+
+    def stop(self):
+        self.is_started = False
 
 
 if __name__ == "__main__":
+    pop_config = {EntityType.PREY: 20, EntityType.PREDATOR: 2, EntityType.OBSTACLE: 2}
 
-    # launch flask in a separated thread
-    threading.Thread(target=app.run).start()
+    sim_config = SimulatorConfig()
 
-    # main thread waits for execute process
-    # especially for start the sgp simulator
-    while True:
-        callback = main_thread_queue.get()  # blocks until an item is available
-        callback()
+    simulator = Simulator(sim_config, pop_config, proxs_dist_max=sim_config.box_size, proxs_cos_min=0., to_jit=True)
+
+    simulator.run()

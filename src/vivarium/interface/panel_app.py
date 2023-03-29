@@ -8,7 +8,7 @@ from bokeh.plotting import figure
 
 import requests
 
-from vivarium.simulator.api import Simulator
+from vivarium.simulator.api import SimulatorServer
 
 import panel as pn
 
@@ -18,11 +18,13 @@ from bokeh.models import ColumnDataSource
 pn.extension()
 
 
-simulator = Simulator()
+simulator = SimulatorServer()
 
 
 sim_config = simulator.get_sim_config()
 state = simulator.get_sim_state()
+
+print(sim_config)
 
 box_size = sim_config['box_size']
 map_dim = sim_config['map_dim']
@@ -34,7 +36,7 @@ N = positions.shape[0]
 x = positions[:, 0]
 y = x = positions[:, 1]
 
-radius = sim_config['base_lenght'] / 2.
+radius = sim_config['base_length'] / 2.
 colors = ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
 
 #orientation_lines_x = [[xx, xx+radius] for xx in x]
@@ -89,10 +91,10 @@ def callback(event):
     global sim_start
     if simulator.is_started():
         button.name = "Stop"
-        simulator.stop_sim()
+        simulator.stop()
     else:
         button.name = "Start"
-        simulator.start_sim()
+        simulator.start()
     #print(state['PREY'].positions.at[0,:].set(jnp.array([50., 50.])))
 
 button.on_event(ButtonClick, callback)
@@ -119,12 +121,7 @@ bk_pane.servable()
 
 
 def update_plot():
-    global sim_start
-    #global state, neighbors, sim_start
 
-
-    if not simulator.is_started():
-        return
     # if not sim_start:
     #     print('stop')
     #     x = cds.data['x']
