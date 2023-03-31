@@ -3,6 +3,7 @@ import queue
 import logging
 
 import numpy as np
+import jax.numpy as jnp
 
 import os
 
@@ -11,7 +12,7 @@ from urllib.parse import urljoin
 import threading
 from functools import partial
 
-from vivarium.simulator.simulator import SimulatorConfig, Simulator, EntityType
+from vivarium.simulator.simulator import SimulatorConfig, Simulator, EntityType, sim_state_to_populations
 
 main_thread_queue = queue.Queue()
 app = Flask(__name__)
@@ -23,7 +24,28 @@ pop_config = {EntityType.PREY: 20, EntityType.PREDATOR: 2, EntityType.OBSTACLE: 
 
 sim_config = SimulatorConfig()
 
-simulator = Simulator(sim_config, pop_config, proxs_dist_max=sim_config.box_size, proxs_cos_min=0., to_jit=True)
+behavior_set = [[[1., 0., 0.],  # Fear
+                 [0., 1., 0.]],
+
+                [[0., 1., 0.],  # Aggression
+                 [1., 0., 0.]],
+
+                [[-1., -0., 1.],  # Love
+                 [0., -1., 1.]],
+
+                [[0., -1., 1.],  # Shy
+                 [-1., -0., 1.]]]
+
+behavior_set = jnp.array(behavior_set)
+
+behavior_map = {EntityType.PREY.name: jnp.array([1., 0., 0., 0.]), EntityType.PREDATOR.name: jnp.array([0., 1, 0., 0.]), EntityType.OBSTACLE.name: jnp.array([0., 0, 0., 0.])}
+
+beh_config = behavior_set, behavior_map
+
+
+simulator = Simulator(sim_config, pop_config, beh_config, proxs_dist_max=sim_config.box_size, proxs_cos_min=0., to_jit=True)
+
+
 
 main_thread_queue = queue.Queue()
 
@@ -64,17 +86,19 @@ class SimulatorServer:
         return req.json()
 
 def serialize_state(s):
+
+
     serial_s = {}
 
-
-    serial_pop_kwargs = {}
-    for field, jarray in s._asdict().items():
-        serial_pop_kwargs[field] = np.array(jarray).tolist()
-    # if isinstance(s[type], Population):
-    #     serial_pop = Population(**serial_pop_kwargs)
-    # elif isinstance(s[type], PopulationObstacle):
-    #     serial_pop = PopulationObstacle(**serial_pop_kwargs)
-    serial_s['PREY'] = serial_pop_kwargs
+    for etype, pop in s.items():
+        serial_pop_kwargs = {}
+        for field, jarray in pop._asdict().items():
+            serial_pop_kwargs[field] = np.array(jarray).tolist()
+        # if isinstance(s[type], Population):
+        #     serial_pop = Population(**serial_pop_kwargs)
+        # elif isinstance(s[type], PopulationObstacle):
+        #     serial_pop = PopulationObstacle(**serial_pop_kwargs)
+        serial_s[etype] = serial_pop_kwargs
     return serial_s
 
 
@@ -89,7 +113,7 @@ def get_sim_config():
 #@tranquilize(method='post')
 @app.route("/simulator/get_state", methods=["POST"])
 def get_state():
-    return serialize_state(simulator.state)
+    return serialize_state(sim_state_to_populations(simulator.state, simulator.entity_slices))
 
 @app.route("/simulator/start", methods=["GET"])
 def open_session():

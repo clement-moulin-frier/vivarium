@@ -10,6 +10,8 @@ Population = namedtuple('Population', ['positions', 'thetas', 'entity_type'])
 
 PopulationObstacle = namedtuple('Population', ['positions', 'thetas', 'entity_type', 'diameters'])
 
+
+
 def sensor_fn(displ, theta, dist_max, cos_min):
     dist = jnp.linalg.norm(displ)
     n = jnp.array([jnp.cos( - theta), jnp.sin(- theta)])
@@ -58,39 +60,67 @@ normal = vmap(normal)
 def cross(array):
   return jnp.hstack((array[:, -1:], array[:, :1]))
 
-def behavior(proxs):
+def noop(proxs):
+    return jnp.zeros(proxs.shape[0]), jnp.zeros(proxs.shape[0])
+def fear(proxs):
+    motors = proxs # Braitenberg simple
+    #fwd, rot = motor_command(motors)
+    return motors
+
+def agression(proxs):
     motors = cross(proxs) # Braitenberg simple
-    fwd, rot = vmap(motor_command)(motors)
-    return fwd, rot
+    #fwd, rot = motor_command(motors)
+    return motors
 
-def dynamics(shift, displacement, map_dim, base_length, wheel_diameter, proxs_dist_max, proxs_cos_min, speed_mul=1., theta_mul=1., dt=1e-1):
-  def move(boids, fwd, rot):
-    R, theta, *_ = boids
-    n = normal(theta)
-    return (shift(R, dt * speed_mul * n * jnp.tile(fwd, (map_dim, 1)).T),
-            theta + dt * rot * theta_mul)
 
-  def update(_, entity_state_and_neighbors):
+def weighted_behavior(w, b):
+    f = vmap(lambda w, b: w * b)
+    return f(w, b).sum(axis=0)
 
-    boids, neighs = entity_state_and_neighbors
 
-    neighbors = neighs.update(boids.positions)
+def behavior(weights, behavior_set, proxs):
+    return weighted_behavior(weights, behavior_set).dot(jnp.hstack((proxs, 1.)))
 
-    senders, receivers = neighbors.idx
-    Ra = boids.positions[senders]
-    Rb = boids.positions[receivers]
+behavior = vmap(behavior, (0, None, 0))
 
-    dR = - space.map_bond(displacement)(Ra, Rb) # Looks like it should be opposite, but don't understand why
+def dynamics(sim_config, pop_config, beh_config, entity_slices, shift, displacement, map_dim, base_length, wheel_diameter, proxs_dist_max, proxs_cos_min, speed_mul=1., theta_mul=1., dt=1e-1):
 
-    proxs = sensor(dR, boids.thetas[senders], proxs_dist_max, proxs_cos_min, neighbors)
+    behavior_set, behavior_map = beh_config
+    def move(positions, thetas, fwd, rot):
+        n = normal(thetas)
+        return (shift(positions, dt * speed_mul * n * jnp.tile(fwd, (map_dim, 1)).T),
+                thetas + dt * rot * theta_mul)
 
-    motors = cross(proxs) # Braitenberg simple
-    fwd, rot = motor_command(motors, base_length, wheel_diameter)
-    # fwd, rot = behavior(proxs)
+    def update(_, state_neighbors):
 
-    new_entity_state = Population(*move(boids, fwd, rot), boids.entity_type)
+        state, neighs = state_neighbors
 
-    return new_entity_state, neighbors
+        #all_positions, all_thetas, all_etypes = state
 
-  return update
+        neighbors = neighs.update(state.positions)
+
+        senders, receivers = neighbors.idx
+        Ra = state.positions[senders]
+        Rb = state.positions[receivers]
+
+        dR = - space.map_bond(displacement)(Ra, Rb) # Looks like it should be opposite, but don't understand why
+
+        proxs = sensor(dR, state.thetas[senders], proxs_dist_max, proxs_cos_min, neighbors)
+
+
+        motors = behavior(behavior_map, behavior_set, proxs)
+
+        # motors = jnp.zeros((all_positions.shape[0], 2))
+        #
+        # for etype, behavior in beh_config.items():
+        #     motors[slice(*entity_slices[etype]), :] = behavior(proxs[slice(*entity_slices[etype]), :] #See if can be done as a matrix operation, e.g. using https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.tensordot.html
+
+        fwd, rot = motor_command(motors, base_length, wheel_diameter)
+            # fwd, rot = behavior(proxs)
+
+        new_entity_state = Population(*move(state.positions, state.thetas, fwd, rot), state.entity_type)
+
+        return new_entity_state, neighs
+
+    return update
 
