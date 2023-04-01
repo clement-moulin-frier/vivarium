@@ -30,6 +30,8 @@ from jax_md import space, smap, energy, minimize, quantity, simulate, partition,
 from enum import Enum
 from dataclasses import dataclass, asdict
 import time
+import queue
+import threading
 
 from tranquilizer import tranquilize
 
@@ -120,6 +122,7 @@ def behavior_map_to_jax(entity_slices, n_agents, behavior_map):
 class Simulator():
     def __init__(self, sim_config, pop_config, beh_config, proxs_dist_max, proxs_cos_min, num_steps_lax = 50, num_lax_loops = 1, freq=100., to_jit=True):
 
+        self.sim_config = sim_config
         self.proxs_dist_max = proxs_dist_max
         self.proxs_cos_min = proxs_cos_min
         self.populations = sim_config.generate_entities(pop_config)
@@ -166,8 +169,20 @@ class Simulator():
 
         self.freq = freq
 
+        #self.main_thread_queue = queue.Queue()
+
         # self_is_running = False
-    def run(self):
+
+    def run(self, threaded=False):
+        if self.is_started:
+            raise Exception("Simulator is already started")
+        if threaded:
+            threading.Thread(target=self._run).start()
+            #self.main_thread_queue.put(lambda: self._run())
+        else:
+            return self._run()
+
+    def _run(self):
 
         self.is_started = True
         print('Run starts')
