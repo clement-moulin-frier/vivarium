@@ -21,6 +21,7 @@ this_directory = os.path.abspath(os.path.dirname(__file__))
 with io.open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
   long_description = f.read()
 
+INSTALL_REQUIRES = ['jax-md']
 
 setuptools.setup(
     name='vivarium',
@@ -28,7 +29,7 @@ setuptools.setup(
     license='MIT',
     author='Clément Moulin-Frier',
     author_email='clement.moulinfrier@gmail.com',
-    #install_requires=INSTALL_REQUIRES,
+    install_requires=INSTALL_REQUIRES,
     #url='https://github.com/google/jax-md',
     packages=setuptools.find_packages(),
     #download_url = "https://pypi.org/project/jax-md/",
