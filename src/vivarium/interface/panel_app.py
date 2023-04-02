@@ -8,7 +8,7 @@ from bokeh.plotting import figure
 
 import requests
 
-from vivarium.simulator.api import SimulatorServer
+from vivarium.simulator.rest_api import SimulatorRestClient
 
 import panel as pn
 
@@ -18,11 +18,11 @@ from bokeh.models import ColumnDataSource
 pn.extension()
 
 
-simulator = SimulatorServer()
+simulator = SimulatorRestClient()
 
 
 sim_config = simulator.get_sim_config()
-state = simulator.get_sim_state()
+state = simulator.get_state()
 
 print(sim_config)
 
@@ -143,7 +143,7 @@ def update_plot():
 
     #print('start')
     #run()
-    state = simulator.get_sim_state()
+    state = simulator.get_state()
 
     positions = np.array(state['PREY']['positions'])
     #print(positions)
