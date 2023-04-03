@@ -64,14 +64,20 @@ class PopulationConfig(Parameterized):
         self.positions = self.box_size * jax.random.uniform(subkey, (self.n_agents, 2))
         key, subkey = jax.random.split(key)
         self.thetas = jax.random.uniform(subkey, (self.n_agents,), maxval=2 * np.pi)
+        self.proxs = jnp.zeros((self.n_agents, 2))
+        self.motors = jnp.zeros((self.n_agents, 2))
 
 
 class BehaviorConfig(Parameterized):
     population_config = param.ClassSelector(PopulationConfig, instantiate=False)
-    predefined_behaviors = Parameter([partial(behaviors.linear_behavior,
-                                              matrix=behaviors.linear_behavior_matrices[behaviors.linear_behavior_enum.AGGRESSION])])
+    behavior_bank = param.List([partial(behaviors.linear_behavior,
+                                               matrix=behaviors.linear_behavior_matrices[beh])
+                                       for beh in behaviors.linear_behavior_enum] + [behaviors.apply_motors])
+    behavior_name_map = {beh.name: i for i, beh in enumerate(behaviors.linear_behavior_enum)}
+                                       #for beh in behaviors.linear_behavior_enum}.update({'manual': behaviors.apply_motors}))
 
     @param.depends('population_config.n_agents', watch=True, on_init=True)
     def _update_behaviors(self):
-        self.behavior_bank = self.predefined_behaviors + [behaviors.noop] * self.population_config.n_agents
+        self.behavior_name_map['manual'] = len(self.behavior_bank) - 1
+        #self.behavior_bank = self.predefined_behaviors + [behaviors.noop] * self.population_config.n_agents
         self.entity_behaviors = jnp.zeros(self.population_config.n_agents, dtype=int)

@@ -46,7 +46,8 @@ cds = ColumnDataSource(data={'x': x, 'y': y,
                              'ox': orientation_lines_x, 'oy': orientation_lines_y,
                              'r': np.ones(N) * radius,
                              'fc': colors
-                            })
+                             }
+                       )
 
 TOOLS = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
 

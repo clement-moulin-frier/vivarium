@@ -6,7 +6,7 @@ from jax_md import space
 from collections import namedtuple
 
 
-Population = namedtuple('Population', ['positions', 'thetas', 'entity_type'])
+Population = namedtuple('Population', ['positions', 'thetas', 'proxs', 'motors', 'entity_type'])
 
 
 def sensor_fn(displ, theta, dist_max, cos_min):
@@ -57,7 +57,7 @@ def normal(theta):
 
 normal = vmap(normal)
 
-multi_switch = jax.vmap(jax.lax.switch, (0, None, 0))
+multi_switch = jax.vmap(jax.lax.switch, (0, None, 0, 0))
 
 
 def dynamics(simulation_config, agent_config, behavior_config):
@@ -97,11 +97,12 @@ def dynamics(simulation_config, agent_config, behavior_config):
 
         proxs = sensor(dR, state.thetas[senders], proxs_dist_max, proxs_cos_min, neighbors)
 
-        motors = multi_switch(entity_behaviors, behavior_bank, proxs)
+        motors = multi_switch(entity_behaviors, behavior_bank, proxs, state.motors)
 
         fwd, rot = motor_command(motors, base_length, wheel_diameter)
 
-        new_entity_state = Population(*move(state.positions, state.thetas, fwd, rot), state.entity_type)
+        new_entity_state = Population(*move(state.positions, state.thetas, fwd, rot), proxs=proxs, motors=motors,
+                                      entity_type=state.entity_type)
 
         return new_entity_state, neighs
 

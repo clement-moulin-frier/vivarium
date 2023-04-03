@@ -1,6 +1,7 @@
 import jax.numpy as jnp
 from enum import Enum
 from jax import vmap
+import numpy as np
 
 linear_behavior_enum = Enum('matrices', ['FEAR', 'AGGRESSION', 'LOVE', 'SHY'])
 
@@ -11,7 +12,7 @@ linear_behavior_matrices = {linear_behavior_enum.FEAR: jnp.array([[1., 0., 0.], 
                             }
 
 
-def linear_behavior(proxs, matrix):
+def linear_behavior(proxs, motors, matrix):
     return matrix.dot(jnp.hstack((proxs, 1.)))
 
 
@@ -28,5 +29,5 @@ def weighted_behavior(weights, behavior_set, proxs):
 def apply_motors(proxs, motors):
     return motors
 
-def noop(proxs):
+def noop(proxs, motors):
     return jnp.array([0., 0.])

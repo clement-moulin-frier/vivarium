@@ -30,7 +30,9 @@ class Simulator():
         self.behavior_config = behavior_config
         self.population_config = population_config
 
-        self.state = Population(positions=population_config.positions, thetas=population_config.thetas, entity_type=0)
+        self.state = Population(positions=population_config.positions, thetas=population_config.thetas,
+                                proxs=population_config.proxs, motors=population_config.motors,
+                                entity_type=0)
 
         self.neighbors = self.simulation_config.neighbor_fn.allocate(population_config.positions)
 
@@ -41,10 +43,20 @@ class Simulator():
 
         self.is_started = False
 
-    def set_motors(self, e_idx, motors):
-        self.behavior_config.behavior_bank[-e_idx - 1] = partial(behaviors.apply_motors, motors=jnp.array(motors))
-        self.behavior_config.entity_behaviors = self.behavior_config.entity_behaviors.at[e_idx].set(self.population_config.n_agents - e_idx)
+    def set_behavior(self, e_idx, behavior_name):
+        #self.behavior_config.behavior_bank[-e_idx - 1] = behaviors.apply_motors
+        self.behavior_config.entity_behaviors = self.behavior_config.entity_behaviors.at[e_idx].set(self.behavior_config.behavior_name_map[behavior_name])
         self.update_fn = dynamics(self.simulation_config, self.agent_config, self.behavior_config)
+
+    def set_motors(self, e_idx, motors):
+        if self.behavior_config.entity_behaviors[e_idx] != self.behavior_config.behavior_name_map['manual']:
+            self.set_behavior(e_idx, 'manual')
+        # self.behavior_config.entity_behaviors = self.behavior_config.entity_behaviors.at[e_idx].set(self.behavior_config.behavior_name_map['manual'])
+        self.state = Population(positions=self.state.positions,
+                                thetas=self.state.thetas,
+                                proxs=self.state.proxs,
+                                motors=self.state.motors.at[e_idx, :].set(jnp.array(motors)),
+                                entity_type=self.state.entity_type)
 
     def run(self, threaded=False):
         if self.is_started:
@@ -69,10 +81,11 @@ class Simulator():
                                                     (self.state, self.neighbors))
             else:
                 #assert False, "not good, modifies self.state"
-                val = (self.state, self.neighbors)
+                #val = (self.state, self.neighbors)
                 for i in range(0, self.simulation_config.num_steps_lax):
-                    val = self.update_fn(i, val)
-                new_state, neighbors = val
+                    self.state, self.neighbors = self.update_fn(i, (self.state, self.neighbors))
+                new_state = self.state
+                #new_state, neighbors = val
 
             # If the neighbor list can't fit in the allocation, rebuild it but bigger.
             if neighbors.did_buffer_overflow:
@@ -98,4 +111,5 @@ if __name__ == "__main__":
 
     simulator = Simulator(simulation_config, agent_config, behavior_config, population_config)
 
+    simulator.set_motors(0, jnp.array([0., 0.]))
     simulator.run()
