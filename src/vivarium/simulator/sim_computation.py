@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 from jax import ops, vmap, jit
-
+import jax
 from jax_md import space
 
 from collections import namedtuple
@@ -83,9 +83,34 @@ def behavior(weights, behavior_set, proxs):
 
 behavior = vmap(behavior, (0, None, 0))
 
-def dynamics(sim_config, pop_config, beh_config, entity_slices, shift, displacement, map_dim, base_length, wheel_diameter, proxs_dist_max, proxs_cos_min, speed_mul=1., theta_mul=1., dt=1e-1):
+multi_switch = jax.vmap(jax.lax.switch, (0, None, 0))
 
-    behavior_set, behavior_map = beh_config
+
+
+def apply_behavior(proxs, behavior_map):
+    motors = jnp.zeros_like(proxs)
+
+
+def dynamics(simulation_config, agent_config, behavior_config):
+
+    displacement = simulation_config.displacement
+    shift = simulation_config.shift
+    map_dim = simulation_config.map_dim
+    dt = simulation_config.dt
+
+    speed_mul = agent_config.speed_mul
+    theta_mul = agent_config.theta_mul
+    proxs_dist_max = agent_config.proxs_dist_max
+    proxs_cos_min = agent_config.proxs_cos_min
+    base_length = agent_config.base_length
+    wheel_diameter = agent_config.wheel_diameter
+
+    entity_behaviors = behavior_config.entity_behaviors
+    behavior_bank = behavior_config.behavior_bank
+
+
+
+#    behavior_set, behavior_map = beh_config
     def move(positions, thetas, fwd, rot):
         n = normal(thetas)
         return (shift(positions, dt * speed_mul * n * jnp.tile(fwd, (map_dim, 1)).T),
@@ -93,6 +118,7 @@ def dynamics(sim_config, pop_config, beh_config, entity_slices, shift, displacem
 
     def update(_, state_neighbors):
 
+        print("update")
         state, neighs = state_neighbors
 
         #all_positions, all_thetas, all_etypes = state
@@ -108,7 +134,9 @@ def dynamics(sim_config, pop_config, beh_config, entity_slices, shift, displacem
         proxs = sensor(dR, state.thetas[senders], proxs_dist_max, proxs_cos_min, neighbors)
 
 
-        motors = behavior(behavior_map, behavior_set, proxs)
+        #motors = behavior(behavior_map, behavior_set, proxs)
+
+        motors = multi_switch(entity_behaviors, behavior_bank, proxs)
 
         # motors = jnp.zeros((all_positions.shape[0], 2))
         #

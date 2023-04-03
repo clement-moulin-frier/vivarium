@@ -19,6 +19,8 @@ from collections import namedtuple
 
 from vivarium.simulator.sim_computation import dynamics, Population, PopulationObstacle, agression, fear, noop
 
+from vivarium.simulator import config
+
 import os
 
 from jax_md import space, smap, energy, minimize, quantity, simulate, partition, util
@@ -119,59 +121,65 @@ def behavior_map_to_jax(entity_slices, n_agents, behavior_map):
 
 
 
+
+
 class Simulator():
-    def __init__(self, sim_config, pop_config, beh_config, proxs_dist_max, proxs_cos_min, num_steps_lax = 50, num_lax_loops = 1, freq=100., to_jit=True):
+    def __init__(self, simulation_config, agent_config, behavior_config, population_config):
 
-        self.sim_config = sim_config
-        self.proxs_dist_max = proxs_dist_max
-        self.proxs_cos_min = proxs_cos_min
-        self.populations = sim_config.generate_entities(pop_config)
+        self.simulation_config = simulation_config
+        self.agent_config = agent_config
+        self.behavior_config = behavior_config
+        self.population_config = population_config
+        # self.proxs_dist_max = proxs_dist_max
+        # self.proxs_cos_min = proxs_cos_min
+        # self.populations = sim_config.generate_entities(pop_config)
+        #
+        # self.entity_slices, all_positions, all_thetas, all_etypes = populations_to_jax(self.populations, sim_config, pop_config)
+        #
+        # n_agents = all_positions.shape[0]
+        #
+        # self.entity_behaviors = entity_behaviors
 
-        self.entity_slices, all_positions, all_thetas, all_etypes = populations_to_jax(self.populations, sim_config, pop_config)
+        # behavior_set, behavior_map = beh_config
+        # behavior_map = behavior_map_to_jax(self.entity_slices, n_agents, behavior_map)
+        # self.beh_config = behavior_set, behavior_map
 
-        n_agents = all_positions.shape[0]
+        self.state = Population(positions=population_config.positions, thetas=population_config.thetas, entity_type=0)
 
-        behavior_set, behavior_map = beh_config
-
-        behavior_map = behavior_map_to_jax(self.entity_slices, n_agents, behavior_map)
-
-        self.beh_config = behavior_set, behavior_map
-
-        self.state = Population(positions=all_positions, thetas= all_thetas, entity_type=all_etypes)
-
-        self.displacement, self.shift = space.periodic(sim_config.box_size)
-        neighbor_radius = sim_config.box_size
-        self.neighbor_fn = partition.neighbor_list(self.displacement,
-                                                   sim_config.box_size,
-                                                   r_cutoff=neighbor_radius,
-                                                   dr_threshold=10.,
-                                                   capacity_multiplier=1.5,
-                                                   format=partition.Sparse)
+        # self.displacement, self.shift = space.periodic(sim_config.box_size)
+        # neighbor_radius = sim_config.box_size
+        # self.neighbor_fn = partition.neighbor_list(self.displacement,
+        #                                            sim_config.box_size,
+        #                                            r_cutoff=neighbor_radius,
+        #                                            dr_threshold=10.,
+        #                                            capacity_multiplier=1.5,
+        #                                            format=partition.Sparse)
         # global neighbors
-        self.neighbors = self.neighbor_fn.allocate(all_positions)
+        self.neighbors = self.simulation_config.neighbor_fn.allocate(population_config.positions)
 
-        self.update_fn = dynamics(sim_config, pop_config, self.beh_config, self.entity_slices, self.shift, self.displacement, sim_config.map_dim,
-                                  sim_config.base_length, sim_config.wheel_diameter,
-                                  self.proxs_dist_max, self.proxs_cos_min,
-                                  sim_config.speed_mul, sim_config.theta_mul, 1e-1)
+        self.update_fn = dynamics(simulation_config, agent_config, behavior_config)
 
-        self.beh_config = beh_config
+        #self.beh_config = beh_config
 
-        self.to_jit = to_jit
-        if self.to_jit:
+
+        if self.simulation_config.to_jit:
             self.update_fn = jit(self.update_fn)
 
-        self.num_steps_lax = num_steps_lax
-        self.num_lax_loops = num_lax_loops
+        # self.num_steps_lax = num_steps_lax
+        # self.num_lax_loops = num_lax_loops
         self.boids_buffer = []
 
         self.is_started = False
 
-        self.freq = freq
+        # self.freq = freq
 
         #self.main_thread_queue = queue.Queue()
 
         # self_is_running = False
+
+    # def set_motors(self, e_idx, motors):
+    #     self.beh_config[0] = self.beh_config[0].at[-1, :, -1].set(motors)
+    #     self.beh_config[1] = self.beh_config[1].at[e_idx, :].set(jnp.array([0., 0., 0., 0., 1.]))
 
     def run(self, threaded=False):
         if self.is_started:
@@ -188,25 +196,25 @@ class Simulator():
         print('Run starts')
         while True:
 
-            time.sleep(1. / self.freq)
+            time.sleep(1. / self.simulation_config.freq)
 
             if not self.is_started:
                 break
-            if self.to_jit:
-                new_state, neighbors = lax.fori_loop(0, self.num_steps_lax, self.update_fn,
+            if self.simulation_config.to_jit:
+                new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_steps_lax, self.update_fn,
                                                     (self.state, self.neighbors))
             else:
                 #assert False, "not good, modifies self.state"
                 val = (self.state, self.neighbors)
-                for i in range(0, self.num_steps_lax):
+                for i in range(0, self.simulation_config.num_steps_lax):
                     val = self.update_fn(i, val)
                 new_state, neighbors = val
 
             # If the neighbor list can't fit in the allocation, rebuild it but bigger.
             if neighbors.did_buffer_overflow:
                 print('REBUILDING')
-                neighbors = self.neighbor_fn.allocate(self.state.positions)
-                new_state, neighbors = lax.fori_loop(0, self.num_lax_loops, self.update_fn, (self.state, neighbors))
+                neighbors = self.simulation_config.neighbor_fn.allocate(self.state.positions)
+                new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_lax_loops, self.update_fn, (self.state, neighbors))
                 assert not neighbors.did_buffer_overflow
 
             self.state = new_state
@@ -219,31 +227,53 @@ class Simulator():
         self.is_started = False
 
 
+
 if __name__ == "__main__":
-    pop_config = {EntityType.PREY: 20, EntityType.PREDATOR: 2, EntityType.OBSTACLE: 2}
 
-    behavior_set = [[[1., 0., 0.],  # Fear
-                     [0., 1., 0.]],
-
-                    [[0., 1., 0.],  # Aggression
-                     [1., 0., 0.]],
-
-                    [[-1., -0., 1.],  # Love
-                     [0., -1., 1.]],
-
-                    [[0., -1., 1.],  # Shy
-                     [-1., -0., 1.]]]
-
-    behavior_set = jnp.array(behavior_set)
-
-    behavior_map = {EntityType.PREY.name: jnp.array([0., 1, 0., 0.]), EntityType.PREDATOR.name: jnp.array([0., 1, 0., 0.]), EntityType.OBSTACLE.name: jnp.array([0., 0, 0., 0.])}
+    agent_config = config.AgentConfig()
+    simulation_config = config.SimulatorConfig(agent_config=agent_config)
+    population_config = config.PopulationConfig()
+    behavior_config = config.BehaviorConfig()
 
 
-    beh_config = behavior_set, behavior_map
 
-    sim_config = SimulatorConfig()
+    # def behavior_test_1(proxs):
+    #     return proxs
+    #
+    # def behavior_test_2(proxs):
+    #     return jnp.array([1., 0.])
+    #
+    # pop_config = {EntityType.PREY: 20, EntityType.PREDATOR: 2, EntityType.OBSTACLE: 2}
+    #
+    # behavior_bank = [behavior_test_1, behavior_test_2]
+    #
+    # entity_behaviors = jnp.hstack((jnp.zeros(12, dtype=int), jnp.ones(12, dtype=int)))
+
+    # behavior_set = [[[1., 0., 0.],  # Fear
+    #                  [0., 1., 0.]],
+    #
+    #                 [[0., 1., 0.],  # Aggression
+    #                  [1., 0., 0.]],
+    #
+    #                 [[-1., -0., 1.],  # Love
+    #                  [0., -1., 1.]],
+    #
+    #                 [[0., -1., 1.],  # Shy
+    #                  [-1., -0., 1.]]]
+    #
+    # behavior_set = jnp.array(behavior_set)
+    #
+    # behavior_map = {EntityType.PREY.name: jnp.array([0., 1, 0., 0.]), EntityType.PREDATOR.name: jnp.array([0., 1, 0., 0.]), EntityType.OBSTACLE.name: jnp.array([0., 0, 0., 0.])}
+    #
+    #
+    # beh_config = behavior_set, behavior_map
+
+    #sim_config = SimulatorConfig()
 
     print("WARNING: to_jit=False")
-    simulator = Simulator(sim_config, pop_config, beh_config, proxs_dist_max=sim_config.box_size, proxs_cos_min=0., to_jit=False)
+    #simulator = Simulator(sim_config, pop_config, behavior_bank, entity_behaviors, proxs_dist_max=sim_config.box_size, proxs_cos_min=0., to_jit=False)
+    simulator = Simulator(simulation_config, agent_config, behavior_config, population_config)
+
+#    simulator.set_motors(simulator.entity_slices['PREY'][0], jnp.array([0., 0.]))
 
     simulator.run()

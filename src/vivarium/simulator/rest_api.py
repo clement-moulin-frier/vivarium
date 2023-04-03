@@ -18,10 +18,13 @@ def is_started(simulator):
     return {'is_started': simulator.is_started}
 
 def get_sim_config(simulator):
-    return simulator.sim_config.get_sim_config()
+    return simulator.simulation_config.json()
+
+def get_agent_config(simulator):
+    return simulator.agent_config.json()
 
 def get_state(simulator):
-    return serialize_state(sim_state_to_populations(simulator.state, simulator.entity_slices))
+    return serialize_state(simulator.state)
 
 def start(simulator):
     simulator.run(threaded=True)
@@ -37,6 +40,10 @@ class SimulatorRestClient:
     def get_sim_config(self):
         sim_config = requests.get(urljoin(self.server_url, os.path.join(self.prefix, 'get_sim_config')))
         return sim_config.json()
+
+    def get_agent_config(self):
+        agent_config = requests.get(urljoin(self.server_url, os.path.join(self.prefix, 'get_agent_config')))
+        return agent_config.json()
 
     def get_state(self):
         state = requests.post(urljoin(self.server_url, os.path.join(self.prefix, 'get_state')))
@@ -86,6 +93,7 @@ class FlaskAppWrapper(object):
         self.simulator = simulator
         self.add_endpoint(endpoint='/is_started', endpoint_name='is_started', handler=is_started)
         self.add_endpoint(endpoint='/get_sim_config', endpoint_name='get_sim_config', handler=get_sim_config)
+        self.add_endpoint(endpoint='/get_agent_config', endpoint_name='get_agent_config', handler=get_agent_config)
         self.add_endpoint(endpoint='/get_state', endpoint_name='get_state', handler=get_state, methods=['POST'])
         self.add_endpoint(endpoint='/start', endpoint_name='start', handler=start)
         self.add_endpoint(endpoint='/stop', endpoint_name='stop', handler=stop)

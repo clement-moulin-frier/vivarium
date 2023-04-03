@@ -22,6 +22,7 @@ simulator = SimulatorRestClient()
 
 
 sim_config = simulator.get_sim_config()
+agent_config = simulator.get_agent_config()
 state = simulator.get_state()
 
 print(sim_config)
@@ -29,14 +30,14 @@ print(sim_config)
 box_size = sim_config['box_size']
 map_dim = sim_config['map_dim']
 
-positions = np.array(state['PREY']['positions'])
+positions = np.array(state['positions'])
 
 N = positions.shape[0]
 
 x = positions[:, 0]
 y = x = positions[:, 1]
 
-radius = sim_config['base_length'] / 2.
+radius = agent_config['base_length'] / 2.
 colors = ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
 
 #orientation_lines_x = [[xx, xx+radius] for xx in x]
@@ -51,7 +52,7 @@ def normal(array):
     normals[:, 1] = np.sin(array)
     return normals
 
-thetas = np.array(state['PREY']['thetas'])
+thetas = np.array(state['thetas'])
 normals = normal(thetas)
 #normals = np.array(normal(state['PREY']['thetas']))
 
@@ -145,7 +146,7 @@ def update_plot():
     #run()
     state = simulator.get_state()
 
-    positions = np.array(state['PREY']['positions'])
+    positions = np.array(state['positions'])
     #print(positions)
     #new_state, neighbors = lax.fori_loop(0, 50, update, (state, neighbors))
     # if pos_change:
@@ -158,7 +159,7 @@ def update_plot():
     x = positions[:, 0]
     y = positions[:, 1]
 
-    normals = normal(np.array(state['PREY']['thetas']))
+    normals = normal(np.array(state['thetas']))
 
     orientation_lines_x = [[xx, xx + radius * n[0]] for xx, n in zip(x, normals)]
     orientation_lines_y = [[yy, yy + radius * n[1]] for yy, n in zip(y, normals)]

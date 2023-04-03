@@ -121,20 +121,11 @@ class RestApi:
 #         return req.json()
 
 def serialize_state(s):
+    serial_pop_kwargs = {}
+    for field, jarray in s._asdict().items():
+        serial_pop_kwargs[field] = np.array(jarray).tolist()
 
-
-    serial_s = {}
-
-    for etype, pop in s.items():
-        serial_pop_kwargs = {}
-        for field, jarray in pop._asdict().items():
-            serial_pop_kwargs[field] = np.array(jarray).tolist()
-        # if isinstance(s[type], Population):
-        #     serial_pop = Population(**serial_pop_kwargs)
-        # elif isinstance(s[type], PopulationObstacle):
-        #     serial_pop = PopulationObstacle(**serial_pop_kwargs)
-        serial_s[etype] = serial_pop_kwargs
-    return serial_s
+    return serial_pop_kwargs
 
 
 from dataclasses import asdict
