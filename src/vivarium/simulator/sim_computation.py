@@ -1,5 +1,5 @@
 import jax.numpy as jnp
-from jax import ops, vmap, jit
+from jax import ops, vmap
 import jax
 from jax_md import space
 
@@ -7,9 +7,6 @@ from collections import namedtuple
 
 
 Population = namedtuple('Population', ['positions', 'thetas', 'entity_type'])
-
-PopulationObstacle = namedtuple('Population', ['positions', 'thetas', 'entity_type', 'diameters'])
-
 
 
 def sensor_fn(displ, theta, dist_max, cos_min):
@@ -25,14 +22,13 @@ def sensor_fn(displ, theta, dist_max, cos_min):
     right = in_view * (1. - at_left) * prox
     return jnp.array([left, right])
 
+
 sensor_fn = vmap(sensor_fn, (0, 0, None, None))
 
-from jax import debug
 
 def sensor(displ, theta, dist_max, cos_min, neighbors):
     proxs = ops.segment_max(sensor_fn(displ, theta, dist_max, cos_min), neighbors.idx[0], len(neighbors.reference_position))
     return proxs
-
 
 
 def lr_2_fwd_rot(left_spd, right_spd, base_length, wheel_diameter):
@@ -40,24 +36,26 @@ def lr_2_fwd_rot(left_spd, right_spd, base_length, wheel_diameter):
     rot = 0.5 * (wheel_diameter / base_length) * (right_spd - left_spd)
     return fwd, rot
 
+
 def fwd_rot_2_lr(fwd, rot, base_length, wheel_diameter):
     left = ((2.0 * fwd) - (rot * base_length)) / (wheel_diameter)
     right = ((2.0 * fwd) + (rot * base_length)) / (wheel_diameter)
     return left, right
 
+
 def motor_command(wheel_activation, base_length, wheel_diameter):
   fwd, rot = lr_2_fwd_rot(wheel_activation[0], wheel_activation[1], base_length, wheel_diameter)
   return fwd, rot
 
+
 motor_command = vmap(motor_command, (0, None, None))
+
 
 def normal(theta):
   return jnp.array([jnp.cos(theta), jnp.sin(theta)])
 
+
 normal = vmap(normal)
-
-
-
 
 multi_switch = jax.vmap(jax.lax.switch, (0, None, 0))
 
@@ -79,9 +77,6 @@ def dynamics(simulation_config, agent_config, behavior_config):
     entity_behaviors = behavior_config.entity_behaviors
     behavior_bank = behavior_config.behavior_bank
 
-
-
-#    behavior_set, behavior_map = beh_config
     def move(positions, thetas, fwd, rot):
         n = normal(thetas)
         return (shift(positions, dt * speed_mul * n * jnp.tile(fwd, (map_dim, 1)).T),
@@ -91,8 +86,6 @@ def dynamics(simulation_config, agent_config, behavior_config):
 
         print("update")
         state, neighs = state_neighbors
-
-        #all_positions, all_thetas, all_etypes = state
 
         neighbors = neighs.update(state.positions)
 
@@ -104,22 +97,12 @@ def dynamics(simulation_config, agent_config, behavior_config):
 
         proxs = sensor(dR, state.thetas[senders], proxs_dist_max, proxs_cos_min, neighbors)
 
-
-        #motors = behavior(behavior_map, behavior_set, proxs)
-
         motors = multi_switch(entity_behaviors, behavior_bank, proxs)
 
-        # motors = jnp.zeros((all_positions.shape[0], 2))
-        #
-        # for etype, behavior in beh_config.items():
-        #     motors[slice(*entity_slices[etype]), :] = behavior(proxs[slice(*entity_slices[etype]), :] #See if can be done as a matrix operation, e.g. using https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.tensordot.html
-
         fwd, rot = motor_command(motors, base_length, wheel_diameter)
-            # fwd, rot = behavior(proxs)
 
         new_entity_state = Population(*move(state.positions, state.thetas, fwd, rot), state.entity_type)
 
         return new_entity_state, neighs
 
     return update
-

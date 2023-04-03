@@ -3,15 +3,15 @@ import threading
 import requests
 import os
 from urllib.parse import urljoin
+import numpy as np
 
-from vivarium.simulator.api import serialize_state, sim_state_to_populations
+def serialize_state(s):
+    serial_pop_kwargs = {}
+    for field, jarray in s._asdict().items():
+        serial_pop_kwargs[field] = np.array(jarray).tolist()
 
+    return serial_pop_kwargs
 
-
-# There could be a way to have i/o type conversions to rest in __call__ above (or in the class). This way, all functions
-# below can be used in a client cla
-# But how about requests for setters (e.g. set_state)
-# Might be a weird solution ...
 
 def is_started(simulator):
     print('is_started')

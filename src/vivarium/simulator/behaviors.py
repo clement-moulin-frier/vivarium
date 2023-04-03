@@ -25,7 +25,6 @@ def weighted_behavior(weights, behavior_set, proxs):
 
 #behavior = vmap(behavior, (0, None, 0))
 
-
 def apply_motors(proxs, motors):
     return motors
 

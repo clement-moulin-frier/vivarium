@@ -1,6 +1,5 @@
 import param
 from param import Parameterized, Parameter
-# from vivarium.simulator.simulator import EntityType
 from jax_md import space, partition
 import jax
 import jax.numpy as jnp
@@ -8,7 +7,6 @@ import numpy as np
 from functools import partial
 
 import vivarium.simulator.behaviors as behaviors
-
 
 
 class AgentConfig(Parameterized):
@@ -36,7 +34,6 @@ class SimulatorConfig(Parameterized):
     to_jit = param.Boolean(True)
     displacement = Parameter()
     shift = Parameter()
-
 
     def json(self):
         return self.param.serialize_parameters(subset=['box_size', 'map_dim'])
@@ -69,7 +66,6 @@ class PopulationConfig(Parameterized):
         self.thetas = jax.random.uniform(subkey, (self.n_agents,), maxval=2 * np.pi)
 
 
-
 class BehaviorConfig(Parameterized):
     population_config = param.ClassSelector(PopulationConfig, instantiate=False)
     predefined_behaviors = Parameter([partial(behaviors.linear_behavior,
@@ -78,4 +74,4 @@ class BehaviorConfig(Parameterized):
     @param.depends('population_config.n_agents', watch=True, on_init=True)
     def _update_behaviors(self):
         self.behavior_bank = self.predefined_behaviors + [behaviors.noop] * self.population_config.n_agents
-        self.entity_behaviors = jnp.zeros(self.population_config.n_agents, dtype=int)  # Parameter(jnp.hstack((jnp.zeros(10, dtype=int), jnp.ones(10, dtype=int))))
+        self.entity_behaviors = jnp.zeros(self.population_config.n_agents, dtype=int)

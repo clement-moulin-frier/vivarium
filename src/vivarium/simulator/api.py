@@ -120,12 +120,7 @@ class RestApi:
 #         req = requests.post(urljoin(self.server_url, 'get_motors'))
 #         return req.json()
 
-def serialize_state(s):
-    serial_pop_kwargs = {}
-    for field, jarray in s._asdict().items():
-        serial_pop_kwargs[field] = np.array(jarray).tolist()
 
-    return serial_pop_kwargs
 
 
 from dataclasses import asdict
