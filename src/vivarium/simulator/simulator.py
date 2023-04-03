@@ -9,6 +9,9 @@ from jax import vmap
 from jax import lax
 from jax import ops
 
+import vivarium.simulator.behaviors as behaviors
+
+
 import typing
 #vectorize = np.vectorize
 
@@ -17,7 +20,7 @@ from collections import namedtuple
 #import base64
 
 
-from vivarium.simulator.sim_computation import dynamics, Population, PopulationObstacle, agression, fear, noop
+from vivarium.simulator.sim_computation import dynamics, Population
 
 from vivarium.simulator import config
 
@@ -177,9 +180,12 @@ class Simulator():
 
         # self_is_running = False
 
-    # def set_motors(self, e_idx, motors):
-    #     self.beh_config[0] = self.beh_config[0].at[-1, :, -1].set(motors)
-    #     self.beh_config[1] = self.beh_config[1].at[e_idx, :].set(jnp.array([0., 0., 0., 0., 1.]))
+    def set_motors(self, e_idx, motors):
+        self.behavior_config.behavior_bank[-e_idx - 1] = partial(behaviors.apply_motors, motors=jnp.array(motors))
+        self.behavior_config.entity_behaviors = self.behavior_config.entity_behaviors.at[e_idx].set(self.population_config.n_agents - e_idx)
+        self.update_fn = dynamics(self.simulation_config, self.agent_config, self.behavior_config)
+        # self.beh_config[0] = self.beh_config[0].at[-1, :, -1].set(motors)
+        # self.beh_config[1] = self.beh_config[1].at[e_idx, :].set(jnp.array([0., 0., 0., 0., 1.]))
 
     def run(self, threaded=False):
         if self.is_started:
@@ -233,7 +239,7 @@ if __name__ == "__main__":
     agent_config = config.AgentConfig()
     simulation_config = config.SimulatorConfig(agent_config=agent_config)
     population_config = config.PopulationConfig()
-    behavior_config = config.BehaviorConfig()
+    behavior_config = config.BehaviorConfig(population_config=population_config)
 
 
 

@@ -57,38 +57,9 @@ def normal(theta):
 normal = vmap(normal)
 
 
-def cross(array):
-  return jnp.hstack((array[:, -1:], array[:, :1]))
 
-def noop(proxs):
-    return jnp.zeros(proxs.shape[0]), jnp.zeros(proxs.shape[0])
-def fear(proxs):
-    motors = proxs # Braitenberg simple
-    #fwd, rot = motor_command(motors)
-    return motors
-
-def agression(proxs):
-    motors = cross(proxs) # Braitenberg simple
-    #fwd, rot = motor_command(motors)
-    return motors
-
-
-def weighted_behavior(w, b):
-    f = vmap(lambda w, b: w * b)
-    return f(w, b).sum(axis=0)
-
-
-def behavior(weights, behavior_set, proxs):
-    return weighted_behavior(weights, behavior_set).dot(jnp.hstack((proxs, 1.)))
-
-behavior = vmap(behavior, (0, None, 0))
 
 multi_switch = jax.vmap(jax.lax.switch, (0, None, 0))
-
-
-
-def apply_behavior(proxs, behavior_map):
-    motors = jnp.zeros_like(proxs)
 
 
 def dynamics(simulation_config, agent_config, behavior_config):

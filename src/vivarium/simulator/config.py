@@ -5,6 +5,9 @@ from jax_md import space, partition
 import jax
 import jax.numpy as jnp
 import numpy as np
+from functools import partial
+
+import vivarium.simulator.behaviors as behaviors
 
 
 
@@ -65,13 +68,14 @@ class PopulationConfig(Parameterized):
         key, subkey = jax.random.split(key)
         self.thetas = jax.random.uniform(subkey, (self.n_agents,), maxval=2 * np.pi)
 
-def behavior_test_1(proxs):
-    return proxs
-
-def behavior_test_2(proxs):
-    return jnp.array([1., 0.])
 
 
 class BehaviorConfig(Parameterized):
-    behavior_bank = Parameter([behavior_test_1, behavior_test_2])
-    entity_behaviors = Parameter(jnp.hstack((jnp.zeros(10, dtype=int), jnp.ones(10, dtype=int))))
+    population_config = param.ClassSelector(PopulationConfig, instantiate=False)
+    predefined_behaviors = Parameter([partial(behaviors.linear_behavior,
+                                              matrix=behaviors.linear_behavior_matrices[behaviors.linear_behavior_enum.AGGRESSION])])
+
+    @param.depends('population_config.n_agents', watch=True, on_init=True)
+    def _update_behaviors(self):
+        self.behavior_bank = self.predefined_behaviors + [behaviors.noop] * self.population_config.n_agents
+        self.entity_behaviors = jnp.zeros(self.population_config.n_agents, dtype=int)  # Parameter(jnp.hstack((jnp.zeros(10, dtype=int), jnp.ones(10, dtype=int))))
