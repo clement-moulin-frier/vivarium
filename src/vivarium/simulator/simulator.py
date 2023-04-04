@@ -13,6 +13,8 @@ from vivarium.simulator import config
 import time
 import threading
 
+import param
+
 
 def sim_state_to_populations(sim_state, entity_slices):
     pop_dict = {}
@@ -22,31 +24,37 @@ def sim_state_to_populations(sim_state, entity_slices):
     return pop_dict
 
 
-class Simulator():
-    def __init__(self, simulation_config, agent_config, behavior_config, population_config):
+class Simulator(param.Parameterized):
+    simulation_config = param.ClassSelector(config.SimulatorConfig, instantiate=False)
+    agent_config = param.ClassSelector(config.AgentConfig, instantiate=False)
+    behavior_config = param.ClassSelector(config.BehaviorConfig, instantiate=False)
+    population_config = param.ClassSelector(config.PopulationConfig, instantiate=False)
+    is_started = param.Boolean(False)
 
-        self.simulation_config = simulation_config
-        self.agent_config = agent_config
-        self.behavior_config = behavior_config
-        self.population_config = population_config
-
-        self.state = Population(positions=population_config.positions, thetas=population_config.thetas,
-                                proxs=population_config.proxs, motors=population_config.motors,
+    @param.depends('population_config', watch=True, on_init=True)
+    def _update_state_neighbors(self):
+        self.state = Population(positions=self.population_config.positions, thetas=self.population_config.thetas,
+                                proxs=self.population_config.proxs, motors=self.population_config.motors,
                                 entity_type=0)
 
-        self.neighbors = self.simulation_config.neighbor_fn.allocate(population_config.positions)
+        self.neighbors = self.simulation_config.neighbor_fn.allocate(self.population_config.positions)
 
-        self.update_fn = dynamics(simulation_config, agent_config, behavior_config)
+    @param.depends('simulation_config.displacement', 'simulation_config.shift', 'simulation_config.map_dim',
+                   'simulation_config.dt', 'agent_config.speed_mul', 'agent_config.theta_mul',
+                   'agent_config.proxs_dist_max', 'agent_config.proxs_cos_min', 'agent_config.base_length',
+                   'agent_config.wheel_diameter', 'behavior_config.entity_behaviors', 'behavior_config.behavior_bank',
+                   watch=True, on_init=True)
+    def _update_function_update(self):
+        print("Update update function due to watched param dependencies")
+        self.update_fn = dynamics(self.simulation_config, self.agent_config, self.behavior_config)
 
         if self.simulation_config.to_jit:
             self.update_fn = jit(self.update_fn)
 
-        self.is_started = False
-
     def set_behavior(self, e_idx, behavior_name):
         #self.behavior_config.behavior_bank[-e_idx - 1] = behaviors.apply_motors
         self.behavior_config.entity_behaviors = self.behavior_config.entity_behaviors.at[e_idx].set(self.behavior_config.behavior_name_map[behavior_name])
-        self.update_fn = dynamics(self.simulation_config, self.agent_config, self.behavior_config)
+        #self.update_fn = dynamics(self.simulation_config, self.agent_config, self.behavior_config)
 
     def set_motors(self, e_idx, motors):
         if self.behavior_config.entity_behaviors[e_idx] != self.behavior_config.behavior_name_map['manual']:
@@ -109,7 +117,8 @@ if __name__ == "__main__":
     population_config = config.PopulationConfig()
     behavior_config = config.BehaviorConfig(population_config=population_config)
 
-    simulator = Simulator(simulation_config, agent_config, behavior_config, population_config)
+    simulator = Simulator(simulation_config=simulation_config, agent_config=agent_config,
+                          behavior_config=behavior_config, population_config=population_config)
 
-    simulator.set_motors(0, jnp.array([0., 0.]))
+    #simulator.set_motors(0, jnp.array([0., 0.]))
     simulator.run()

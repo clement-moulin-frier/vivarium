@@ -76,6 +76,8 @@ class BehaviorConfig(Parameterized):
     behavior_name_map = {beh.name: i for i, beh in enumerate(behaviors.linear_behavior_enum)}
                                        #for beh in behaviors.linear_behavior_enum}.update({'manual': behaviors.apply_motors}))
 
+    entity_behaviors = param.ClassSelector(jax.Array)
+
     @param.depends('population_config.n_agents', watch=True, on_init=True)
     def _update_behaviors(self):
         self.behavior_name_map['manual'] = len(self.behavior_bank) - 1
