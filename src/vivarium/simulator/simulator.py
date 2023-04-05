@@ -14,7 +14,7 @@ import time
 import threading
 
 import param
-
+import requests
 
 def sim_state_to_populations(sim_state, entity_slices):
     pop_dict = {}
@@ -31,13 +31,14 @@ class Simulator(param.Parameterized):
     population_config = param.ClassSelector(config.PopulationConfig, instantiate=False)
     is_started = param.Boolean(False)
 
-    @param.depends('population_config', watch=True, on_init=True)
+    @param.depends('population_config', 'simulation_config.box_size', watch=True, on_init=True)
     def _update_state_neighbors(self):
-        self.state = Population(positions=self.population_config.positions, thetas=self.population_config.thetas,
-                                proxs=self.population_config.proxs, motors=self.population_config.motors,
-                                entity_type=0)
+        self.state = self.population_config.generate_population(self.simulation_config.box_size)
+        # self.state = Population(positions=self.population_config.positions, thetas=self.population_config.thetas,
+        #                         proxs=self.population_config.proxs, motors=self.population_config.motors,
+        #                         entity_type=0)
 
-        self.neighbors = self.simulation_config.neighbor_fn.allocate(self.population_config.positions)
+        self.neighbors = self.simulation_config.neighbor_fn.allocate(self.state.positions)
 
     @param.depends('simulation_config.displacement', 'simulation_config.shift', 'simulation_config.map_dim',
                    'simulation_config.dt', 'agent_config.speed_mul', 'agent_config.theta_mul',

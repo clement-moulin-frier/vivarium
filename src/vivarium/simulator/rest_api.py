@@ -1,9 +1,11 @@
-from flask import Flask, Response
+from flask import Flask, Response, request
 import threading
 import requests
 import os
 from urllib.parse import urljoin
 import numpy as np
+from vivarium.simulator.config import PopulationConfig
+import json
 
 def serialize_state(s):
     serial_pop_kwargs = {}
@@ -22,6 +24,22 @@ def get_sim_config(simulator):
 
 def get_agent_config(simulator):
     return simulator.agent_config.json()
+
+def get_population_config(simulator):
+    return simulator.population_config.json()
+
+def set_population_config(simulator, json_str):
+    # print("method", request.method)
+    kwargs = json.loads(json_str)
+    print("set_pop", json_str)
+    #pop = PopulationConfig(**PopulationConfig.param.deserialize_parameters(json_str))
+
+    #vals = dict(pop.param.values())
+    #del vals['name']
+    simulator.population_config.param.update(**kwargs)
+
+    #simulator.population_config.param.update(**kwargs)
+
 
 def get_state(simulator):
     return serialize_state(simulator.state)
@@ -44,6 +62,16 @@ class SimulatorRestClient:
     def get_agent_config(self):
         agent_config = requests.get(urljoin(self.server_url, os.path.join(self.prefix, 'get_agent_config')))
         return agent_config.json()
+
+    def get_population_config(self):
+        population_config = requests.get(urljoin(self.server_url, os.path.join(self.prefix, 'get_population_config')))
+        return population_config.text  #.json()
+
+    def set_population_config(self, **kwargs):
+        #print("set_pop: before req", kwargs)
+        s = json.dumps((kwargs))
+        requests.get(urljoin(self.server_url, os.path.join(self.prefix, 'set_population_config')), params=dict(json_str=s))
+
 
     def get_state(self):
         state = requests.post(urljoin(self.server_url, os.path.join(self.prefix, 'get_state')))
@@ -78,8 +106,9 @@ class EndpointAction(object):
         self.simulator = simulator
         self.response = Response(status=200, headers={})
 
-    def __call__(self, *args):
-        res = self.action(self.simulator)
+    def __call__(self, **kwargs):
+        print('EndpointAction', request.args)  # .to_dict())
+        res = self.action(self.simulator, **request.args.to_dict())
         if res is None:
             return self.response
         else:
@@ -94,6 +123,8 @@ class FlaskAppWrapper(object):
         self.add_endpoint(endpoint='/is_started', endpoint_name='is_started', handler=is_started)
         self.add_endpoint(endpoint='/get_sim_config', endpoint_name='get_sim_config', handler=get_sim_config)
         self.add_endpoint(endpoint='/get_agent_config', endpoint_name='get_agent_config', handler=get_agent_config)
+        self.add_endpoint(endpoint='/get_population_config', endpoint_name='get_population_config', handler=get_population_config)
+        self.add_endpoint(endpoint='/set_population_config', endpoint_name='set_population_config', handler=set_population_config)
         self.add_endpoint(endpoint='/get_state', endpoint_name='get_state', handler=get_state, methods=['POST'])
         self.add_endpoint(endpoint='/start', endpoint_name='start', handler=start)
         self.add_endpoint(endpoint='/stop', endpoint_name='stop', handler=stop)

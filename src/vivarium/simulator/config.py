@@ -7,6 +7,7 @@ import numpy as np
 from functools import partial
 
 import vivarium.simulator.behaviors as behaviors
+from vivarium.simulator.sim_computation import Population
 
 
 class AgentConfig(Parameterized):
@@ -54,18 +55,21 @@ class SimulatorConfig(Parameterized):
 
 class PopulationConfig(Parameterized):
     n_agents = param.Integer(20)
-    box_size = param.Number(100., bounds=(0, None))
+    #box_size = param.Number(100., bounds=(0, None))
 
-    @param.depends('n_agents', 'box_size', watch=True, on_init=True)
-    def _update_population_arrays(self):
-        print('upd population')
+    #@param.depends('n_agents', 'box_size', watch=True, on_init=True)
+    def generate_population(self, box_size):
         key = jax.random.PRNGKey(0)
         key, subkey = jax.random.split(key)
-        self.positions = self.box_size * jax.random.uniform(subkey, (self.n_agents, 2))
+        positions = box_size * jax.random.uniform(subkey, (self.n_agents, 2))
         key, subkey = jax.random.split(key)
-        self.thetas = jax.random.uniform(subkey, (self.n_agents,), maxval=2 * np.pi)
-        self.proxs = jnp.zeros((self.n_agents, 2))
-        self.motors = jnp.zeros((self.n_agents, 2))
+        thetas = jax.random.uniform(subkey, (self.n_agents,), maxval=2 * np.pi)
+        proxs = jnp.zeros((self.n_agents, 2))
+        motors = jnp.zeros((self.n_agents, 2))
+        return Population(positions=positions, thetas=thetas, proxs=proxs, motors=motors, entity_type=0)
+
+    def json(self):
+        return self.param.serialize_parameters()
 
 
 class BehaviorConfig(Parameterized):

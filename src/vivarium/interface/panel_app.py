@@ -1,13 +1,19 @@
 import numpy as np
 
 from vivarium.simulator.rest_api import SimulatorRestClient
+from vivarium.simulator.config import PopulationConfig
 
 import panel as pn
+import json
+import param
 
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, Button, PointDrawTool, HoverTool, Range1d
 from bokeh.layouts import layout
 from bokeh.events import ButtonClick
+
+
+
 
 def normal(array):
     normals = np.zeros((array.shape[0], map_dim))
@@ -22,6 +28,17 @@ simulator = SimulatorRestClient()
 sim_config = simulator.get_sim_config()
 agent_config = simulator.get_agent_config()
 state = simulator.get_state()
+
+def pull_population_config():
+    p = PopulationConfig(**PopulationConfig.param.deserialize_parameters(simulator.get_population_config()))
+    return p
+
+def update_simulator_population_config(**kwargs):
+    simulator.set_population_config(**population_config.param.values(onlychanged=True))
+
+population_config = pull_population_config()
+
+population_config.param.watch_values(update_simulator_population_config, ['n_agents'])
 
 box_size = sim_config['box_size']
 map_dim = sim_config['map_dim']
@@ -82,11 +99,15 @@ draw_tool = PointDrawTool(renderers=[r])
 p.add_tools(draw_tool)
 p.toolbar.active_tap = draw_tool
 
-lo = layout([[button], [p]])
+#lo = layout([[button], [p, population_config]])
+#bk_pane = pn.pane.Bokeh()
+#bk_pane.servable()
 
-bk_pane = pn.pane.Bokeh(lo)
+row = pn.Row(p, population_config)
+row.servable()
 
-bk_pane.servable()
+
+
 
 
 def update_plot():
@@ -108,6 +129,15 @@ def update_plot():
     cds.data['ox'] = orientation_lines_x
     cds.data['oy'] = orientation_lines_y
 
+def update_config():
+    pop = pull_population_config()
+    vals = dict(pop.param.values())
+    del vals['name']
+    population_config.param.update(**vals)
 
-pcb = pn.state.add_periodic_callback(update_plot, 10)
+
+pcb1 = pn.state.add_periodic_callback(update_plot, 100)
+
+pcb2 = pn.state.add_periodic_callback(update_config, 2000)
+
 
