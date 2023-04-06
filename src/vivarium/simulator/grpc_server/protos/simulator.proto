@@ -1,0 +1,151 @@
+// Copyright 2015 gRPC authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.examples.simulator";
+option java_outer_classname = "SimulatorProto";
+option objc_class_prefix = "SIM";
+
+import "google/protobuf/empty.proto";
+//import "ndarray.proto";
+package simulator;
+
+// Interface exported by the server.
+service SimulatorServer {
+  // A simple RPC.
+  //
+  // Obtains the feature at a given position.
+  //
+  // A feature with an empty name is returned if there's no feature at the given
+  // position.
+  rpc GetSimulationConfig(google.protobuf.Empty) returns (SimulationConfig) {}
+
+  rpc GetAgentConfig(google.protobuf.Empty) returns (AgentConfig) {}
+
+  rpc GetPopulationConfig(google.protobuf.Empty) returns (PopulationConfig) {}
+
+  rpc SetPopulationConfig(PopulationConfig) returns (google.protobuf.Empty) {}
+
+  rpc GetState(google.protobuf.Empty) returns (State) {}
+
+  rpc GetStateArray(google.protobuf.Empty) returns (StateArray) {}
+
+  rpc IsStarted(google.protobuf.Empty) returns (IsStartedState) {}
+
+  rpc Start(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+
+  rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+
+}
+
+// Points are represented as latitude-longitude pairs in the E7 representation
+// (degrees multiplied by 10**7 and rounded to the nearest integer).
+// Latitudes should be in the range +/- 90 degrees and longitude should be in
+// the range +/- 180 degrees (inclusive).
+message SimulationConfig {
+  float box_size = 1;
+  int32 map_dim = 2;
+}
+
+message AgentConfig {
+    float wheel_diameter = 1;
+    float base_length = 2;
+    float speed_mul = 3;
+    float theta_mul = 4;
+    float neighbor_radius = 5;
+    float proxs_dist_max = 6;
+    float proxs_cos_min = 7;
+}
+
+message PopulationConfig {
+  int32 n_agents = 1;
+}
+
+message Position {
+  float x = 1;
+  float y = 2;
+}
+
+message State {
+  repeated Position positions = 1;
+  repeated float thetas = 2;
+}
+
+//message StateVector {
+//  repeated float vector = 1;
+//}
+
+message NDArray {
+  bytes ndarray = 1;
+}
+
+message StateArray {
+  NDArray array = 1;
+}
+
+message IsStartedState {
+  bool is_started = 1;
+}
+
+// A latitude-longitude rectangle, represented as two diagonally opposite
+// points "lo" and "hi".
+//message Rectangle {
+//  // One corner of the rectangle.
+//  Point lo = 1;
+//
+//  // The other corner of the rectangle.
+//  Point hi = 2;
+//}
+
+// A feature names something at a given point.
+//
+// If a feature could not be named, the name is empty.
+//message Feature {
+//  // The name of the feature.
+//  string name = 1;
+//
+//  // The point where the feature is detected.
+//  Point location = 2;
+//}
+
+// A RouteNote is a message sent while at a given point.
+//message RouteNote {
+//  // The location from which the message is sent.
+//  Point location = 1;
+//
+//  // The message to be sent.
+//  string message = 2;
+//}
+
+// A RouteSummary is received in response to a RecordRoute rpc.
+//
+// It contains the number of individual points received, the number of
+// detected features, and the total distance covered as the cumulative sum of
+// the distance between each point.
+//message RouteSummary {
+//  // The number of points received.
+//  int32 point_count = 1;
+//
+//  // The number of known features passed while traversing the route.
+//  int32 feature_count = 2;
+//
+//  // The distance covered in metres.
+//  int32 distance = 3;
+//
+//  // The duration of the traversal in seconds.
+//  int32 elapsed_time = 4;
+//}
