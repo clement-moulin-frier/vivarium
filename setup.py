@@ -25,7 +25,7 @@ INSTALL_REQUIRES = ['jax-md']
 
 setuptools.setup(
     name='vivarium',
-    version='0.0.0',
+    version='0.0.1',
     license='MIT',
     author='Clément Moulin-Frier',
     author_email='clement.moulinfrier@gmail.com',
@@ -45,10 +45,9 @@ setuptools.setup(
     classifiers=[
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
-        'License :: OSI Approved :: Apache Software License',
+        # 'License :: OSI Approved :: Apache Software License',
         'Operating System :: MacOS',
         'Operating System :: POSIX :: Linux',
-        'Topic :: Software Development',
         'Topic :: Scientific/Engineering',
         'Intended Audience :: Science/Research',
         'Intended Audience :: Developers',
