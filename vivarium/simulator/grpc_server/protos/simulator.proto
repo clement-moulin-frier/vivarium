@@ -32,17 +32,20 @@ service SimulatorServer {
   //
   // A feature with an empty name is returned if there's no feature at the given
   // position.
-  rpc GetSimulationConfig(google.protobuf.Empty) returns (SimulationConfig) {}
+  rpc GetSimulationConfigMessage(google.protobuf.Empty) returns (SimulationConfig) {}
+  rpc GetSimulationConfigSerialized(google.protobuf.Empty) returns (SimulationConfigSerialized) {}
 
-  rpc GetAgentConfig(google.protobuf.Empty) returns (AgentConfig) {}
+  rpc GetAgentConfigMessage(google.protobuf.Empty) returns (AgentConfig) {}
+  rpc GetAgentConfigSerialized(google.protobuf.Empty) returns (AgentConfigSerialized) {}
 
-  rpc GetPopulationConfig(google.protobuf.Empty) returns (PopulationConfig) {}
+  rpc GetPopulationConfigMessage(google.protobuf.Empty) returns (PopulationConfig) {}
+  rpc GetPopulationConfigSerialized(google.protobuf.Empty) returns (PopulationConfigSerialized) {}
 
   rpc SetPopulationConfig(PopulationConfig) returns (google.protobuf.Empty) {}
 
-  rpc GetState(google.protobuf.Empty) returns (State) {}
+  rpc GetStateMessage(google.protobuf.Empty) returns (State) {}
 
-  rpc GetStateArray(google.protobuf.Empty) returns (StateArray) {}
+  rpc GetStateArrays(google.protobuf.Empty) returns (StateArrays) {}
 
   rpc IsStarted(google.protobuf.Empty) returns (IsStartedState) {}
 
@@ -61,6 +64,10 @@ message SimulationConfig {
   int32 map_dim = 2;
 }
 
+message SimulationConfigSerialized {
+  string serialized = 1;
+}
+
 message AgentConfig {
     float wheel_diameter = 1;
     float base_length = 2;
@@ -71,17 +78,25 @@ message AgentConfig {
     float proxs_cos_min = 7;
 }
 
+message AgentConfigSerialized {
+  string serialized = 1;
+}
+
 message PopulationConfig {
   int32 n_agents = 1;
 }
 
+message PopulationConfigSerialized {
+  string serialized = 1;
+}
+
 message Position {
-  float x = 1;
-  float y = 2;
+  repeated float x = 1;
+  repeated float y = 2;
 }
 
 message State {
-  repeated Position positions = 1;
+  Position positions = 1;
   repeated float thetas = 2;
 }
 
@@ -93,8 +108,12 @@ message NDArray {
   bytes ndarray = 1;
 }
 
-message StateArray {
-  NDArray array = 1;
+message StateArrays {
+  NDArray positions = 1;
+  NDArray thetas = 2;
+  NDArray proxs = 3;
+  NDArray motors = 4;
+  int32 entity_type = 5;
 }
 
 message IsStartedState {

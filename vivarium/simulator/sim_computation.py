@@ -60,10 +60,10 @@ normal = vmap(normal)
 multi_switch = jax.vmap(jax.lax.switch, (0, None, 0, 0))
 
 
-def dynamics(simulation_config, agent_config, behavior_config):
+def dynamics(engine_config, simulation_config, agent_config):
 
-    displacement = simulation_config.displacement
-    shift = simulation_config.shift
+    displacement = engine_config.displacement
+    shift = engine_config.shift
     map_dim = simulation_config.map_dim
     dt = simulation_config.dt
 
@@ -74,8 +74,8 @@ def dynamics(simulation_config, agent_config, behavior_config):
     base_length = agent_config.base_length
     wheel_diameter = agent_config.wheel_diameter
 
-    entity_behaviors = behavior_config.entity_behaviors
-    behavior_bank = behavior_config.behavior_bank
+    entity_behaviors = jnp.array(engine_config.entity_behaviors, dtype=int)
+    behavior_bank = engine_config.behavior_bank
 
     def move(positions, thetas, fwd, rot):
         n = normal(thetas)
