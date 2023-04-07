@@ -15,7 +15,7 @@ from vivarium.simulator import config
 
 import time
 import threading
-
+import math
 import param
 import requests
 
@@ -120,12 +120,14 @@ class Simulator(param.Parameterized):
         else:
             return self._run()
 
-    def _run(self):
+    def _run(self, num_loops=math.inf):
         self.is_started = True
         print('Run starts')
-        while True:
+        loop_count = 0
+        while loop_count < num_loops:
             # print(self.simulation_config.entity_behaviors)
-            time.sleep(1. / self.simulation_config.freq)
+            if self.simulation_config.freq is not None:
+                time.sleep(1. / self.simulation_config.freq)
 
             if not self.is_started:
                 break
@@ -148,6 +150,8 @@ class Simulator(param.Parameterized):
                 assert not neighbors.did_buffer_overflow
 
             self.state = new_state
+
+            loop_count += 1
 
         print('Run stops')
 

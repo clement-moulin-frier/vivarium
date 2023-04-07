@@ -52,7 +52,7 @@ class SimulatorConfig(Config):
     num_steps_lax = param.Integer(50)
     num_lax_loops = param.Integer(1)
     dt = param.Number(0.1)
-    freq = param.Number(100.)
+    freq = param.Number(100., allow_None=True)
     to_jit = param.Boolean(True)
 
     n_agents = param.Integer(20)
