@@ -38,8 +38,8 @@ def lr_2_fwd_rot(left_spd, right_spd, base_length, wheel_diameter):
 
 
 def fwd_rot_2_lr(fwd, rot, base_length, wheel_diameter):
-    left = ((2.0 * fwd) - (rot * base_length)) / (wheel_diameter)
-    right = ((2.0 * fwd) + (rot * base_length)) / (wheel_diameter)
+    left = ((2.0 * fwd) - (rot * base_length)) / wheel_diameter
+    right = ((2.0 * fwd) + (rot * base_length)) / wheel_diameter
     return left, right
 
 
@@ -62,8 +62,8 @@ multi_switch = jax.vmap(jax.lax.switch, (0, None, 0, 0))
 
 def dynamics(engine_config, simulation_config, agent_config):
 
-    displacement = engine_config.displacement
-    shift = engine_config.shift
+    displacement = simulation_config.displacement
+    shift = simulation_config.shift
     map_dim = simulation_config.map_dim
     dt = simulation_config.dt
 
@@ -74,7 +74,7 @@ def dynamics(engine_config, simulation_config, agent_config):
     base_length = agent_config.base_length
     wheel_diameter = agent_config.wheel_diameter
 
-    entity_behaviors = jnp.array(engine_config.entity_behaviors, dtype=int)
+    entity_behaviors = jnp.array(simulation_config.entity_behaviors, dtype=int)
     behavior_bank = engine_config.behavior_bank
 
     def move(positions, thetas, fwd, rot):

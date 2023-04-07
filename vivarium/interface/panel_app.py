@@ -1,19 +1,18 @@
 import numpy as np
 
-from vivarium.simulator.rest_api import SimulatorRestClient
+# from vivarium.simulator.rest_api import SimulatorRestClient
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
-from vivarium.simulator.config import SimulatorConfig, AgentConfig, PopulationConfig
+from vivarium.simulator.config import SimulatorConfig, AgentConfig
 
 import panel as pn
 import json
 import param
+import time
 
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, Button, PointDrawTool, HoverTool, Range1d
 from bokeh.layouts import layout
 from bokeh.events import ButtonClick
-
-
 
 
 def normal(array):
@@ -28,44 +27,51 @@ pn.extension()
 simulator = SimulatorGRPCClient()
 
 sim_config = simulator.get_sim_config()
+print('sim_config', sim_config.param.values())
 agent_config = simulator.get_agent_config()
-population_config = simulator.get_population_config()
+# population_config = simulator.get_population_config()
 
 state = simulator.get_state_arrays()
 
-# def pull_population_config():
-#     p = PopulationConfig(**PopulationConfig.param.deserialize_parameters(simulator.get_population_config()))
-#     return p
 
-def update_simulator_population_config(**kwargs):
-    simulator.set_population_config(population_config)
-
-# population_config = pull_population_config()
-
-population_config.param.watch_values(update_simulator_population_config, population_config.export_fields)
-
-# box_size = sim_config['box_size']
-# map_dim = sim_config['map_dim']
+def push_config(e):
+    if e.name == 'entity_behaviors' and np.array_equal(e.old, e.new):
+        return
+    print('push_config', sim_config)
+    pcb_config.stop()
+    #print(f"(event: {e.name} changed from {e.old} with type {type(e.old)} to {e.new} with type {type(e.new)}). Equals = {np.array_equal(e.old, e.new)}")
+    simulator.set_simulation_config(sim_config)
+    # time.sleep(10)
+    pcb_config.start()
 
 
-x = state.positions[:, 0]
-y = state.positions[:, 1]
-thetas = state.thetas
+sim_config.param.watch(push_config, sim_config.export_fields, onlychanged=True)
 
-radius = agent_config.base_length / 2.
-colors = ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
+max_agents = 1000
+all_colors = ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(np.random.rand(max_agents) * 200 + 50, np.random.rand(max_agents) * 200 + 50)]
 
-normals = normal(thetas)
+def get_cds_data(state):
+    x = state.positions[:, 0]
+    y = state.positions[:, 1]
+    thetas = state.thetas
 
-orientation_lines_x = [[xx, xx + radius * n[0]] for xx, n in zip(x, normals)]
-orientation_lines_y = [[yy, yy + radius * n[1]] for yy, n in zip(y, normals)]
+    radius = agent_config.base_length / 2.
+    colors = all_colors[:sim_config.n_agents]  # ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
 
-cds = ColumnDataSource(data={'x': x, 'y': y,
-                             'ox': orientation_lines_x, 'oy': orientation_lines_y,
-                             'r': np.ones(population_config.n_agents) * radius,
-                             'fc': colors
-                             }
-                       )
+    normals = normal(thetas)
+
+    orientation_lines_x = [[xx, xx + radius * n[0]] for xx, n in zip(x, normals)]
+    orientation_lines_y = [[yy, yy + radius * n[1]] for yy, n in zip(y, normals)]
+
+    return dict(x=x, y=y, ox=orientation_lines_x, oy=orientation_lines_y, r=np.ones(sim_config.n_agents) * radius, fc=colors)
+
+
+cds = ColumnDataSource(data=get_cds_data(state))
+
+
+def update_cds(state):
+    cds.data.update(get_cds_data(state))
+
 
 TOOLS = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
 
@@ -100,45 +106,25 @@ draw_tool = PointDrawTool(renderers=[r])
 p.add_tools(draw_tool)
 p.toolbar.active_tap = draw_tool
 
-#lo = layout([[button], [p, population_config]])
-#bk_pane = pn.pane.Bokeh()
-#bk_pane.servable()
 
-row = pn.Row(p, button, population_config)
+row = pn.Row(p, button, sim_config)
 row.servable()
 
 
-
-
-
 def update_plot():
-
+    # print('update plot')
     state = simulator.get_state_arrays()
-
-    # positions = np.array(state['positions'])
-
-    x = state.positions[:, 0]
-    y = state.positions[:, 1]
-    thetas = state.thetas
-
-    normals = normal(thetas)
-
-    orientation_lines_x = [[xx, xx + radius * n[0]] for xx, n in zip(x, normals)]
-    orientation_lines_y = [[yy, yy + radius * n[1]] for yy, n in zip(y, normals)]
-
-    cds.data['x'] = x
-    cds.data['y'] = y
-    cds.data['ox'] = orientation_lines_x
-    cds.data['oy'] = orientation_lines_y
-
-def update_config():
-    pop = simulator.get_population_config()
-
-    population_config.param.update(**pop.to_dict())
+    update_cds(state)
 
 
-pcb1 = pn.state.add_periodic_callback(update_plot, 100)
+def pull_config():
+    changes_dict = simulator.get_recorded_changes()
+    # print('pull_config', changes_dict)
+    sim_config.param.update(**changes_dict)
 
-pcb2 = pn.state.add_periodic_callback(update_config, 2000)
+
+pcb_plot = pn.state.add_periodic_callback(update_plot, 10)
+
+pcb_config = pn.state.add_periodic_callback(pull_config, 200)
 
 

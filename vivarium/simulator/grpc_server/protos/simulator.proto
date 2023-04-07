@@ -26,14 +26,10 @@ package simulator;
 
 // Interface exported by the server.
 service SimulatorServer {
-  // A simple RPC.
-  //
-  // Obtains the feature at a given position.
-  //
-  // A feature with an empty name is returned if there's no feature at the given
-  // position.
+
   rpc GetSimulationConfigMessage(google.protobuf.Empty) returns (SimulationConfig) {}
   rpc GetSimulationConfigSerialized(google.protobuf.Empty) returns (SimulationConfigSerialized) {}
+  rpc GetRecordedChanges(google.protobuf.Empty) returns (SerializedDict) {}
 
   rpc GetAgentConfigMessage(google.protobuf.Empty) returns (AgentConfig) {}
   rpc GetAgentConfigSerialized(google.protobuf.Empty) returns (AgentConfigSerialized) {}
@@ -41,7 +37,12 @@ service SimulatorServer {
   rpc GetPopulationConfigMessage(google.protobuf.Empty) returns (PopulationConfig) {}
   rpc GetPopulationConfigSerialized(google.protobuf.Empty) returns (PopulationConfigSerialized) {}
 
+  rpc SetSimulationConfigSerialized(SimulationConfigSerialized) returns (google.protobuf.Empty) {}
+  rpc SetSimulationConfig(SimulationConfig) returns (google.protobuf.Empty) {}
+
+
   rpc SetPopulationConfig(PopulationConfig) returns (google.protobuf.Empty) {}
+  rpc SetPopulationConfigSerialized(PopulationConfigSerialized) returns (google.protobuf.Empty) {}
 
   rpc GetStateMessage(google.protobuf.Empty) returns (State) {}
 
@@ -55,17 +56,27 @@ service SimulatorServer {
 
 }
 
-// Points are represented as latitude-longitude pairs in the E7 representation
-// (degrees multiplied by 10**7 and rounded to the nearest integer).
-// Latitudes should be in the range +/- 90 degrees and longitude should be in
-// the range +/- 180 degrees (inclusive).
 message SimulationConfig {
   float box_size = 1;
   int32 map_dim = 2;
+
+  int32 num_steps_lax = 3;
+  int32 num_lax_loops = 4;
+  float dt = 5;
+  float freq = 6;
+  bool to_jit = 7;
+  int32 n_agents = 8;
+  NDArray entity_behaviors = 9;
 }
 
 message SimulationConfigSerialized {
   string serialized = 1;
+}
+
+message SerializedDict {
+  string serialized_dict = 1;
+  bool has_entity_behaviors = 2;
+  NDArray entity_behaviors = 3;
 }
 
 message AgentConfig {
@@ -100,10 +111,6 @@ message State {
   repeated float thetas = 2;
 }
 
-//message StateVector {
-//  repeated float vector = 1;
-//}
-
 message NDArray {
   bytes ndarray = 1;
 }
@@ -119,52 +126,3 @@ message StateArrays {
 message IsStartedState {
   bool is_started = 1;
 }
-
-// A latitude-longitude rectangle, represented as two diagonally opposite
-// points "lo" and "hi".
-//message Rectangle {
-//  // One corner of the rectangle.
-//  Point lo = 1;
-//
-//  // The other corner of the rectangle.
-//  Point hi = 2;
-//}
-
-// A feature names something at a given point.
-//
-// If a feature could not be named, the name is empty.
-//message Feature {
-//  // The name of the feature.
-//  string name = 1;
-//
-//  // The point where the feature is detected.
-//  Point location = 2;
-//}
-
-// A RouteNote is a message sent while at a given point.
-//message RouteNote {
-//  // The location from which the message is sent.
-//  Point location = 1;
-//
-//  // The message to be sent.
-//  string message = 2;
-//}
-
-// A RouteSummary is received in response to a RecordRoute rpc.
-//
-// It contains the number of individual points received, the number of
-// detected features, and the total distance covered as the cumulative sum of
-// the distance between each point.
-//message RouteSummary {
-//  // The number of points received.
-//  int32 point_count = 1;
-//
-//  // The number of known features passed while traversing the route.
-//  int32 feature_count = 2;
-//
-//  // The distance covered in metres.
-//  int32 distance = 3;
-//
-//  // The duration of the traversal in seconds.
-//  int32 elapsed_time = 4;
-//}

@@ -1,3 +1,5 @@
+import json
+
 from numproto.numproto import ndarray_to_proto, proto_to_ndarray
 from protobuf_to_dict import protobuf_to_dict, dict_to_protobuf
 
@@ -5,9 +7,6 @@ import grpc
 import simulator_pb2_grpc
 import simulator_pb2
 
-
-# from numproto import ndarray_to_proto, proto_to_ndarray
-#
 import numpy as np
 import logging
 from concurrent import futures
@@ -16,6 +15,7 @@ from vivarium.simulator import config
 from vivarium.simulator.simulator import Simulator
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
+
 
 class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def __init__(self, simulator):
@@ -29,6 +29,18 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         config = self.simulator.simulation_config
         serialized = config.param.serialize_parameters(subset=config.export_fields)
         return simulator_pb2.SimulationConfigSerialized(serialized=serialized)
+
+    def GetRecordedChanges(self, request, context):
+        d = self.simulator.get_recorded_changes()
+        has_entity_behaviors = 'entity_behaviors' in d
+        if has_entity_behaviors:
+            entity_behaviors = ndarray_to_proto(d['entity_behaviors'])
+            del d['entity_behaviors']
+        else:
+            entity_behaviors = ndarray_to_proto(np.array(0))
+        serialized_dict = json.dumps(d)
+        return simulator_pb2.SerializedDict(serialized_dict=serialized_dict,
+                                            has_entity_behaviors=has_entity_behaviors, entity_behaviors=entity_behaviors)
 
     def GetAgentConfigMessage(self, request, context):
         return simulator_pb2.AgentConfig(**self.simulator.agent_config.to_dict())
@@ -77,6 +89,22 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         self.simulator.population_config.param.update(**d_pop)
         return Empty()
 
+    def SetSimulationConfig(self, request, context):
+        d_conf = protobuf_to_dict(request)
+        if 'entity_behaviors' in d_conf:
+            entity_behaviors = proto_to_ndarray(request.entity_behaviors)
+            d_conf['entity_behaviors'] = entity_behaviors
+        print('SetSimulationConfig', d_conf)
+        self.simulator.simulation_config.param.update(**d_conf)
+        return Empty()
+
+    def SetSimulationConfigSerialized(self, request, context):
+        serialized = request.serialized
+        # print('SetSimulationConfigSerialized', serialized)
+        conf = config.SimulatorConfig(**config.SimulatorConfig.param.deserialize_parameters(serialized))
+        self.simulator.simulation_config.param.update(**conf.to_dict())
+        return Empty()
+
 
 def serve(simulator):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
@@ -90,10 +118,12 @@ def serve(simulator):
 if __name__ == '__main__':
     agent_config = config.AgentConfig()
     simulation_config = config.SimulatorConfig()
-    population_config = config.PopulationConfig()
+    # population_config = config.PopulationConfig()
+    engine_config = config.EngineConfig()
     # behavior_config = config.BehaviorConfig(population_config=population_config)
 
     simulator = Simulator(simulation_config=simulation_config, agent_config=agent_config,
-                          population_config=population_config)
+                          engine_config=engine_config)
+
     logging.basicConfig()
     serve(simulator)
