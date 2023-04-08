@@ -6,6 +6,7 @@ import vivarium.simulator.grpc_server.simulator_pb2 as simulator_pb2
 
 from vivarium.simulator.config import SimulatorConfig, AgentConfig
 from vivarium.simulator.sim_computation import Population
+from vivarium.simulator.simulator_client_abc import SimulatorClient
 
 from numproto.numproto import ndarray_to_proto, proto_to_ndarray
 
@@ -16,8 +17,9 @@ import numpy as np
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
 
-class SimulatorGRPCClient:
-    def __init__(self):
+class SimulatorGRPCClient(SimulatorClient):
+    def __init__(self, name=None):
+        self.name = name
         channel = grpc.insecure_channel('localhost:50051')
         self.stub = simulator_pb2_grpc.SimulatorServerStub(channel)
 
@@ -26,6 +28,9 @@ class SimulatorGRPCClient:
 
     def stop(self):
         self.stub.Stop(Empty())
+
+    def get_change_time(self):
+        return self.stub.GetChangeTime(Empty()).time
 
     def get_sim_config_dict(self):
         config = self.stub.GetSimulationConfig(Empty())
@@ -37,7 +42,7 @@ class SimulatorGRPCClient:
         return SimulatorConfig(**SimulatorConfig.param.deserialize_parameters(serialized))
 
     def get_recorded_changes(self):
-        changes = self.stub.GetRecordedChanges(Empty())
+        changes = self.stub.GetRecordedChanges(simulator_pb2.Name(name=self.name))
         d = json.loads(changes.serialized_dict)
         if changes.has_entity_behaviors:
             d['entity_behaviors'] = proto_to_ndarray(changes.entity_behaviors)
@@ -90,3 +95,14 @@ class SimulatorGRPCClient:
     def is_started(self):
         return self.stub.IsStarted(Empty()).is_started
 
+    def update_neighbor_fn(self):
+        self.stub.UpdateNeighborFn(Empty())
+
+    def update_state_neighbors(self):
+        self.stub.UpdateStateNeighbors(Empty())
+
+    def update_function_update(self):
+        self.stub.UpdateFunctionUpdate(Empty())
+
+    def update_behaviors(self):
+        self.stub.UpdateBehaviors(Empty())

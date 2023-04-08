@@ -28,7 +28,7 @@ class SimulatorServerStub(object):
                 )
         self.GetRecordedChanges = channel.unary_unary(
                 '/simulator.SimulatorServer/GetRecordedChanges',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                request_serializer=simulator__pb2.Name.SerializeToString,
                 response_deserializer=simulator__pb2.SerializedDict.FromString,
                 )
         self.GetAgentConfigMessage = channel.unary_unary(
@@ -96,6 +96,31 @@ class SimulatorServerStub(object):
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 )
+        self.UpdateNeighborFn = channel.unary_unary(
+                '/simulator.SimulatorServer/UpdateNeighborFn',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                )
+        self.UpdateStateNeighbors = channel.unary_unary(
+                '/simulator.SimulatorServer/UpdateStateNeighbors',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                )
+        self.UpdateFunctionUpdate = channel.unary_unary(
+                '/simulator.SimulatorServer/UpdateFunctionUpdate',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                )
+        self.UpdateBehaviors = channel.unary_unary(
+                '/simulator.SimulatorServer/UpdateBehaviors',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                )
+        self.GetChangeTime = channel.unary_unary(
+                '/simulator.SimulatorServer/GetChangeTime',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=simulator__pb2.Time.FromString,
+                )
 
 
 class SimulatorServerServicer(object):
@@ -103,13 +128,7 @@ class SimulatorServerServicer(object):
     """
 
     def GetSimulationConfigMessage(self, request, context):
-        """A simple RPC.
-
-        Obtains the feature at a given position.
-
-        A feature with an empty name is returned if there's no feature at the given
-        position.
-        """
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -204,6 +223,36 @@ class SimulatorServerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def UpdateNeighborFn(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdateStateNeighbors(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdateFunctionUpdate(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdateBehaviors(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetChangeTime(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SimulatorServerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -219,7 +268,7 @@ def add_SimulatorServerServicer_to_server(servicer, server):
             ),
             'GetRecordedChanges': grpc.unary_unary_rpc_method_handler(
                     servicer.GetRecordedChanges,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    request_deserializer=simulator__pb2.Name.FromString,
                     response_serializer=simulator__pb2.SerializedDict.SerializeToString,
             ),
             'GetAgentConfigMessage': grpc.unary_unary_rpc_method_handler(
@@ -287,6 +336,31 @@ def add_SimulatorServerServicer_to_server(servicer, server):
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
+            'UpdateNeighborFn': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateNeighborFn,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'UpdateStateNeighbors': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateStateNeighbors,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'UpdateFunctionUpdate': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateFunctionUpdate,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'UpdateBehaviors': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateBehaviors,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'GetChangeTime': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetChangeTime,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=simulator__pb2.Time.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
             'simulator.SimulatorServer', rpc_method_handlers)
@@ -344,7 +418,7 @@ class SimulatorServer(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetRecordedChanges',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            simulator__pb2.Name.SerializeToString,
             simulator__pb2.SerializedDict.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
@@ -567,5 +641,90 @@ class SimulatorServer(object):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/Stop',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def UpdateNeighborFn(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/UpdateNeighborFn',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def UpdateStateNeighbors(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/UpdateStateNeighbors',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def UpdateFunctionUpdate(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/UpdateFunctionUpdate',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def UpdateBehaviors(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/UpdateBehaviors',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetChangeTime(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetChangeTime',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            simulator__pb2.Time.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -42,6 +42,12 @@ class NDArray(_message.Message):
     ndarray: bytes
     def __init__(self, ndarray: _Optional[bytes] = ...) -> None: ...
 
+class Name(_message.Message):
+    __slots__ = ["name"]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    def __init__(self, name: _Optional[str] = ...) -> None: ...
+
 class PopulationConfig(_message.Message):
     __slots__ = ["n_agents"]
     N_AGENTS_FIELD_NUMBER: _ClassVar[int]
@@ -121,3 +127,9 @@ class StateArrays(_message.Message):
     proxs: NDArray
     thetas: NDArray
     def __init__(self, positions: _Optional[_Union[NDArray, _Mapping]] = ..., thetas: _Optional[_Union[NDArray, _Mapping]] = ..., proxs: _Optional[_Union[NDArray, _Mapping]] = ..., motors: _Optional[_Union[NDArray, _Mapping]] = ..., entity_type: _Optional[int] = ...) -> None: ...
+
+class Time(_message.Message):
+    __slots__ = ["time"]
+    TIME_FIELD_NUMBER: _ClassVar[int]
+    time: int
+    def __init__(self, time: _Optional[int] = ...) -> None: ...

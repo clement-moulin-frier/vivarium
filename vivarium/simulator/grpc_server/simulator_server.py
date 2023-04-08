@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 
 from numproto.numproto import ndarray_to_proto, proto_to_ndarray
 from protobuf_to_dict import protobuf_to_dict, dict_to_protobuf
@@ -20,6 +21,16 @@ Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def __init__(self, simulator):
         self.simulator = simulator
+        self.recorded_change_dict = defaultdict(dict)
+        self._change_time = 0
+
+    def _record_change(self, **kwargs):
+        for k in self.recorded_change_dict.keys():
+            self.recorded_change_dict[k].update(kwargs)
+        self._change_time += 1
+
+    def GetChangeTime(self, request, context):
+        return simulator_pb2.Time(time=self._change_time)
 
     def GetSimulationConfigMessage(self, request, context):
         config = simulator_pb2.SimulationConfig(**self.simulator.simulation_config.to_dict())
@@ -31,7 +42,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return simulator_pb2.SimulationConfigSerialized(serialized=serialized)
 
     def GetRecordedChanges(self, request, context):
-        d = self.simulator.get_recorded_changes()
+        d = self.recorded_change_dict[request.name]
         has_entity_behaviors = 'entity_behaviors' in d
         if has_entity_behaviors:
             entity_behaviors = ndarray_to_proto(d['entity_behaviors'])
@@ -39,6 +50,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         else:
             entity_behaviors = ndarray_to_proto(np.array(0))
         serialized_dict = json.dumps(d)
+        self.recorded_change_dict[request.name] = {}
         return simulator_pb2.SerializedDict(serialized_dict=serialized_dict,
                                             has_entity_behaviors=has_entity_behaviors, entity_behaviors=entity_behaviors)
 
@@ -96,6 +108,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
             d_conf['entity_behaviors'] = entity_behaviors
         print('SetSimulationConfig', d_conf)
         self.simulator.simulation_config.param.update(**d_conf)
+        self._record_change(**d_conf)
         return Empty()
 
     def SetSimulationConfigSerialized(self, request, context):
@@ -103,6 +116,19 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         # print('SetSimulationConfigSerialized', serialized)
         conf = config.SimulatorConfig(**config.SimulatorConfig.param.deserialize_parameters(serialized))
         self.simulator.simulation_config.param.update(**conf.to_dict())
+        return Empty()
+
+    def UpdateNeighborFn(self, request, context):
+        self.simulator.update_neighbor_fn()
+        return Empty()
+    def UpdateStateNeighbors(self, request, context):
+        self.simulator.update_state_neighbors()
+        return Empty()
+    def UpdateFunctionUpdate(self, request, context):
+        self.simulator.update_function_update()
+        return Empty()
+    def UpdateBehaviors(self, request, context):
+        self.simulator.update_behaviors()
         return Empty()
 
 
@@ -125,5 +151,6 @@ if __name__ == '__main__':
     simulator = Simulator(simulation_config=simulation_config, agent_config=agent_config,
                           engine_config=engine_config)
 
+    print('Done?')
     logging.basicConfig()
     serve(simulator)

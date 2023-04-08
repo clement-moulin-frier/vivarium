@@ -37,32 +37,36 @@ def generate_population(n_agents, box_size):
     return Population(positions=positions, thetas=thetas, proxs=proxs, motors=motors, entity_type=0)
 
 
-class Simulator(param.Parameterized):
-    simulation_config = param.ClassSelector(config.SimulatorConfig, instantiate=False)
-    agent_config = param.ClassSelector(config.AgentConfig, instantiate=False)
-    # behavior_config = param.ClassSelector(config.BehaviorConfig, instantiate=False)
-    # population_config = param.ClassSelector(config.PopulationConfig, instantiate=False)
-    engine_config = param.ClassSelector(config.EngineConfig, instantiate=False)
-    is_started = param.Boolean(False)
-    # engine_config = param.ClassSelector(config.EngineConfig)
+class Simulator():
+    # simulation_config = param.ClassSelector(config.SimulatorConfig, instantiate=False)
+    # agent_config = param.ClassSelector(config.AgentConfig, instantiate=False)
+    # # behavior_config = param.ClassSelector(config.BehaviorConfig, instantiate=False)
+    # # population_config = param.ClassSelector(config.PopulationConfig, instantiate=False)
+    # engine_config = param.ClassSelector(config.EngineConfig, instantiate=False)
+    # is_started = param.Boolean(False)
+    # # engine_config = param.ClassSelector(config.EngineConfig)
 
-    def __init__(self, **params):
-        super().__init__(**params)
+    def __init__(self, simulation_config, agent_config, engine_config):
+        # super().__init__(**params)
+        self.simulation_config = simulation_config
+        self.agent_config = agent_config
+        self.engine_config = engine_config
         self.engine_config.behavior_name_map['manual'] = len(self.engine_config.behavior_bank) - 1
-        self.simulation_config.param.watch_values(self._record_change, self.simulation_config.export_fields, queued=True)
-        self._recorded_change_dict = {}
+        self.is_started = False
+        # self.simulation_config.param.watch_values(self._record_change, self.simulation_config.export_fields, queued=True)
+        # self._recorded_change_dict = {}
 
-    def _record_change(self, **kwargs):
-        self._recorded_change_dict.update(kwargs)
-
-    def get_recorded_changes(self):
-        d = dict(self._recorded_change_dict)
-        self._recorded_change_dict = {}
-        return d
-
-    @param.depends('simulation_config.displacement', 'simulation_config.box_size', 'agent_config.neighbor_radius',
-                   watch=True, on_init=True)
-    def _update_neighbor_fn(self):
+    # def _record_change(self, **kwargs):
+    #     self._recorded_change_dict.update(kwargs)
+    #
+    # def get_recorded_changes(self):
+    #     d = dict(self._recorded_change_dict)
+    #     self._recorded_change_dict = {}
+    #     return d
+    #
+    # @param.depends('simulation_config.displacement', 'simulation_config.box_size', 'agent_config.neighbor_radius',
+    #                watch=True, on_init=True)
+    def update_neighbor_fn(self):
         print('_update_neighbor_fn')
         self.neighbor_fn = partition.neighbor_list(self.simulation_config.displacement,
                                                    self.simulation_config.box_size,
@@ -71,8 +75,8 @@ class Simulator(param.Parameterized):
                                                    capacity_multiplier=1.5,
                                                    format=partition.Sparse)
 
-    @param.depends('simulation_config.n_agents', 'simulation_config.box_size', watch=True, on_init=True)
-    def _update_state_neighbors(self):
+    # @param.depends('simulation_config.n_agents', 'simulation_config.box_size', watch=True, on_init=True)
+    def update_state_neighbors(self):
         print('_update_state_neighbors')
         # self.is_started = False
         self.state = generate_population(self.simulation_config.n_agents, self.simulation_config.box_size)
@@ -83,20 +87,20 @@ class Simulator(param.Parameterized):
         self.neighbors = self.neighbor_fn.allocate(self.state.positions)
         # self.run(threaded=True)
 
-    @param.depends('simulation_config.displacement', 'simulation_config.shift', 'simulation_config.map_dim',
-                   'simulation_config.dt', 'agent_config.speed_mul', 'agent_config.theta_mul',
-                   'agent_config.proxs_dist_max', 'agent_config.proxs_cos_min', 'agent_config.base_length',
-                   'agent_config.wheel_diameter', 'simulation_config.entity_behaviors', 'engine_config.behavior_bank',
-                   watch=True, on_init=True)
-    def _update_function_update(self):
+    # @param.depends('simulation_config.displacement', 'simulation_config.shift', 'simulation_config.map_dim',
+    #                'simulation_config.dt', 'agent_config.speed_mul', 'agent_config.theta_mul',
+    #                'agent_config.proxs_dist_max', 'agent_config.proxs_cos_min', 'agent_config.base_length',
+    #                'agent_config.wheel_diameter', 'simulation_config.entity_behaviors', 'engine_config.behavior_bank',
+    #                watch=True, on_init=True)
+    def update_function_update(self):
         print("_update_function_update")
         self.update_fn = dynamics(self.engine_config, self.simulation_config, self.agent_config)
 
         if self.simulation_config.to_jit:
             self.update_fn = jit(self.update_fn)
 
-    @param.depends('simulation_config.n_agents', watch=True, on_init=True)
-    def _update_behaviors(self):
+    # @param.depends('simulation_config.n_agents', watch=True, on_init=True)
+    def update_behaviors(self):
         print('_update_behaviors')
         self.simulation_config.entity_behaviors = np.zeros(self.simulation_config.n_agents, dtype=int)
 

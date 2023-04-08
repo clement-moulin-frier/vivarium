@@ -29,7 +29,7 @@ service SimulatorServer {
 
   rpc GetSimulationConfigMessage(google.protobuf.Empty) returns (SimulationConfig) {}
   rpc GetSimulationConfigSerialized(google.protobuf.Empty) returns (SimulationConfigSerialized) {}
-  rpc GetRecordedChanges(google.protobuf.Empty) returns (SerializedDict) {}
+  rpc GetRecordedChanges(Name) returns (SerializedDict) {}
 
   rpc GetAgentConfigMessage(google.protobuf.Empty) returns (AgentConfig) {}
   rpc GetAgentConfigSerialized(google.protobuf.Empty) returns (AgentConfigSerialized) {}
@@ -54,6 +54,24 @@ service SimulatorServer {
 
   rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 
+  rpc UpdateNeighborFn(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+
+  rpc UpdateStateNeighbors(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+
+  rpc UpdateFunctionUpdate(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+
+  rpc UpdateBehaviors(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+
+  rpc GetChangeTime(google.protobuf.Empty) returns (Time) {}
+
+}
+
+message Name {
+  string name = 1;
+}
+
+message Time {
+  int32 time = 1;
 }
 
 message SimulationConfig {
