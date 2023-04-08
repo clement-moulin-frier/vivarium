@@ -1,7 +1,7 @@
 import jax.numpy as jnp
 from jax import ops, vmap
 import jax
-from jax_md import space
+from jax_md import space, energy
 
 from collections import namedtuple
 
@@ -59,6 +59,19 @@ normal = vmap(normal)
 
 multi_switch = jax.vmap(jax.lax.switch, (0, None, 0, 0))
 
+import jax.numpy as jnp
+from jax_md import energy, quantity
+from jax import lax
+strength = 1000.0
+
+def collision_energy(displ, base_length, **kwargs):
+  # distance = jnp.linalg.norm(ag1 - ag2)
+  return energy.soft_sphere(jnp.linalg.norm(displ), sigma=base_length + 1.0, epsilon=strength)
+
+collision_energy = vmap(collision_energy, (0, None))
+
+
+
 
 def dynamics(engine_config, simulation_config, agent_config):
 
@@ -76,10 +89,19 @@ def dynamics(engine_config, simulation_config, agent_config):
 
     entity_behaviors = jnp.array(simulation_config.entity_behaviors, dtype=int)
     behavior_bank = engine_config.behavior_bank
-
-    def move(positions, thetas, fwd, rot):
+    def total_collision_energy(positions, base_length, neighbors, **kwargs):
+        lax.stop_gradient(base_length)
+        senders, receivers = neighbors.idx
+        Ra = positions[senders]
+        Rb = positions[receivers]
+        dR = -space.map_bond(displacement)(Ra, Rb)
+        e = collision_energy(dR, base_length)
+        #e = ops.segment_sum(e, neighbors.idx[0], len(neighbors.reference_position))
+        # print('e.shape', e.shape)
+        return jnp.sum(e)
+    def move(positions, thetas, fwd, rot, dpos):
         n = normal(thetas)
-        return (shift(positions, dt * speed_mul * n * jnp.tile(fwd, (map_dim, 1)).T),
+        return (shift(positions, dt * (dpos + speed_mul * n * jnp.tile(fwd, (map_dim, 1)).T)),
                 thetas + dt * rot * theta_mul)
 
     def update(_, state_neighbors):
@@ -101,7 +123,9 @@ def dynamics(engine_config, simulation_config, agent_config):
 
         fwd, rot = motor_command(motors, base_length, wheel_diameter)
 
-        new_entity_state = Population(*move(state.positions, state.thetas, fwd, rot), proxs=proxs, motors=motors,
+        dpos = quantity.force(total_collision_energy)(state.positions, base_length, neighbors)
+
+        new_entity_state = Population(*move(state.positions, state.thetas, fwd, rot, dpos=dpos), proxs=proxs, motors=motors,
                                       entity_type=state.entity_type)
 
         return new_entity_state, neighs
