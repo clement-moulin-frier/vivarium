@@ -1,12 +1,46 @@
 import jax.numpy as jnp
-from jax import ops, vmap
+from jax import ops, vmap, jit
 import jax
-from jax_md import space, energy
+from jax_md import space, energy, rigid_body, util, simulate
 
 from collections import namedtuple
+from dataclasses import dataclass
+f32 = util.f32
 
 
 Population = namedtuple('Population', ['position', 'theta', 'prox', 'motor', 'entity_type'])
+
+@dataclass
+class RigidRobot:
+    center: util.Array
+    orientation: util.Array
+    prox: util.Array
+    motor: util.Array
+    entity_type: int
+    def __getitem__(self, idx):
+        return RigidRobot(self.center[idx], self.orientation[idx], self.prox[idx], self.motor[idx], self.entity_type)
+    def to_rigid_body(self):
+        return rigid_body.RigidBody(center=self.center, orientation=self.orientation)
+
+util.register_custom_simulation_type(RigidRobot)
+def rigid_verlet_init_step(energy_or_force_fn, shift_fn, dt=1e-3, **sim_kwargs):
+  force_fn = quantity.canonicalize_force(energy_or_force_fn)
+  #initialize_momenta = simulate.initialize_momenta.register(RigidRobot)
+
+
+  def init_fn(key, R, kT=0., mass=f32(1.0), **kwargs):
+    #bodies = R.to_rigid_body()
+    force = force_fn(R, **kwargs)
+    state = simulate.NVEState(R, None, force, mass)
+    state = simulate.canonicalize_mass(state)
+    return simulate.initialize_momenta(state, key, kT)
+
+  @jit
+  def step_fn(state, **kwargs):
+    _dt = kwargs.pop('dt', dt)
+    return simulate.velocity_verlet(force_fn, shift_fn, _dt, state, **kwargs)
+
+  return init_fn, step_fn
 
 
 def sensor_fn(displ, theta, dist_max, cos_min):
@@ -73,9 +107,9 @@ collision_energy = vmap(collision_energy, (0, None))
 
 
 
-def total_collision_energy(positions, base_length, neighbors, displacement, **kwargs):
+def total_collision_energy(positions, base_length, neighbor, displacement, **kwargs):
     lax.stop_gradient(base_length)
-    senders, receivers = neighbors.idx
+    senders, receivers = neighbor.idx
     Ra = positions[senders]
     Rb = positions[receivers]
     dR = -space.map_bond(displacement)(Ra, Rb)

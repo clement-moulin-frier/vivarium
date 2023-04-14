@@ -3,13 +3,13 @@ from jax import jit, grad
 from jax import lax
 import jax
 import numpy as np
-from jax_md import space, partition, simulate, quantity
+from jax_md import space, partition, simulate, quantity, rigid_body
 
 import vivarium.simulator.behaviors as behaviors
 
 from functools import partial
 
-from vivarium.simulator.sim_computation import dynamics, Population, total_collision_energy, collision_energy
+from vivarium.simulator.sim_computation import dynamics, Population, total_collision_energy, RigidRobot, rigid_verlet_init_step
 
 from vivarium.simulator import config
 
@@ -26,12 +26,17 @@ def sim_state_to_populations(sim_state, entity_slices):
 
     return pop_dict
 
-def generate_population(n_agents, box_size):
-    key = jax.random.PRNGKey(0)
+def generate_positions_orientations(key, n_agents, box_size):
     key, subkey = jax.random.split(key)
     positions = box_size * jax.random.uniform(subkey, (n_agents, 2))
     key, subkey = jax.random.split(key)
-    thetas = jax.random.uniform(subkey, (n_agents,), maxval=2 * np.pi)
+    orientations = jax.random.uniform(subkey, (n_agents,), maxval=2 * np.pi)
+    return positions, orientations
+
+def generate_population(n_agents, box_size):
+    key = jax.random.PRNGKey(0)
+    key, subkey = jax.random.split(key)
+    positions, thetas = generate_positions_orientations(key, n_agents, box_size)
     proxs = jnp.zeros((n_agents, 2))
     motors = jnp.zeros((n_agents, 2))
     return Population(position=positions, theta=thetas, prox=proxs, motor=motors, entity_type=0)
@@ -181,37 +186,52 @@ class VerletSimulator(Simulator):
     def __init__(self, simulation_config, agent_config, engine_config):
         super().__init__(simulation_config, agent_config, engine_config)
         #self.init_simulator()
+        self._shape = rigid_body.monomer
+
+    def update_neighbor_fn(self):
+        energy_fn = partial(total_collision_energy, base_length=self.agent_config.base_length, displacement=self.simulation_config.displacement)
+        neighbor_fn = partition.neighbor_list(self.simulation_config.displacement,
+                                                   self.simulation_config.box_size,
+                                                   r_cutoff=self.agent_config.neighbor_radius,
+                                                   dr_threshold=10.,
+                                                   capacity_multiplier=1.5,
+                                                   format=partition.Sparse)
+        self.neighbor_fn, self._energy_fn = rigid_body.point_energy_neighbor_list(energy_fn, neighbor_fn, shape=self._shape)
 
     def update_state_neighbors(self):
-        pop = generate_population(self.simulation_config.n_agents, self.simulation_config.box_size)
+        # pop = generate_population(self.simulation_config.n_agents, self.simulation_config.box_size)
         key = jax.random.PRNGKey(0)
         key, subkey = jax.random.split(key)
-        state = simulate.NVEState(position=pop.position, momentum=None, force=1., mass=1.)
-        state = simulate.canonicalize_mass(state)
-        kT = 0
-        self._state = simulate.initialize_momenta(state, key, kT)
-        self.neighbors = self.neighbor_fn.allocate(self._state.position)
+        # state = simulate.NVEState(position=pop.position, momentum=None, force=1., mass=1.)
+        # state = simulate.canonicalize_mass(state)
+        # kT = 0
+        pop = generate_population(self.simulation_config.n_agents, self.simulation_config.box_size)
+        bodies = RigidRobot(center=pop.position, orientation=pop.theta,
+                            prox=jnp.zeros((self.simulation_config.n_agents, 2)),
+                            motor=jnp.zeros((self.simulation_config.n_agents, 2)),
+                            entity_type=0)
+        #self.neighbors = self.neighbor_fn.allocate(bodies.center)
 
+        self.neighbors = self.neighbor_fn.allocate(bodies.to_rigid_body())
+        self._init_fn, self._step_fn = rigid_verlet_init_step(self._energy_fn, self.simulation_config.shift, self.simulation_config.dt)
+        self._state = self._init_fn(key, bodies.to_rigid_body(), mass=self._shape.mass(), neighbor=self.neighbors) #simulate.initialize_momenta(state, key, kT)
     @property
     def state(self):
 
-        state = Population(position=self._state.position,
-                                theta=jnp.zeros(self._state.position.shape[0]),
-                                prox=jnp.zeros_like(self._state.position),
-                                motor=jnp.zeros_like(self._state.position),
-                                entity_type=0)
+        state = Population(position=self._state.position.center,
+                           theta=self._state.position.orientation,
+                           prox=jnp.zeros((self.simulation_config.n_agents, 2)),
+                           motor=jnp.zeros((self.simulation_config.n_agents, 2)),
+                           entity_type=0)
         return state
     def update_function_update(self):
-
-        self._force_fn = quantity.force(partial(total_collision_energy, base_length=self.agent_config.base_length, displacement=self.simulation_config.displacement))
-        #print(self._force_fn(self._state.position, neighbors=self.neighbors))
-
-        step_fn = partial(simulate.velocity_verlet, shift_fn=self.simulation_config.shift, dt=self.simulation_config.dt)
+        # step_fn = partial(simulate.velocity_verlet, shift_fn=self.simulation_config.shift, dt=self.simulation_config.dt)
         def update_fn(_, state_and_neighbors):
             state, neighs = state_and_neighbors
+            neighs = neighs.update(state.position)
             #print('upd', self._force_fn(self._state.position, neighs))
-            return (step_fn(force_fn=self._force_fn, state=state, neighbors=neighs),
-                    self.neighbors)
+            return (self._step_fn(state=state, neighbor=neighs),
+                    neighs)
 
         print("_update_function_update")
         self.update_fn = update_fn
@@ -244,10 +264,11 @@ if __name__ == "__main__":
     # simulation_config.to_jit = False
     engine_config = config.EngineConfig()
 
-    simulator = Simulator(simulation_config=simulation_config, agent_config=agent_config,
+    simulator = VerletSimulator(simulation_config=simulation_config, agent_config=agent_config,
                           engine_config=engine_config)
 
     simulator.init_simulator()
     #simulator.set_motors(0, jnp.array([0., 0.]))
+    # simulator.is_started = True
     simulator.run()
 

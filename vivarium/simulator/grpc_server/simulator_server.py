@@ -150,8 +150,9 @@ if __name__ == '__main__':
     # behavior_config = config.BehaviorConfig(population_config=population_config)
 
     simulator = VerletSimulator(simulation_config=simulation_config, agent_config=agent_config,
-                          engine_config=engine_config)
+                                engine_config=engine_config)
 
     print('Done?')
+    # simulator.init_simulator()
     logging.basicConfig()
     serve(simulator)
