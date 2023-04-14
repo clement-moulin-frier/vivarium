@@ -1,15 +1,15 @@
 import jax.numpy as jnp
-from jax import jit
+from jax import jit, grad
 from jax import lax
 import jax
 import numpy as np
-from jax_md import space, partition
+from jax_md import space, partition, simulate, quantity
 
 import vivarium.simulator.behaviors as behaviors
 
 from functools import partial
 
-from vivarium.simulator.sim_computation import dynamics, Population
+from vivarium.simulator.sim_computation import dynamics, Population, total_collision_energy, collision_energy
 
 from vivarium.simulator import config
 
@@ -34,7 +34,7 @@ def generate_population(n_agents, box_size):
     thetas = jax.random.uniform(subkey, (n_agents,), maxval=2 * np.pi)
     proxs = jnp.zeros((n_agents, 2))
     motors = jnp.zeros((n_agents, 2))
-    return Population(positions=positions, thetas=thetas, proxs=proxs, motors=motors, entity_type=0)
+    return Population(position=positions, theta=thetas, prox=proxs, motor=motors, entity_type=0)
 
 
 class Simulator():
@@ -66,6 +66,15 @@ class Simulator():
     #
     # @param.depends('simulation_config.displacement', 'simulation_config.box_size', 'agent_config.neighbor_radius',
     #                watch=True, on_init=True)
+
+    @property
+    def state(self):
+        return self._state
+
+    def init_simulator(self):
+        self.update_neighbor_fn()
+        self.update_state_neighbors()
+        self.update_function_update()
     def update_neighbor_fn(self):
         print('_update_neighbor_fn')
         self.neighbor_fn = partition.neighbor_list(self.simulation_config.displacement,
@@ -79,13 +88,13 @@ class Simulator():
     def update_state_neighbors(self):
         print('_update_state_neighbors')
         # self.is_started = False
-        self.state = generate_population(self.simulation_config.n_agents, self.simulation_config.box_size)
-        # self.state = Population(positions=self.population_config.positions, thetas=self.population_config.thetas,
+        self._state = generate_population(self.simulation_config.n_agents, self.simulation_config.box_size)
+        # self._state = Population(positions=self.population_config.positions, thetas=self.population_config.thetas,
         #                         proxs=self.population_config.proxs, motors=self.population_config.motors,
         #                         entity_type=0)
 
-        self.neighbors = self.neighbor_fn.allocate(self.state.positions)
-        # self.run(threaded=True)
+        self.neighbors = self.neighbor_fn.allocate(self._state.position)
+        # self.run(threaded=True)‹‹
 
     # @param.depends('simulation_config.displacement', 'simulation_config.shift', 'simulation_config.map_dim',
     #                'simulation_config.dt', 'agent_config.speed_mul', 'agent_config.theta_mul',
@@ -102,6 +111,7 @@ class Simulator():
     # @param.depends('simulation_config.n_agents', watch=True, on_init=True)
     def update_behaviors(self):
         print('_update_behaviors')
+        print("WARNING: why all zeros?")
         self.simulation_config.entity_behaviors = np.zeros(self.simulation_config.n_agents, dtype=int)
 
     def set_behavior(self, e_idx, behavior_name):
@@ -110,11 +120,11 @@ class Simulator():
     def set_motors(self, e_idx, motors):
         if self.behavior_config.entity_behaviors[e_idx] != self.behavior_config.behavior_name_map['manual']:
             self.set_behavior(e_idx, 'manual')
-        self.state = Population(positions=self.state.positions,
-                                thetas=self.state.thetas,
-                                proxs=self.state.proxs,
-                                motors=self.state.motors.at[e_idx, :].set(jnp.array(motors)),
-                                entity_type=self.state.entity_type)
+        self._state = Population(positions=self._state.positions,
+                                thetas=self._state.thetas,
+                                proxs=self._state.proxs,
+                                motors=self._state.motors.at[e_idx, :].set(jnp.array(motors)),
+                                entity_type=self._state.entity_type)
 
     def run(self, threaded=False):
         if self.is_started:
@@ -135,25 +145,28 @@ class Simulator():
 
             if not self.is_started:
                 break
-            if self.simulation_config.to_jit:
+            if self.simulation_config.use_fori_loop:
                 new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_steps_lax, self.update_fn,
-                                                    (self.state, self.neighbors))
+                                                    (self._state, self.neighbors))
             else:
-                #assert False, "not good, modifies self.state"
-                #val = (self.state, self.neighbors)
+                #assert False, "not good, modifies self._state"
+                #val = (self._state, self.neighbors)
+                new_state = self._state
+                neighbors = self.neighbors
                 for i in range(0, self.simulation_config.num_steps_lax):
-                    self.state, self.neighbors = self.update_fn(i, (self.state, self.neighbors))
-                new_state = self.state
+                    new_state, neighbors = self.update_fn(i, (new_state, neighbors))
+                #new_state = self._state
                 #new_state, neighbors = val
 
             # If the neighbor list can't fit in the allocation, rebuild it but bigger.
             if neighbors.did_buffer_overflow:
                 print('REBUILDING')
-                neighbors = self.simulation_config.neighbor_fn.allocate(self.state.positions)
-                new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_lax_loops, self.update_fn, (self.state, neighbors))
+                neighbors = self.simulation_config.neighbor_fn.allocate(self._state.positions)
+                new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_lax_loops, self.update_fn, (self._state, neighbors))
                 assert not neighbors.did_buffer_overflow
 
-            self.state = new_state
+            self._state = new_state
+            self.neighbors = neighbors
 
             loop_count += 1
 
@@ -163,16 +176,78 @@ class Simulator():
         self.is_started = False
 
 
+
+class VerletSimulator(Simulator):
+    def __init__(self, simulation_config, agent_config, engine_config):
+        super().__init__(simulation_config, agent_config, engine_config)
+        #self.init_simulator()
+
+    def update_state_neighbors(self):
+        pop = generate_population(self.simulation_config.n_agents, self.simulation_config.box_size)
+        key = jax.random.PRNGKey(0)
+        key, subkey = jax.random.split(key)
+        state = simulate.NVEState(position=pop.position, momentum=None, force=1., mass=1.)
+        state = simulate.canonicalize_mass(state)
+        kT = 0
+        self._state = simulate.initialize_momenta(state, key, kT)
+        self.neighbors = self.neighbor_fn.allocate(self._state.position)
+
+    @property
+    def state(self):
+
+        state = Population(position=self._state.position,
+                                theta=jnp.zeros(self._state.position.shape[0]),
+                                prox=jnp.zeros_like(self._state.position),
+                                motor=jnp.zeros_like(self._state.position),
+                                entity_type=0)
+        return state
+    def update_function_update(self):
+
+        self._force_fn = quantity.force(partial(total_collision_energy, base_length=self.agent_config.base_length, displacement=self.simulation_config.displacement))
+        #print(self._force_fn(self._state.position, neighbors=self.neighbors))
+
+        step_fn = partial(simulate.velocity_verlet, shift_fn=self.simulation_config.shift, dt=self.simulation_config.dt)
+        def update_fn(_, state_and_neighbors):
+            state, neighs = state_and_neighbors
+            #print('upd', self._force_fn(self._state.position, neighs))
+            return (step_fn(force_fn=self._force_fn, state=state, neighbors=neighs),
+                    self.neighbors)
+
+        print("_update_function_update")
+        self.update_fn = update_fn
+
+        if self.simulation_config.to_jit:
+            self.update_fn = jit(self.update_fn)
+
+    # @param.depends('simulation_config.n_agents', watch=True, on_init=True)
+    def update_behaviors(self):
+        print('_update_behaviors')
+        self.simulation_config.entity_behaviors = np.zeros(self.simulation_config.n_agents, dtype=int)
+
+    def set_behavior(self, e_idx, behavior_name):
+        self.simulation_config.entity_behaviors[e_idx] = self.engine_config.behavior_name_map[behavior_name]  # self.behavior_config.entity_behaviors.at[e_idx].set(self.behavior_config.behavior_name_map[behavior_name])
+
+    def set_motors(self, e_idx, motors):
+        if self.behavior_config.entity_behaviors[e_idx] != self.behavior_config.behavior_name_map['manual']:
+            self.set_behavior(e_idx, 'manual')
+        self._state = Population(positions=self._state.positions,
+                                thetas=self._state.thetas,
+                                proxs=self._state.proxs,
+                                motors=self._state.motors.at[e_idx, :].set(jnp.array(motors)),
+                                entity_type=self._state.entity_type)
+
+
 if __name__ == "__main__":
 
     agent_config = config.AgentConfig()
     simulation_config = config.SimulatorConfig()
+    # simulation_config.to_jit = False
     engine_config = config.EngineConfig()
 
     simulator = Simulator(simulation_config=simulation_config, agent_config=agent_config,
                           engine_config=engine_config)
 
-
+    simulator.init_simulator()
     #simulator.set_motors(0, jnp.array([0., 0.]))
     simulator.run()
 

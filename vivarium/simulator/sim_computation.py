@@ -6,7 +6,7 @@ from jax_md import space, energy
 from collections import namedtuple
 
 
-Population = namedtuple('Population', ['positions', 'thetas', 'proxs', 'motors', 'entity_type'])
+Population = namedtuple('Population', ['position', 'theta', 'prox', 'motor', 'entity_type'])
 
 
 def sensor_fn(displ, theta, dist_max, cos_min):
@@ -62,7 +62,8 @@ multi_switch = jax.vmap(jax.lax.switch, (0, None, 0, 0))
 import jax.numpy as jnp
 from jax_md import energy, quantity
 from jax import lax
-strength = 1000.0
+
+strength = 0.1
 
 def collision_energy(displ, base_length, **kwargs):
   # distance = jnp.linalg.norm(ag1 - ag2)
@@ -72,6 +73,16 @@ collision_energy = vmap(collision_energy, (0, None))
 
 
 
+def total_collision_energy(positions, base_length, neighbors, displacement, **kwargs):
+    lax.stop_gradient(base_length)
+    senders, receivers = neighbors.idx
+    Ra = positions[senders]
+    Rb = positions[receivers]
+    dR = -space.map_bond(displacement)(Ra, Rb)
+    e = collision_energy(dR, base_length)
+    #e = ops.segment_sum(e, neighbors.idx[0], len(neighbors.reference_position))
+    # print('e.shape', e.shape)
+    return jnp.sum(e)
 
 def dynamics(engine_config, simulation_config, agent_config):
 
@@ -89,16 +100,7 @@ def dynamics(engine_config, simulation_config, agent_config):
 
     entity_behaviors = jnp.array(simulation_config.entity_behaviors, dtype=int)
     behavior_bank = engine_config.behavior_bank
-    def total_collision_energy(positions, base_length, neighbors, **kwargs):
-        lax.stop_gradient(base_length)
-        senders, receivers = neighbors.idx
-        Ra = positions[senders]
-        Rb = positions[receivers]
-        dR = -space.map_bond(displacement)(Ra, Rb)
-        e = collision_energy(dR, base_length)
-        #e = ops.segment_sum(e, neighbors.idx[0], len(neighbors.reference_position))
-        # print('e.shape', e.shape)
-        return jnp.sum(e)
+
     def move(positions, thetas, fwd, rot, dpos):
         n = normal(thetas)
         return (shift(positions, dt * (dpos + speed_mul * n * jnp.tile(fwd, (map_dim, 1)).T)),
@@ -109,23 +111,23 @@ def dynamics(engine_config, simulation_config, agent_config):
         print("update")
         state, neighs = state_neighbors
 
-        neighbors = neighs.update(state.positions)
+        neighbors = neighs.update(state.position)
 
         senders, receivers = neighbors.idx
-        Ra = state.positions[senders]
-        Rb = state.positions[receivers]
+        Ra = state.position[senders]
+        Rb = state.position[receivers]
 
         dR = - space.map_bond(displacement)(Ra, Rb) # Looks like it should be opposite, but don't understand why
 
-        proxs = sensor(dR, state.thetas[senders], proxs_dist_max, proxs_cos_min, neighbors)
+        proxs = sensor(dR, state.theta[senders], proxs_dist_max, proxs_cos_min, neighbors)
 
-        motors = multi_switch(entity_behaviors, behavior_bank, proxs, state.motors)
+        motors = multi_switch(entity_behaviors, behavior_bank, proxs, state.motor)
 
         fwd, rot = motor_command(motors, base_length, wheel_diameter)
 
-        dpos = quantity.force(total_collision_energy)(state.positions, base_length, neighbors)
+        dpos = quantity.force(total_collision_energy)(state.position, base_length, neighbors, displacement)
 
-        new_entity_state = Population(*move(state.positions, state.thetas, fwd, rot, dpos=dpos), proxs=proxs, motors=motors,
+        new_entity_state = Population(*move(state.position, state.theta, fwd, rot, dpos=dpos), prox=proxs, motor=motors,
                                       entity_type=state.entity_type)
 
         return new_entity_state, neighs

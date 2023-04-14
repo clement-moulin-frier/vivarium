@@ -54,6 +54,7 @@ class SimulatorConfig(Config):
     dt = param.Number(0.1)
     freq = param.Number(100., allow_None=True)
     to_jit = param.Boolean(True)
+    use_fori_loop = param.Boolean(False)
 
     n_agents = param.Integer(20)
     entity_behaviors = param.Array(np.array([0]))

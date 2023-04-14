@@ -86,10 +86,10 @@ class SimulatorGRPCClient(SimulatorClient):
 
     def get_state_arrays(self):
         state = self.stub.GetStateArrays(Empty())
-        return Population(positions=proto_to_ndarray(state.positions),
-                          thetas=proto_to_ndarray(state.thetas),
-                          proxs=proto_to_ndarray(state.proxs),
-                          motors=proto_to_ndarray(state.motors),
+        return Population(position=proto_to_ndarray(state.positions),
+                          theta=proto_to_ndarray(state.thetas),
+                          prox=proto_to_ndarray(state.proxs),
+                          motor=proto_to_ndarray(state.motors),
                           entity_type=state.entity_type)
 
     def is_started(self):

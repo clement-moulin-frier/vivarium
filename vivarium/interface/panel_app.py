@@ -52,9 +52,9 @@ max_agents = 1000
 all_colors = ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(np.random.rand(max_agents) * 200 + 50, np.random.rand(max_agents) * 200 + 50)]
 
 def get_cds_data(state):
-    x = state.positions[:, 0]
-    y = state.positions[:, 1]
-    thetas = state.thetas
+    x = state.position[:, 0]
+    y = state.position[:, 1]
+    thetas = state.theta
 
     radius = simulator.agent_config.base_length / 2.
     colors = all_colors[:simulator.simulation_config.n_agents]  # ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]

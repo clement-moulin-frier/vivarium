@@ -13,7 +13,7 @@ import logging
 from concurrent import futures
 
 from vivarium.simulator import config
-from vivarium.simulator.simulator import Simulator
+from vivarium.simulator.simulator import Simulator, VerletSimulator
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
@@ -72,17 +72,17 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
     def GetStateMessage(self, request, context):
         state = self.simulator.state
-        x = state.positions[:, 0]
-        y = state.positions[:, 1]
+        x = state.position[:, 0]
+        y = state.position[:, 1]
         thetas = state.thetas
         return simulator_pb2.State(positions=simulator_pb2.Position(x=x, y=y), thetas=thetas)
 
     def GetStateArrays(self, request, context):
         state = self.simulator.state
-        return simulator_pb2.StateArrays(positions=ndarray_to_proto(state.positions),
-                                         thetas=ndarray_to_proto(state.thetas),
-                                         proxs=ndarray_to_proto(state.proxs),
-                                         motors=ndarray_to_proto(state.motors),
+        return simulator_pb2.StateArrays(positions=ndarray_to_proto(state.position),
+                                         thetas=ndarray_to_proto(state.theta),
+                                         proxs=ndarray_to_proto(state.prox),
+                                         motors=ndarray_to_proto(state.motor),
                                          entity_type=state.entity_type)
 
     def Start(self, request, context):
@@ -144,11 +144,12 @@ def serve(simulator):
 if __name__ == '__main__':
     agent_config = config.AgentConfig()
     simulation_config = config.SimulatorConfig()
+    # simulation_config.to_jit = False
     # population_config = config.PopulationConfig()
     engine_config = config.EngineConfig()
     # behavior_config = config.BehaviorConfig(population_config=population_config)
 
-    simulator = Simulator(simulation_config=simulation_config, agent_config=agent_config,
+    simulator = VerletSimulator(simulation_config=simulation_config, agent_config=agent_config,
                           engine_config=engine_config)
 
     print('Done?')
