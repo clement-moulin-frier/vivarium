@@ -66,7 +66,7 @@ class SimulatorConfig(Config):
     def __init__(self, **params):
         super().__init__(**params)
         self.displacement, self.shift = space.periodic(self.box_size)
-        self.entity_behaviors = np.zeros(self.n_agents, dtype=int)
+        self.entity_behaviors = 2 * np.ones(self.n_agents, dtype=int)
         self.param.watch(self._update_ds, ['box_size'], onlychanged=True)
         self.param.watch(self._update_eb, ['n_agents'], onlychanged=True)
     # @param.depends('box_size', watch=True, on_init=True)
@@ -77,7 +77,7 @@ class SimulatorConfig(Config):
     # @param.depends('n_agents', watch=True, on_init=True)
     def _update_eb(self, event):
         print('_update_eb')
-        self.entity_behaviors = np.zeros(event.new, dtype=int)
+        self.entity_behaviors = 0 * np.ones(event.new, dtype=int)
 
 
 class EngineConfig(Config):

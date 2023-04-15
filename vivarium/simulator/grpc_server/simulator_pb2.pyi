@@ -79,7 +79,7 @@ class SerializedDict(_message.Message):
     def __init__(self, serialized_dict: _Optional[str] = ..., has_entity_behaviors: bool = ..., entity_behaviors: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class SimulationConfig(_message.Message):
-    __slots__ = ["box_size", "dt", "entity_behaviors", "freq", "map_dim", "n_agents", "num_lax_loops", "num_steps_lax", "to_jit"]
+    __slots__ = ["box_size", "dt", "entity_behaviors", "freq", "map_dim", "n_agents", "num_lax_loops", "num_steps_lax", "to_jit", "use_fori_loop"]
     BOX_SIZE_FIELD_NUMBER: _ClassVar[int]
     DT_FIELD_NUMBER: _ClassVar[int]
     ENTITY_BEHAVIORS_FIELD_NUMBER: _ClassVar[int]
@@ -89,6 +89,7 @@ class SimulationConfig(_message.Message):
     NUM_STEPS_LAX_FIELD_NUMBER: _ClassVar[int]
     N_AGENTS_FIELD_NUMBER: _ClassVar[int]
     TO_JIT_FIELD_NUMBER: _ClassVar[int]
+    USE_FORI_LOOP_FIELD_NUMBER: _ClassVar[int]
     box_size: float
     dt: float
     entity_behaviors: NDArray
@@ -98,7 +99,16 @@ class SimulationConfig(_message.Message):
     num_lax_loops: int
     num_steps_lax: int
     to_jit: bool
-    def __init__(self, box_size: _Optional[float] = ..., map_dim: _Optional[int] = ..., num_steps_lax: _Optional[int] = ..., num_lax_loops: _Optional[int] = ..., dt: _Optional[float] = ..., freq: _Optional[float] = ..., to_jit: bool = ..., n_agents: _Optional[int] = ..., entity_behaviors: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
+    use_fori_loop: bool
+    def __init__(self, box_size: _Optional[float] = ..., map_dim: _Optional[int] = ..., num_steps_lax: _Optional[int] = ..., num_lax_loops: _Optional[int] = ..., dt: _Optional[float] = ..., freq: _Optional[float] = ..., to_jit: bool = ..., n_agents: _Optional[int] = ..., entity_behaviors: _Optional[_Union[NDArray, _Mapping]] = ..., use_fori_loop: bool = ...) -> None: ...
+
+class SimulationConfigSenderName(_message.Message):
+    __slots__ = ["config", "name"]
+    CONFIG_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    config: SimulationConfig
+    name: Name
+    def __init__(self, config: _Optional[_Union[SimulationConfig, _Mapping]] = ..., name: _Optional[_Union[Name, _Mapping]] = ...) -> None: ...
 
 class SimulationConfigSerialized(_message.Message):
     __slots__ = ["serialized"]

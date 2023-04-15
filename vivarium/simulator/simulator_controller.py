@@ -21,6 +21,8 @@ class SimulatorController(param.Parameterized):
         super().__init__(**params)
         # self.client = SimulatorGRPCClient()
         # self.simulation_config.param.watch_values(self._record_change, self.simulation_config.export_fields, queued=True)
+        values = {k: v for k, v in self.client.get_sim_config().param.values().items() if k in self.simulation_config.export_fields}
+        self.simulation_config.param.update(**values)
         self.simulation_config.param.watch(self.push_config, self.simulation_config.export_fields, onlychanged=True, queued=True)
         self.client.name = self.name
         # self.recorded_change_dict = {}
@@ -77,7 +79,7 @@ class SimulatorController(param.Parameterized):
     def _update_function_update(self):
         self.client.update_function_update()
 
-    @param.depends('simulation_config.n_agents', watch=True, on_init=True)
+    @param.depends('simulation_config.n_agents', watch=True)
     def _update_behaviors(self):
         self.client.update_behaviors()
 

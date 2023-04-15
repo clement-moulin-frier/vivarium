@@ -18,6 +18,7 @@ from bokeh.events import ButtonClick
 
 def normal(array):
     normals = np.zeros((array.shape[0], 2))
+    # print('normal', array)
     normals[:, 0] = np.cos(array)
     normals[:, 1] = np.sin(array)
     return normals

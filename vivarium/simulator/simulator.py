@@ -9,7 +9,7 @@ import vivarium.simulator.behaviors as behaviors
 
 from functools import partial
 
-from vivarium.simulator.sim_computation import dynamics, Population, total_collision_energy, RigidRobot, rigid_verlet_init_step
+from vivarium.simulator.sim_computation import dynamics, Population, total_collision_energy, RigidRobot, rigid_verlet_init_step, get_verlet_force_fn
 
 from vivarium.simulator import config
 
@@ -189,14 +189,14 @@ class VerletSimulator(Simulator):
         self._shape = rigid_body.monomer
 
     def update_neighbor_fn(self):
-        energy_fn = partial(total_collision_energy, base_length=self.agent_config.base_length, displacement=self.simulation_config.displacement)
-        neighbor_fn = partition.neighbor_list(self.simulation_config.displacement,
+        self._energy_fn = get_verlet_force_fn(self.engine_config, self.simulation_config, self.agent_config)  # partial(total_collision_energy, base_length=self.agent_config.base_length, displacement=self.simulation_config.displacement)
+        self.neighbor_fn = partition.neighbor_list(self.simulation_config.displacement,
                                                    self.simulation_config.box_size,
                                                    r_cutoff=self.agent_config.neighbor_radius,
                                                    dr_threshold=10.,
                                                    capacity_multiplier=1.5,
                                                    format=partition.Sparse)
-        self.neighbor_fn, self._energy_fn = rigid_body.point_energy_neighbor_list(energy_fn, neighbor_fn, shape=self._shape)
+        #self.neighbor_fn, self._energy_fn = rigid_body.point_energy_neighbor_list(energy_fn, neighbor_fn, shape=self._shape)
 
     def update_state_neighbors(self):
         # pop = generate_population(self.simulation_config.n_agents, self.simulation_config.box_size)
@@ -212,9 +212,10 @@ class VerletSimulator(Simulator):
                             entity_type=0)
         #self.neighbors = self.neighbor_fn.allocate(bodies.center)
 
-        self.neighbors = self.neighbor_fn.allocate(bodies.to_rigid_body())
+        self.neighbors = self.neighbor_fn.allocate(bodies.center)
         self._init_fn, self._step_fn = rigid_verlet_init_step(self._energy_fn, self.simulation_config.shift, self.simulation_config.dt)
-        self._state = self._init_fn(key, bodies.to_rigid_body(), mass=self._shape.mass(), neighbor=self.neighbors) #simulate.initialize_momenta(state, key, kT)
+        self._state = self._init_fn(key, bodies.to_rigid_body(), mass=self._shape.mass(),
+                                    neighbor=self.neighbors) #simulate.initialize_momenta(state, key, kT)
     @property
     def state(self):
 
@@ -228,7 +229,7 @@ class VerletSimulator(Simulator):
         # step_fn = partial(simulate.velocity_verlet, shift_fn=self.simulation_config.shift, dt=self.simulation_config.dt)
         def update_fn(_, state_and_neighbors):
             state, neighs = state_and_neighbors
-            neighs = neighs.update(state.position)
+            neighs = neighs.update(state.position.center)
             #print('upd', self._force_fn(self._state.position, neighs))
             return (self._step_fn(state=state, neighbor=neighs),
                     neighs)
@@ -239,29 +240,29 @@ class VerletSimulator(Simulator):
         if self.simulation_config.to_jit:
             self.update_fn = jit(self.update_fn)
 
-    # @param.depends('simulation_config.n_agents', watch=True, on_init=True)
-    def update_behaviors(self):
-        print('_update_behaviors')
-        self.simulation_config.entity_behaviors = np.zeros(self.simulation_config.n_agents, dtype=int)
-
-    def set_behavior(self, e_idx, behavior_name):
-        self.simulation_config.entity_behaviors[e_idx] = self.engine_config.behavior_name_map[behavior_name]  # self.behavior_config.entity_behaviors.at[e_idx].set(self.behavior_config.behavior_name_map[behavior_name])
-
-    def set_motors(self, e_idx, motors):
-        if self.behavior_config.entity_behaviors[e_idx] != self.behavior_config.behavior_name_map['manual']:
-            self.set_behavior(e_idx, 'manual')
-        self._state = Population(positions=self._state.positions,
-                                thetas=self._state.thetas,
-                                proxs=self._state.proxs,
-                                motors=self._state.motors.at[e_idx, :].set(jnp.array(motors)),
-                                entity_type=self._state.entity_type)
+    # # @param.depends('simulation_config.n_agents', watch=True, on_init=True)
+    # def update_behaviors(self):
+    #     print('_update_behaviors')
+    #     self.simulation_config.entity_behaviors = np.zeros(self.simulation_config.n_agents, dtype=int)
+    #
+    # def set_behavior(self, e_idx, behavior_name):
+    #     self.simulation_config.entity_behaviors[e_idx] = self.engine_config.behavior_name_map[behavior_name]  # self.behavior_config.entity_behaviors.at[e_idx].set(self.behavior_config.behavior_name_map[behavior_name])
+    #
+    # def set_motors(self, e_idx, motors):
+    #     if self.behavior_config.entity_behaviors[e_idx] != self.behavior_config.behavior_name_map['manual']:
+    #         self.set_behavior(e_idx, 'manual')
+    #     self._state = Population(positions=self._state.positions,
+    #                             thetas=self._state.thetas,
+    #                             proxs=self._state.proxs,
+    #                             motors=self._state.motors.at[e_idx, :].set(jnp.array(motors)),
+    #                             entity_type=self._state.entity_type)
 
 
 if __name__ == "__main__":
 
     agent_config = config.AgentConfig()
     simulation_config = config.SimulatorConfig()
-    # simulation_config.to_jit = False
+    simulation_config.to_jit = False
     engine_config = config.EngineConfig()
 
     simulator = VerletSimulator(simulation_config=simulation_config, agent_config=agent_config,

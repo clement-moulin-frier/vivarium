@@ -74,7 +74,9 @@ class SimulatorGRPCClient(SimulatorClient):
         if 'entity_behaviors' in d:
             d['entity_behaviors'] = ndarray_to_proto(d['entity_behaviors'])
         config = simulator_pb2.SimulationConfig(**d)
-        self.stub.SetSimulationConfig(config)
+        name = simulator_pb2.Name(name=self.name)
+        config_sender_name = simulator_pb2.SimulationConfigSenderName(name=name, config=config)
+        self.stub.SetSimulationConfig(config_sender_name)
 
     def set_simulation_config_serialized(self, simulation_config):
         serialized = simulation_config.param.serialize_parameters(subset=simulation_config.export_fields)

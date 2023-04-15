@@ -38,7 +38,7 @@ service SimulatorServer {
   rpc GetPopulationConfigSerialized(google.protobuf.Empty) returns (PopulationConfigSerialized) {}
 
   rpc SetSimulationConfigSerialized(SimulationConfigSerialized) returns (google.protobuf.Empty) {}
-  rpc SetSimulationConfig(SimulationConfig) returns (google.protobuf.Empty) {}
+  rpc SetSimulationConfig(SimulationConfigSenderName) returns (google.protobuf.Empty) {}
 
 
   rpc SetPopulationConfig(PopulationConfig) returns (google.protobuf.Empty) {}
@@ -85,6 +85,12 @@ message SimulationConfig {
   bool to_jit = 7;
   int32 n_agents = 8;
   NDArray entity_behaviors = 9;
+  bool use_fori_loop = 10;
+}
+
+message SimulationConfigSenderName {
+  SimulationConfig config = 1;
+  Name name = 2;
 }
 
 message SimulationConfigSerialized {

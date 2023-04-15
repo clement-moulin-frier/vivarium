@@ -24,9 +24,10 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         self.recorded_change_dict = defaultdict(dict)
         self._change_time = 0
 
-    def _record_change(self, **kwargs):
+    def _record_change(self, name, **kwargs):
         for k in self.recorded_change_dict.keys():
-            self.recorded_change_dict[k].update(kwargs)
+            if k != name:
+                self.recorded_change_dict[k].update(kwargs)
         self._change_time += 1
 
     def GetChangeTime(self, request, context):
@@ -102,13 +103,13 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return Empty()
 
     def SetSimulationConfig(self, request, context):
-        d_conf = protobuf_to_dict(request)
+        d_conf = protobuf_to_dict(request.config)
         if 'entity_behaviors' in d_conf:
-            entity_behaviors = proto_to_ndarray(request.entity_behaviors)
+            entity_behaviors = proto_to_ndarray(request.config.entity_behaviors)
             d_conf['entity_behaviors'] = entity_behaviors
         print('SetSimulationConfig', d_conf)
         self.simulator.simulation_config.param.update(**d_conf)
-        self._record_change(**d_conf)
+        self._record_change(request.name.name, **d_conf)
         return Empty()
 
     def SetSimulationConfigSerialized(self, request, context):
