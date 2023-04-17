@@ -40,6 +40,8 @@ service SimulatorServer {
   rpc SetSimulationConfigSerialized(SimulationConfigSerialized) returns (google.protobuf.Empty) {}
   rpc SetSimulationConfig(SimulationConfigSenderName) returns (google.protobuf.Empty) {}
 
+  rpc SetMotors(Motors) returns (google.protobuf.Empty) {}
+  rpc SetBehaviors(Behaviors) returns (google.protobuf.Empty) {}
 
   rpc SetPopulationConfig(PopulationConfig) returns (google.protobuf.Empty) {}
   rpc SetPopulationConfigSerialized(PopulationConfigSerialized) returns (google.protobuf.Empty) {}
@@ -72,6 +74,22 @@ message Name {
 
 message Time {
   int32 time = 1;
+}
+
+message Slice {
+  int32 start = 1;
+  int32 stop = 2;
+  int32 step = 3;
+}
+
+message Motors {
+  Slice agent_slice = 1;
+  NDArray motors = 2;
+}
+
+message Behaviors {
+  Slice agent_slice = 1;
+  string behavior = 2;
 }
 
 message SimulationConfig {

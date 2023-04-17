@@ -47,10 +47,11 @@ class SimulatorController(param.Parameterized):
         while True:
             change_time = self.client.get_change_time()
             if self.change_time < change_time:
-                self.simulation_config.param.update(**self.client.get_recorded_changes())
+                config_dict = self.client.get_sim_config().to_dict()
+                self.simulation_config.param.update(**config_dict)  # **self.client.get_recorded_changes())
                 self.change_time = change_time
-            # param.Dynamic.time_fn(self.change_time)
-            # self.change_time = param.Dynamic.time_fn()
+            param.Dynamic.time_fn(self.change_time)
+            self.change_time = param.Dynamic.time_fn()
             time.sleep(self.refresh_change_period)
 
     # def _record_change(self, **kwargs):
@@ -94,3 +95,10 @@ class SimulatorController(param.Parameterized):
 
     def get_state(self):
         return self.client.get_state_arrays()
+
+    def set_motors(self, agent_idx, motors):
+        return self.client.set_motors(agent_idx, motors)
+
+    def set_behaviors(self, agent_idx, behavior):
+        self.client.set_behaviors(agent_idx, behavior)
+        self._update_function_update()

@@ -119,6 +119,19 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         self.simulator.simulation_config.param.update(**conf.to_dict())
         return Empty()
 
+    def SetMotors(self, request, context):
+        ag = request.agent_slice
+        self.simulator.set_motors(slice(ag.start, ag.stop, 1 if ag.step == 0 else ag.step),
+                                  proto_to_ndarray(request.motors))
+        return Empty()
+
+    def SetBehaviors(self, request, context):
+        ag = request.agent_slice
+        self.simulator.set_behavior(slice(ag.start, ag.stop, 1 if ag.step == 0 else ag.step), request.behavior)
+        # self._record_change(request.name.name, **d_conf)
+        self._change_time += 1
+        return Empty()
+
     def UpdateNeighborFn(self, request, context):
         self.simulator.update_neighbor_fn()
         return Empty()
@@ -153,6 +166,7 @@ if __name__ == '__main__':
     simulator = VerletSimulator(simulation_config=simulation_config, agent_config=agent_config,
                                 engine_config=engine_config)
 
+    #simulator.set_motors(0, np.zeros(2))
     print('Done?')
     # simulator.init_simulator()
     logging.basicConfig()

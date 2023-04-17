@@ -4,7 +4,7 @@ import jax
 from jax_md import space, energy, rigid_body, util, simulate
 
 from collections import namedtuple
-from dataclasses import dataclass
+from jax_md.dataclasses import dataclass
 from functools import partial
 f32 = util.f32
 
@@ -23,6 +23,46 @@ class RigidRobot:
     def to_rigid_body(self):
         return rigid_body.RigidBody(center=self.center, orientation=self.orientation)
 
+@dataclass
+class NVEState(simulate.NVEState):
+    prox: util.Array
+    motor: util.Array
+    entity_type: int
+
+#
+# util.register_custom_simulation_type(RigidRobot)
+#
+# #count_dof?
+#
+#
+# @simulate.initialize_momenta.register(RigidRobot)
+# def _(state, key, kT):
+#     return simulate.initialize_momenta._registry[rigid_body.RigidBody](state, key, kT)
+#
+#
+# @simulate.position_step.register(RigidRobot)
+# def _(state, shift_fn, dt, m_rot=1, **kwargs):
+#     return simulate.position_step._registry[rigid_body.RigidBody](state, shift_fn, dt, m_rot, **kwargs)
+#
+#
+# @simulate.stochastic_step.register(RigidRobot)
+# def _(state, dt: float, kT: float, gamma: float):
+#     return simulate.stochastic_step._registry[rigid_body.RigidBody](state, dt, kT, gamma)
+#
+#
+# @simulate.canonicalize_mass.register(RigidRobot)
+# def _(state):
+#     return simulate.canonicalize_mass._registry[rigid_body.RigidBody](state)
+#
+#
+# @simulate.kinetic_energy.register(RigidRobot)
+# def _(state) -> util.Array:
+#     return simulate.kinetic_energy._registry[rigid_body.RigidBody](state)
+#
+#
+# @simulate.temperature.register(RigidRobot)
+# def _(state) -> util.Array:
+#     return simulate.temperature._registry[rigid_body.RigidBody](state)
 
 def get_verlet_force_fn(engine_config, simulation_config, agent_config):
     displacement = simulation_config.displacement
@@ -41,18 +81,18 @@ def get_verlet_force_fn(engine_config, simulation_config, agent_config):
     coll_force_fn = quantity.force(partial(total_collision_energy, base_length=base_length, displacement=displacement,
                                    epsilon=10, alpha=12))
 
-    motor = jnp.zeros((simulation_config.n_agents, 2), dtype=f32)  # Should be from manual input normally
+    # motor = jnp.zeros((simulation_config.n_agents, 2), dtype=f32)  # Should be from manual input normally
     def force_fn(state, neighbor):
         if state is None:
             return rigid_body.RigidBody(center=jnp.zeros((n_agents, map_dim)), orientation=jnp.zeros(n_agents))
         body = state.position
-        senders, receivers = neighbor.idx
-        Ra = body.center[senders]
-        Rb = body.center[receivers]
-        dR = - space.map_bond(displacement)(Ra, Rb) # Looks like it should be opposite, but don't understand why
-        proxs = sensor(dR, body.orientation[senders], proxs_dist_max, proxs_cos_min, neighbor)
-        motors = multi_switch(entity_behaviors, behavior_bank, proxs, motor)
-        fwd, rot = motor_command(motors, base_length, wheel_diameter)
+        # senders, receivers = neighbor.idx
+        # Ra = body.center[senders]
+        # Rb = body.center[receivers]
+        # dR = - space.map_bond(displacement)(Ra, Rb) # Looks like it should be opposite, but don't understand why
+        # proxs = sensor(dR, body.orientation[senders], proxs_dist_max, proxs_cos_min, neighbor)
+        # motors = multi_switch(entity_behaviors, behavior_bank, proxs, state.motor)
+        fwd, rot = motor_command(state.motor, base_length, wheel_diameter)
         n = normal(body.orientation)
         cur_vel = state.momentum.center / state.mass.center
         # print(jnp.max(jnp.linalg.norm(cur_vel)))
@@ -76,29 +116,51 @@ def get_verlet_force_fn(engine_config, simulation_config, agent_config):
 
 
 # util.register_custom_simulation_type(RigidRobot)
-def rigid_verlet_init_step(force_fn, shift_fn, dt, **sim_kwargs):
-    def init_fn(key, R, kT=0., mass=f32(1.0), **kwargs):
+def rigid_verlet_init_step(force_fn, engine_config, simulation_config, agent_config, **sim_kwargs):
+    displacement = simulation_config.displacement
+    shift = simulation_config.shift
+    dt = simulation_config.dt
+    proxs_dist_max = agent_config.proxs_dist_max
+    proxs_cos_min = agent_config.proxs_cos_min
+    entity_behaviors = simulation_config.entity_behaviors
+    behavior_bank = engine_config.behavior_bank
+    def init_fn(key, body, kT=0., mass=f32(1.0), **kwargs):
         #bodies = R.to_rigid_body()
         force = force_fn(None, **kwargs)
-        state = simulate.NVEState(R, None, force, mass)
+        state = simulate.NVEState(position=body.to_rigid_body(), momentum=None, force=force, mass=mass)
         state = simulate.canonicalize_mass(state)
-        return simulate.initialize_momenta(state, key, kT)
+        state = simulate.initialize_momenta(state, key, kT)
+        return NVEState(position=state.position, momentum=state.momentum, force=state.force, mass=state.mass,
+                        prox=body.prox, motor=body.motor, entity_type=body.entity_type)
+
     def my_velocity_verlet(force_fn, shift_fn, dt, state, **kwargs):
-      """Apply a single step of velocity Verlet integration to a state."""
-      dt = f32(dt)
-      dt_2 = f32(dt / 2)
+        """Apply a single step of velocity Verlet integration to a state."""
+        dt = f32(dt)
+        dt_2 = f32(dt / 2)
 
-      state = simulate.momentum_step(state, dt_2)
-      state = simulate.position_step(state, shift_fn, dt, **kwargs)
-      state = state.set(force=force_fn(state, **kwargs))
-      state = simulate.momentum_step(state, dt_2)
+        state = sensorimotor(state, **kwargs)
 
-      return state
+        state = simulate.momentum_step(state, dt_2)
+        state = simulate.position_step(state, shift_fn, dt, **kwargs)
+        state = state.set(force=force_fn(state, **kwargs))
+        state = simulate.momentum_step(state, dt_2)
 
+        return state
+
+    def sensorimotor(state, neighbor):
+        body = state.position
+        senders, receivers = neighbor.idx
+        Ra = body.center[senders]
+        Rb = body.center[receivers]
+        dR = - space.map_bond(displacement)(Ra, Rb) # Looks like it should be opposite, but don't understand why
+        prox = sensor(dR, body.orientation[senders], proxs_dist_max, proxs_cos_min, neighbor)
+        motor = multi_switch(entity_behaviors, behavior_bank, prox, state.motor)
+
+        return state.set(prox=prox, motor=motor)
     def step_fn(state, **kwargs):
         # _dt = kwargs.pop('dt', dt)
 
-        return my_velocity_verlet(force_fn, shift_fn, dt, state, **kwargs)
+        return my_velocity_verlet(force_fn, shift, dt, state, **kwargs)
 
     return init_fn, step_fn
 

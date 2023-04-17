@@ -61,6 +61,16 @@ class SimulatorServerStub(object):
                 request_serializer=simulator__pb2.SimulationConfigSenderName.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 )
+        self.SetMotors = channel.unary_unary(
+                '/simulator.SimulatorServer/SetMotors',
+                request_serializer=simulator__pb2.Motors.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                )
+        self.SetBehaviors = channel.unary_unary(
+                '/simulator.SimulatorServer/SetBehaviors',
+                request_serializer=simulator__pb2.Behaviors.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                )
         self.SetPopulationConfig = channel.unary_unary(
                 '/simulator.SimulatorServer/SetPopulationConfig',
                 request_serializer=simulator__pb2.PopulationConfig.SerializeToString,
@@ -176,6 +186,18 @@ class SimulatorServerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def SetSimulationConfig(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SetMotors(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SetBehaviors(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -299,6 +321,16 @@ def add_SimulatorServerServicer_to_server(servicer, server):
             'SetSimulationConfig': grpc.unary_unary_rpc_method_handler(
                     servicer.SetSimulationConfig,
                     request_deserializer=simulator__pb2.SimulationConfigSenderName.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'SetMotors': grpc.unary_unary_rpc_method_handler(
+                    servicer.SetMotors,
+                    request_deserializer=simulator__pb2.Motors.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'SetBehaviors': grpc.unary_unary_rpc_method_handler(
+                    servicer.SetBehaviors,
+                    request_deserializer=simulator__pb2.Behaviors.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
             'SetPopulationConfig': grpc.unary_unary_rpc_method_handler(
@@ -521,6 +553,40 @@ class SimulatorServer(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetSimulationConfig',
             simulator__pb2.SimulationConfigSenderName.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def SetMotors(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetMotors',
+            simulator__pb2.Motors.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def SetBehaviors(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetBehaviors',
+            simulator__pb2.Behaviors.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

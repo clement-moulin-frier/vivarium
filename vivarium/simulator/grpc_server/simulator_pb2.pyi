@@ -30,11 +30,27 @@ class AgentConfigSerialized(_message.Message):
     serialized: str
     def __init__(self, serialized: _Optional[str] = ...) -> None: ...
 
+class Behaviors(_message.Message):
+    __slots__ = ["agent_slice", "behavior"]
+    AGENT_SLICE_FIELD_NUMBER: _ClassVar[int]
+    BEHAVIOR_FIELD_NUMBER: _ClassVar[int]
+    agent_slice: Slice
+    behavior: str
+    def __init__(self, agent_slice: _Optional[_Union[Slice, _Mapping]] = ..., behavior: _Optional[str] = ...) -> None: ...
+
 class IsStartedState(_message.Message):
     __slots__ = ["is_started"]
     IS_STARTED_FIELD_NUMBER: _ClassVar[int]
     is_started: bool
     def __init__(self, is_started: bool = ...) -> None: ...
+
+class Motors(_message.Message):
+    __slots__ = ["agent_slice", "motors"]
+    AGENT_SLICE_FIELD_NUMBER: _ClassVar[int]
+    MOTORS_FIELD_NUMBER: _ClassVar[int]
+    agent_slice: Slice
+    motors: NDArray
+    def __init__(self, agent_slice: _Optional[_Union[Slice, _Mapping]] = ..., motors: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class NDArray(_message.Message):
     __slots__ = ["ndarray"]
@@ -115,6 +131,16 @@ class SimulationConfigSerialized(_message.Message):
     SERIALIZED_FIELD_NUMBER: _ClassVar[int]
     serialized: str
     def __init__(self, serialized: _Optional[str] = ...) -> None: ...
+
+class Slice(_message.Message):
+    __slots__ = ["start", "step", "stop"]
+    START_FIELD_NUMBER: _ClassVar[int]
+    STEP_FIELD_NUMBER: _ClassVar[int]
+    STOP_FIELD_NUMBER: _ClassVar[int]
+    start: int
+    step: int
+    stop: int
+    def __init__(self, start: _Optional[int] = ..., stop: _Optional[int] = ..., step: _Optional[int] = ...) -> None: ...
 
 class State(_message.Message):
     __slots__ = ["positions", "thetas"]

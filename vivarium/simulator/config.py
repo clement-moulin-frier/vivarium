@@ -57,7 +57,7 @@ class SimulatorConfig(Config):
     use_fori_loop = param.Boolean(False)
 
     n_agents = param.Integer(20)
-    entity_behaviors = param.Array(np.array([0]))
+    entity_behaviors = param.Array(None)
 
     displacement = param.Parameter()
     shift = param.Parameter()
@@ -66,7 +66,7 @@ class SimulatorConfig(Config):
     def __init__(self, **params):
         super().__init__(**params)
         self.displacement, self.shift = space.periodic(self.box_size)
-        self.entity_behaviors = 2 * np.ones(self.n_agents, dtype=int)
+        # self.entity_behaviors = self.entity_behaviors or 2 * np.ones(self.n_agents, dtype=int)
         self.param.watch(self._update_ds, ['box_size'], onlychanged=True)
         self.param.watch(self._update_eb, ['n_agents'], onlychanged=True)
     # @param.depends('box_size', watch=True, on_init=True)
