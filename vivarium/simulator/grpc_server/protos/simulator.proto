@@ -32,13 +32,17 @@ service SimulatorServer {
   rpc GetRecordedChanges(Name) returns (SerializedDict) {}
 
   rpc GetAgentConfigMessage(google.protobuf.Empty) returns (AgentConfig) {}
-  rpc GetAgentConfigSerialized(google.protobuf.Empty) returns (AgentConfigSerialized) {}
+  rpc GetAgentConfigSerialized(AgentIdx) returns (AgentConfigSerialized) {}
+  rpc GetAgentConfigs(google.protobuf.Empty) returns (AgentConfigs) {}
+  rpc GetAgentConfig(AgentIdx) returns (AgentConfig) {}
 
   rpc GetPopulationConfigMessage(google.protobuf.Empty) returns (PopulationConfig) {}
   rpc GetPopulationConfigSerialized(google.protobuf.Empty) returns (PopulationConfigSerialized) {}
 
   rpc SetSimulationConfigSerialized(SimulationConfigSerialized) returns (google.protobuf.Empty) {}
   rpc SetSimulationConfig(SimulationConfigSenderName) returns (google.protobuf.Empty) {}
+
+  rpc SetAgentConfig(AgentConfigIdxSenderName) returns (AgentConfig) {}
 
   rpc SetMotors(Motors) returns (google.protobuf.Empty) {}
   rpc SetBehaviors(Behaviors) returns (google.protobuf.Empty) {}
@@ -49,6 +53,8 @@ service SimulatorServer {
   rpc GetStateMessage(google.protobuf.Empty) returns (State) {}
 
   rpc GetStateArrays(google.protobuf.Empty) returns (StateArrays) {}
+
+  rpc GetNVEState(google.protobuf.Empty) returns (NVEState) {}
 
   rpc IsStarted(google.protobuf.Empty) returns (IsStartedState) {}
 
@@ -95,15 +101,52 @@ message Behaviors {
 message SimulationConfig {
   float box_size = 1;
   int32 map_dim = 2;
-
   int32 num_steps_lax = 3;
   int32 num_lax_loops = 4;
   float dt = 5;
   float freq = 6;
-  bool to_jit = 7;
-  int32 n_agents = 8;
-  NDArray entity_behaviors = 9;
-  bool use_fori_loop = 10;
+  float neighbor_radius = 7;
+  bool to_jit = 8;
+  bool use_fori_loop = 9;
+}
+
+message SimulationConfigWithOneOf {
+  oneof box_size {
+    bool has_box_size = 1;
+    float box_size_value = 2;
+  }
+  oneof map_dim {
+    bool has_map_dim = 3;
+    int32 map_dim_value = 4;
+  }
+  oneof num_steps_lax {
+    bool has_num_steps_lax = 5;
+    int32 num_steps_lax_value = 6;
+  }
+  oneof num_lax_loops {
+    bool has_num_lax_loops = 7;
+    int32 num_lax_loops_value = 8;
+  }
+  oneof dt {
+    bool has_dt = 9;
+    float dt_value = 10;
+  }
+  oneof freq {
+    bool has_freq = 11;
+    float freq_value = 12;
+  }
+  oneof neighbor_radius {
+    bool has_neighbor_radius = 13;
+    float neighbor_radius_value = 14;
+  }
+  oneof to_jit {
+    bool has_to_jit = 15;
+    bool to_jit_value = 16;
+  }
+  oneof use_fori_loop {
+    bool has_use_fori_loop = 17;
+    bool use_fori_loop_value = 18;
+  }
 }
 
 message SimulationConfigSenderName {
@@ -121,14 +164,29 @@ message SerializedDict {
   NDArray entity_behaviors = 3;
 }
 
+message AgentIdx {
+  int32 idx = 1;
+}
+
 message AgentConfig {
     float wheel_diameter = 1;
     float base_length = 2;
     float speed_mul = 3;
     float theta_mul = 4;
-    float neighbor_radius = 5;
     float proxs_dist_max = 6;
     float proxs_cos_min = 7;
+    string behavior = 8;
+    int32 entity_type = 9;
+}
+
+message AgentConfigIdxSenderName {
+  AgentConfig config = 1;
+  Name name = 2;
+  AgentIdx idx = 3;
+}
+
+message AgentConfigs {
+  repeated AgentConfig agent_configs = 1;
 }
 
 message AgentConfigSerialized {
@@ -163,6 +221,28 @@ message StateArrays {
   NDArray proxs = 3;
   NDArray motors = 4;
   int32 entity_type = 5;
+}
+
+message RigidBody {
+  NDArray center = 1;
+  NDArray orientation = 2;
+}
+
+message NVEState {
+  RigidBody position = 1;
+  RigidBody momentum = 2;
+  RigidBody force = 3;
+  RigidBody mass = 4;
+  NDArray prox = 5;
+  NDArray motor = 6;
+  NDArray behavior = 7;
+  NDArray wheel_diameter = 8;
+  NDArray base_length = 9;
+  NDArray speed_mul = 10;
+  NDArray theta_mul = 11;
+  NDArray proxs_dist_max = 12;
+  NDArray proxs_cos_min = 13;
+  NDArray entity_type = 14;
 }
 
 message IsStartedState {

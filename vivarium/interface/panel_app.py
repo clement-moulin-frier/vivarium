@@ -28,12 +28,16 @@ pn.extension()
 #simulator = SimulatorRestClient()
 simulator = SimulatorController(client=SimulatorGRPCClient())
 
+# simulator.param.watch()
+#
+# def change_agent_
+
 # sim_config = simulator.get_sim_config()
 # print('sim_config', sim_config.param.values())
 # agent_config = simulator.get_agent_config()
 # population_config = simulator.get_population_config()
 
-state = simulator.get_state()
+state = simulator.get_nve_state()
 
 
 # def push_config(e):
@@ -53,19 +57,20 @@ max_agents = 1000
 all_colors = ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(np.random.rand(max_agents) * 200 + 50, np.random.rand(max_agents) * 200 + 50)]
 
 def get_cds_data(state):
-    x = state.position[:, 0]
-    y = state.position[:, 1]
-    thetas = state.theta
-
-    radius = simulator.agent_config.base_length / 2.
-    colors = all_colors[:simulator.simulation_config.n_agents]  # ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
+    pos = state.position.center
+    x, y = pos[:, 0], pos[:, 1]
+    # print(x)
+    thetas = state.position.orientation
+    radii = state.base_length / 2.
+    n_agents = x.shape[0]
+    colors = all_colors[:n_agents]  # ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
 
     normals = normal(thetas)
 
-    orientation_lines_x = [[xx, xx + radius * n[0]] for xx, n in zip(x, normals)]
-    orientation_lines_y = [[yy, yy + radius * n[1]] for yy, n in zip(y, normals)]
+    orientation_lines_x = [[xx, xx + r * n[0]] for xx, n, r in zip(x, normals, radii)]
+    orientation_lines_y = [[yy, yy + r * n[1]] for yy, n, r in zip(y, normals, radii)]
 
-    return dict(x=x, y=y, ox=orientation_lines_x, oy=orientation_lines_y, r=np.ones(simulator.simulation_config.n_agents) * radius, fc=colors)
+    return dict(x=x, y=y, ox=orientation_lines_x, oy=orientation_lines_y, r=radii, fc=colors)
 
 
 cds = ColumnDataSource(data=get_cds_data(state))
@@ -109,13 +114,19 @@ p.add_tools(draw_tool)
 p.toolbar.active_tap = draw_tool
 
 
-row = pn.Row(p, button, simulator.simulation_config)
+row = pn.Row(p, pn.Column(simulator.param.agent_idx, simulator.agent_config), pn.Column(button, simulator.simulation_config))
 row.servable()
 
 
 def update_plot():
+    if len(cds.selected.indices) > 0 and cds.selected.indices[0] != simulator.agent_idx:
+        simulator.agent_idx = cds.selected.indices[0]
+        simulator.pull_agent_config()
     # print('update plot')
-    state = simulator.get_state()
+    # print(cds.selected.indices)
+    # agent_configs = simulator.get_agent_configs()
+    # state = dict(x)
+    state = simulator.get_nve_state()
     update_cds(state)
 
 

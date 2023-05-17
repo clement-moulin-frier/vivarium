@@ -5,8 +5,11 @@ from vivarium.simulator.grpc_server import simulator_pb2_grpc
 import vivarium.simulator.grpc_server.simulator_pb2 as simulator_pb2
 
 from vivarium.simulator.config import SimulatorConfig, AgentConfig
-from vivarium.simulator.sim_computation import Population
+from vivarium.simulator.sim_computation import Population, NVEState
 from vivarium.simulator.simulator_client_abc import SimulatorClient
+
+from jax_md.rigid_body import RigidBody
+
 
 from numproto.numproto import ndarray_to_proto, proto_to_ndarray
 
@@ -52,9 +55,17 @@ class SimulatorGRPCClient(SimulatorClient):
         config = self.stub.GetAgentConfig(Empty())
         return protobuf_to_dict(config)
 
-    def get_agent_config(self):
-        serialized = self.stub.GetAgentConfigSerialized(Empty()).serialized
+    def get_agent_config(self, idx):
+        serialized = self.stub.GetAgentConfigSerialized(simulator_pb2.AgentIdx(idx=idx)).serialized
         return AgentConfig(**AgentConfig.param.deserialize_parameters(serialized))
+
+    def get_agent_configs(self):
+        agent_configs_message = self.stub.GetAgentConfigs(Empty()).agent_configs
+        res = []
+        for config in agent_configs_message:
+            d = protobuf_to_dict(config)
+            res.append(AgentConfig(**d))
+        return config
 
     def get_population_config_dict(self):
         config = self.stub.GetPopulationConfig(Empty())
@@ -71,12 +82,23 @@ class SimulatorGRPCClient(SimulatorClient):
     def set_simulation_config(self, simulation_config):
         d = simulation_config.to_dict()
         print('set_simulation_config', d)
-        if 'entity_behaviors' in d:
-            d['entity_behaviors'] = ndarray_to_proto(d['entity_behaviors'])
+        # if 'entity_behaviors' in d:
+        #     d['entity_behaviors'] = ndarray_to_proto(d['entity_behaviors'])
         config = simulator_pb2.SimulationConfig(**d)
         name = simulator_pb2.Name(name=self.name)
         config_sender_name = simulator_pb2.SimulationConfigSenderName(name=name, config=config)
         self.stub.SetSimulationConfig(config_sender_name)
+
+    def set_agent_config(self, agent_idx, agent_config):
+        d = agent_config.to_dict()
+        print('set_agent_config', d)
+        # if 'entity_behaviors' in d:
+        #     d['entity_behaviors'] = ndarray_to_proto(d['entity_behaviors'])
+        config = simulator_pb2.AgentConfig(**d)
+        name = simulator_pb2.Name(name=self.name)
+        idx = simulator_pb2.AgentIdx(idx=agent_idx)
+        config_idx_sender_name = simulator_pb2.AgentConfigIdxSenderName(name=name, config=config, idx=idx)
+        self.stub.SetAgentConfig(config_idx_sender_name)
 
     def set_simulation_config_serialized(self, simulation_config):
         serialized = simulation_config.param.serialize_parameters(subset=simulation_config.export_fields)
@@ -111,6 +133,28 @@ class SimulatorGRPCClient(SimulatorClient):
                           prox=proto_to_ndarray(state.proxs),
                           motor=proto_to_ndarray(state.motors),
                           entity_type=state.entity_type)
+
+    def get_nve_state(self):
+        state = self.stub.GetNVEState(Empty())
+        return NVEState(position=RigidBody(center=proto_to_ndarray(state.position.center),
+                                           orientation=proto_to_ndarray(state.position.orientation)),
+                        momentum=RigidBody(center=proto_to_ndarray(state.momentum.center),
+                                           orientation=proto_to_ndarray(state.momentum.orientation)),
+                        force=RigidBody(center=proto_to_ndarray(state.force.center),
+                                        orientation=proto_to_ndarray(state.force.orientation)),
+                        mass=RigidBody(center=proto_to_ndarray(state.mass.center),
+                                       orientation=proto_to_ndarray(state.mass.orientation)),
+                        prox=proto_to_ndarray(state.prox),
+                        motor=proto_to_ndarray(state.motor),
+                        behavior=proto_to_ndarray(state.behavior),
+                        wheel_diameter=proto_to_ndarray(state.wheel_diameter),
+                        base_length=proto_to_ndarray(state.base_length),
+                        speed_mul=proto_to_ndarray(state.speed_mul),
+                        theta_mul=proto_to_ndarray(state.theta_mul),
+                        proxs_dist_max=proto_to_ndarray(state.proxs_dist_max),
+                        proxs_cos_min=proto_to_ndarray(state.proxs_cos_min),
+                        entity_type=proto_to_ndarray(state.entity_type)
+                        )
 
     def is_started(self):
         return self.stub.IsStarted(Empty()).is_started

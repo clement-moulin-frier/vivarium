@@ -36,15 +36,19 @@ class Config(Parameterized):
         return self.param.serialize_parameters(subset=self.export_fields)
 
 class AgentConfig(Config):
-
+    behavior = param.ObjectSelector(default=behaviors.linear_behavior_enum.AGGRESSION.name,
+                                    objects=behaviors.behavior_name_map.keys())
     wheel_diameter = param.Number(2.)
     base_length = param.Number(10.)
     speed_mul = param.Number(0.1)
     theta_mul = param.Number(0.1)
-    neighbor_radius = param.Number(100., bounds=(0, None))
     proxs_dist_max = param.Number(100., bounds=(0, None))
     proxs_cos_min = param.Number(0., bounds=(-1., 1.))
+    entity_type = param.Integer(0)
 
+
+# def default_agent:
+#     return AgentConfig()
 
 class SimulatorConfig(Config):
     box_size = param.Number(100., bounds=(0, None))
@@ -53,40 +57,51 @@ class SimulatorConfig(Config):
     num_lax_loops = param.Integer(1)
     dt = param.Number(0.1)
     freq = param.Number(100., allow_None=True)
+    neighbor_radius = param.Number(100., bounds=(0, None))
     to_jit = param.Boolean(True)
     use_fori_loop = param.Boolean(False)
 
-    n_agents = param.Integer(20)
-    entity_behaviors = param.Array(None)
+    # n_agents = param.Integer(4)
+    # entity_behaviors = param.Array(None)
+    # agent_configs = param.List(None)
+    # displacement = param.Parameter()
+    # shift = param.Parameter()
+    # behavior_bank = param.List([partial(behaviors.linear_behavior,
+    #                                     matrix=behaviors.linear_behavior_matrices[beh])
+    #                             for beh in behaviors.linear_behavior_enum] + [behaviors.apply_motors])
+    # export_fields_exclude = ['agent_configs']
 
-    displacement = param.Parameter()
-    shift = param.Parameter()
-    export_fields_exclude = ['displacement', 'shift']
-
-    def __init__(self, **params):
-        super().__init__(**params)
-        self.displacement, self.shift = space.periodic(self.box_size)
+    # def __init__(self, **params):
+    #     super().__init__(**params)
+    #     self.agent_configs = self.agent_configs or [AgentConfig() for _ in range(self.n_agents)]
+        # self.displacement, self.shift = space.periodic(self.box_size)
+        # self.agent_configs = [AgentConfig() for _ in range(self.n_agents)]
         # self.entity_behaviors = self.entity_behaviors or 2 * np.ones(self.n_agents, dtype=int)
-        self.param.watch(self._update_ds, ['box_size'], onlychanged=True)
-        self.param.watch(self._update_eb, ['n_agents'], onlychanged=True)
+        # self.behavior_name_map = {beh.name: i for i, beh in enumerate(behaviors.linear_behavior_enum)}
+        # self.param.watch(self._update_ds, ['box_size'], onlychanged=True)
+        # self.param.watch(self._update_eb, ['n_agents'], onlychanged=True)
     # @param.depends('box_size', watch=True, on_init=True)
-    def _update_ds(self, event):
-        print('_update_ds')
-        self.displacement, self.shift = space.periodic(event.new)
+    # def _update_ds(self, event):
+    #     print('_update_ds')
+    #     self.displacement, self.shift = space.periodic(event.new)
 
-    # @param.depends('n_agents', watch=True, on_init=True)
-    def _update_eb(self, event):
-        print('_update_eb')
-        self.entity_behaviors = 0 * np.ones(event.new, dtype=int)
+    # # @param.depends('n_agents', watch=True, on_init=True)
+    # def _update_eb(self, event):
+    #     print('_update_eb')
+    #     self.entity_behaviors = 0 * np.ones(event.new, dtype=int)
 
 
-class EngineConfig(Config):
 
-    behavior_bank = param.List([partial(behaviors.linear_behavior,
-                                        matrix=behaviors.linear_behavior_matrices[beh])
-                                for beh in behaviors.linear_behavior_enum] + [behaviors.apply_motors])
-    behavior_name_map = {beh.name: i for i, beh in enumerate(behaviors.linear_behavior_enum)}
-                                       #for beh in behaviors.linear_behavior_enum}.update({'manual': behaviors.apply_motors}))
+
+
+
+# class EngineConfig(Config):
+#
+#     behavior_bank = param.List([partial(behaviors.linear_behavior,
+#                                         matrix=behaviors.linear_behavior_matrices[beh])
+#                                 for beh in behaviors.linear_behavior_enum] + [behaviors.apply_motors])
+#     behavior_name_map = {beh.name: i for i, beh in enumerate(behaviors.linear_behavior_enum)}
+#                                        #for beh in behaviors.linear_behavior_enum}.update({'manual': behaviors.apply_motors}))
 
 
 # class BehaviorConfig(Config):

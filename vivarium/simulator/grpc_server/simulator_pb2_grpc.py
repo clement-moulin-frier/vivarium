@@ -38,8 +38,18 @@ class SimulatorServerStub(object):
                 )
         self.GetAgentConfigSerialized = channel.unary_unary(
                 '/simulator.SimulatorServer/GetAgentConfigSerialized',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                request_serializer=simulator__pb2.AgentIdx.SerializeToString,
                 response_deserializer=simulator__pb2.AgentConfigSerialized.FromString,
+                )
+        self.GetAgentConfigs = channel.unary_unary(
+                '/simulator.SimulatorServer/GetAgentConfigs',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=simulator__pb2.AgentConfigs.FromString,
+                )
+        self.GetAgentConfig = channel.unary_unary(
+                '/simulator.SimulatorServer/GetAgentConfig',
+                request_serializer=simulator__pb2.AgentIdx.SerializeToString,
+                response_deserializer=simulator__pb2.AgentConfig.FromString,
                 )
         self.GetPopulationConfigMessage = channel.unary_unary(
                 '/simulator.SimulatorServer/GetPopulationConfigMessage',
@@ -60,6 +70,11 @@ class SimulatorServerStub(object):
                 '/simulator.SimulatorServer/SetSimulationConfig',
                 request_serializer=simulator__pb2.SimulationConfigSenderName.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                )
+        self.SetAgentConfig = channel.unary_unary(
+                '/simulator.SimulatorServer/SetAgentConfig',
+                request_serializer=simulator__pb2.AgentConfigIdxSenderName.SerializeToString,
+                response_deserializer=simulator__pb2.AgentConfig.FromString,
                 )
         self.SetMotors = channel.unary_unary(
                 '/simulator.SimulatorServer/SetMotors',
@@ -90,6 +105,11 @@ class SimulatorServerStub(object):
                 '/simulator.SimulatorServer/GetStateArrays',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
                 response_deserializer=simulator__pb2.StateArrays.FromString,
+                )
+        self.GetNVEState = channel.unary_unary(
+                '/simulator.SimulatorServer/GetNVEState',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=simulator__pb2.NVEState.FromString,
                 )
         self.IsStarted = channel.unary_unary(
                 '/simulator.SimulatorServer/IsStarted',
@@ -167,6 +187,18 @@ class SimulatorServerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetAgentConfigs(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetAgentConfig(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def GetPopulationConfigMessage(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -186,6 +218,12 @@ class SimulatorServerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def SetSimulationConfig(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SetAgentConfig(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -222,6 +260,12 @@ class SimulatorServerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def GetStateArrays(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetNVEState(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -300,8 +344,18 @@ def add_SimulatorServerServicer_to_server(servicer, server):
             ),
             'GetAgentConfigSerialized': grpc.unary_unary_rpc_method_handler(
                     servicer.GetAgentConfigSerialized,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    request_deserializer=simulator__pb2.AgentIdx.FromString,
                     response_serializer=simulator__pb2.AgentConfigSerialized.SerializeToString,
+            ),
+            'GetAgentConfigs': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAgentConfigs,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=simulator__pb2.AgentConfigs.SerializeToString,
+            ),
+            'GetAgentConfig': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAgentConfig,
+                    request_deserializer=simulator__pb2.AgentIdx.FromString,
+                    response_serializer=simulator__pb2.AgentConfig.SerializeToString,
             ),
             'GetPopulationConfigMessage': grpc.unary_unary_rpc_method_handler(
                     servicer.GetPopulationConfigMessage,
@@ -322,6 +376,11 @@ def add_SimulatorServerServicer_to_server(servicer, server):
                     servicer.SetSimulationConfig,
                     request_deserializer=simulator__pb2.SimulationConfigSenderName.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'SetAgentConfig': grpc.unary_unary_rpc_method_handler(
+                    servicer.SetAgentConfig,
+                    request_deserializer=simulator__pb2.AgentConfigIdxSenderName.FromString,
+                    response_serializer=simulator__pb2.AgentConfig.SerializeToString,
             ),
             'SetMotors': grpc.unary_unary_rpc_method_handler(
                     servicer.SetMotors,
@@ -352,6 +411,11 @@ def add_SimulatorServerServicer_to_server(servicer, server):
                     servicer.GetStateArrays,
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                     response_serializer=simulator__pb2.StateArrays.SerializeToString,
+            ),
+            'GetNVEState': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetNVEState,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=simulator__pb2.NVEState.SerializeToString,
             ),
             'IsStarted': grpc.unary_unary_rpc_method_handler(
                     servicer.IsStarted,
@@ -484,8 +548,42 @@ class SimulatorServer(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetAgentConfigSerialized',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            simulator__pb2.AgentIdx.SerializeToString,
             simulator__pb2.AgentConfigSerialized.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetAgentConfigs(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetAgentConfigs',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            simulator__pb2.AgentConfigs.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetAgentConfig(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetAgentConfig',
+            simulator__pb2.AgentIdx.SerializeToString,
+            simulator__pb2.AgentConfig.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -554,6 +652,23 @@ class SimulatorServer(object):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetSimulationConfig',
             simulator__pb2.SimulationConfigSenderName.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def SetAgentConfig(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetAgentConfig',
+            simulator__pb2.AgentConfigIdxSenderName.SerializeToString,
+            simulator__pb2.AgentConfig.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -656,6 +771,23 @@ class SimulatorServer(object):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetStateArrays',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             simulator__pb2.StateArrays.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetNVEState(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetNVEState',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            simulator__pb2.NVEState.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

@@ -7,28 +7,52 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class AgentConfig(_message.Message):
-    __slots__ = ["base_length", "neighbor_radius", "proxs_cos_min", "proxs_dist_max", "speed_mul", "theta_mul", "wheel_diameter"]
+    __slots__ = ["base_length", "behavior", "entity_type", "proxs_cos_min", "proxs_dist_max", "speed_mul", "theta_mul", "wheel_diameter"]
     BASE_LENGTH_FIELD_NUMBER: _ClassVar[int]
-    NEIGHBOR_RADIUS_FIELD_NUMBER: _ClassVar[int]
+    BEHAVIOR_FIELD_NUMBER: _ClassVar[int]
+    ENTITY_TYPE_FIELD_NUMBER: _ClassVar[int]
     PROXS_COS_MIN_FIELD_NUMBER: _ClassVar[int]
     PROXS_DIST_MAX_FIELD_NUMBER: _ClassVar[int]
     SPEED_MUL_FIELD_NUMBER: _ClassVar[int]
     THETA_MUL_FIELD_NUMBER: _ClassVar[int]
     WHEEL_DIAMETER_FIELD_NUMBER: _ClassVar[int]
     base_length: float
-    neighbor_radius: float
+    behavior: str
+    entity_type: int
     proxs_cos_min: float
     proxs_dist_max: float
     speed_mul: float
     theta_mul: float
     wheel_diameter: float
-    def __init__(self, wheel_diameter: _Optional[float] = ..., base_length: _Optional[float] = ..., speed_mul: _Optional[float] = ..., theta_mul: _Optional[float] = ..., neighbor_radius: _Optional[float] = ..., proxs_dist_max: _Optional[float] = ..., proxs_cos_min: _Optional[float] = ...) -> None: ...
+    def __init__(self, wheel_diameter: _Optional[float] = ..., base_length: _Optional[float] = ..., speed_mul: _Optional[float] = ..., theta_mul: _Optional[float] = ..., proxs_dist_max: _Optional[float] = ..., proxs_cos_min: _Optional[float] = ..., behavior: _Optional[str] = ..., entity_type: _Optional[int] = ...) -> None: ...
+
+class AgentConfigIdxSenderName(_message.Message):
+    __slots__ = ["config", "idx", "name"]
+    CONFIG_FIELD_NUMBER: _ClassVar[int]
+    IDX_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    config: AgentConfig
+    idx: AgentIdx
+    name: Name
+    def __init__(self, config: _Optional[_Union[AgentConfig, _Mapping]] = ..., name: _Optional[_Union[Name, _Mapping]] = ..., idx: _Optional[_Union[AgentIdx, _Mapping]] = ...) -> None: ...
 
 class AgentConfigSerialized(_message.Message):
     __slots__ = ["serialized"]
     SERIALIZED_FIELD_NUMBER: _ClassVar[int]
     serialized: str
     def __init__(self, serialized: _Optional[str] = ...) -> None: ...
+
+class AgentConfigs(_message.Message):
+    __slots__ = ["agent_configs"]
+    AGENT_CONFIGS_FIELD_NUMBER: _ClassVar[int]
+    agent_configs: _containers.RepeatedCompositeFieldContainer[AgentConfig]
+    def __init__(self, agent_configs: _Optional[_Iterable[_Union[AgentConfig, _Mapping]]] = ...) -> None: ...
+
+class AgentIdx(_message.Message):
+    __slots__ = ["idx"]
+    IDX_FIELD_NUMBER: _ClassVar[int]
+    idx: int
+    def __init__(self, idx: _Optional[int] = ...) -> None: ...
 
 class Behaviors(_message.Message):
     __slots__ = ["agent_slice", "behavior"]
@@ -58,6 +82,38 @@ class NDArray(_message.Message):
     ndarray: bytes
     def __init__(self, ndarray: _Optional[bytes] = ...) -> None: ...
 
+class NVEState(_message.Message):
+    __slots__ = ["base_length", "behavior", "entity_type", "force", "mass", "momentum", "motor", "position", "prox", "proxs_cos_min", "proxs_dist_max", "speed_mul", "theta_mul", "wheel_diameter"]
+    BASE_LENGTH_FIELD_NUMBER: _ClassVar[int]
+    BEHAVIOR_FIELD_NUMBER: _ClassVar[int]
+    ENTITY_TYPE_FIELD_NUMBER: _ClassVar[int]
+    FORCE_FIELD_NUMBER: _ClassVar[int]
+    MASS_FIELD_NUMBER: _ClassVar[int]
+    MOMENTUM_FIELD_NUMBER: _ClassVar[int]
+    MOTOR_FIELD_NUMBER: _ClassVar[int]
+    POSITION_FIELD_NUMBER: _ClassVar[int]
+    PROXS_COS_MIN_FIELD_NUMBER: _ClassVar[int]
+    PROXS_DIST_MAX_FIELD_NUMBER: _ClassVar[int]
+    PROX_FIELD_NUMBER: _ClassVar[int]
+    SPEED_MUL_FIELD_NUMBER: _ClassVar[int]
+    THETA_MUL_FIELD_NUMBER: _ClassVar[int]
+    WHEEL_DIAMETER_FIELD_NUMBER: _ClassVar[int]
+    base_length: NDArray
+    behavior: NDArray
+    entity_type: NDArray
+    force: RigidBody
+    mass: RigidBody
+    momentum: RigidBody
+    motor: NDArray
+    position: RigidBody
+    prox: NDArray
+    proxs_cos_min: NDArray
+    proxs_dist_max: NDArray
+    speed_mul: NDArray
+    theta_mul: NDArray
+    wheel_diameter: NDArray
+    def __init__(self, position: _Optional[_Union[RigidBody, _Mapping]] = ..., momentum: _Optional[_Union[RigidBody, _Mapping]] = ..., force: _Optional[_Union[RigidBody, _Mapping]] = ..., mass: _Optional[_Union[RigidBody, _Mapping]] = ..., prox: _Optional[_Union[NDArray, _Mapping]] = ..., motor: _Optional[_Union[NDArray, _Mapping]] = ..., behavior: _Optional[_Union[NDArray, _Mapping]] = ..., wheel_diameter: _Optional[_Union[NDArray, _Mapping]] = ..., base_length: _Optional[_Union[NDArray, _Mapping]] = ..., speed_mul: _Optional[_Union[NDArray, _Mapping]] = ..., theta_mul: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_dist_max: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_cos_min: _Optional[_Union[NDArray, _Mapping]] = ..., entity_type: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
+
 class Name(_message.Message):
     __slots__ = ["name"]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -84,6 +140,14 @@ class Position(_message.Message):
     y: _containers.RepeatedScalarFieldContainer[float]
     def __init__(self, x: _Optional[_Iterable[float]] = ..., y: _Optional[_Iterable[float]] = ...) -> None: ...
 
+class RigidBody(_message.Message):
+    __slots__ = ["center", "orientation"]
+    CENTER_FIELD_NUMBER: _ClassVar[int]
+    ORIENTATION_FIELD_NUMBER: _ClassVar[int]
+    center: NDArray
+    orientation: NDArray
+    def __init__(self, center: _Optional[_Union[NDArray, _Mapping]] = ..., orientation: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
+
 class SerializedDict(_message.Message):
     __slots__ = ["entity_behaviors", "has_entity_behaviors", "serialized_dict"]
     ENTITY_BEHAVIORS_FIELD_NUMBER: _ClassVar[int]
@@ -95,28 +159,26 @@ class SerializedDict(_message.Message):
     def __init__(self, serialized_dict: _Optional[str] = ..., has_entity_behaviors: bool = ..., entity_behaviors: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class SimulationConfig(_message.Message):
-    __slots__ = ["box_size", "dt", "entity_behaviors", "freq", "map_dim", "n_agents", "num_lax_loops", "num_steps_lax", "to_jit", "use_fori_loop"]
+    __slots__ = ["box_size", "dt", "freq", "map_dim", "neighbor_radius", "num_lax_loops", "num_steps_lax", "to_jit", "use_fori_loop"]
     BOX_SIZE_FIELD_NUMBER: _ClassVar[int]
     DT_FIELD_NUMBER: _ClassVar[int]
-    ENTITY_BEHAVIORS_FIELD_NUMBER: _ClassVar[int]
     FREQ_FIELD_NUMBER: _ClassVar[int]
     MAP_DIM_FIELD_NUMBER: _ClassVar[int]
+    NEIGHBOR_RADIUS_FIELD_NUMBER: _ClassVar[int]
     NUM_LAX_LOOPS_FIELD_NUMBER: _ClassVar[int]
     NUM_STEPS_LAX_FIELD_NUMBER: _ClassVar[int]
-    N_AGENTS_FIELD_NUMBER: _ClassVar[int]
     TO_JIT_FIELD_NUMBER: _ClassVar[int]
     USE_FORI_LOOP_FIELD_NUMBER: _ClassVar[int]
     box_size: float
     dt: float
-    entity_behaviors: NDArray
     freq: float
     map_dim: int
-    n_agents: int
+    neighbor_radius: float
     num_lax_loops: int
     num_steps_lax: int
     to_jit: bool
     use_fori_loop: bool
-    def __init__(self, box_size: _Optional[float] = ..., map_dim: _Optional[int] = ..., num_steps_lax: _Optional[int] = ..., num_lax_loops: _Optional[int] = ..., dt: _Optional[float] = ..., freq: _Optional[float] = ..., to_jit: bool = ..., n_agents: _Optional[int] = ..., entity_behaviors: _Optional[_Union[NDArray, _Mapping]] = ..., use_fori_loop: bool = ...) -> None: ...
+    def __init__(self, box_size: _Optional[float] = ..., map_dim: _Optional[int] = ..., num_steps_lax: _Optional[int] = ..., num_lax_loops: _Optional[int] = ..., dt: _Optional[float] = ..., freq: _Optional[float] = ..., neighbor_radius: _Optional[float] = ..., to_jit: bool = ..., use_fori_loop: bool = ...) -> None: ...
 
 class SimulationConfigSenderName(_message.Message):
     __slots__ = ["config", "name"]
@@ -131,6 +193,46 @@ class SimulationConfigSerialized(_message.Message):
     SERIALIZED_FIELD_NUMBER: _ClassVar[int]
     serialized: str
     def __init__(self, serialized: _Optional[str] = ...) -> None: ...
+
+class SimulationConfigWithOneOf(_message.Message):
+    __slots__ = ["box_size_value", "dt_value", "freq_value", "has_box_size", "has_dt", "has_freq", "has_map_dim", "has_neighbor_radius", "has_num_lax_loops", "has_num_steps_lax", "has_to_jit", "has_use_fori_loop", "map_dim_value", "neighbor_radius_value", "num_lax_loops_value", "num_steps_lax_value", "to_jit_value", "use_fori_loop_value"]
+    BOX_SIZE_VALUE_FIELD_NUMBER: _ClassVar[int]
+    DT_VALUE_FIELD_NUMBER: _ClassVar[int]
+    FREQ_VALUE_FIELD_NUMBER: _ClassVar[int]
+    HAS_BOX_SIZE_FIELD_NUMBER: _ClassVar[int]
+    HAS_DT_FIELD_NUMBER: _ClassVar[int]
+    HAS_FREQ_FIELD_NUMBER: _ClassVar[int]
+    HAS_MAP_DIM_FIELD_NUMBER: _ClassVar[int]
+    HAS_NEIGHBOR_RADIUS_FIELD_NUMBER: _ClassVar[int]
+    HAS_NUM_LAX_LOOPS_FIELD_NUMBER: _ClassVar[int]
+    HAS_NUM_STEPS_LAX_FIELD_NUMBER: _ClassVar[int]
+    HAS_TO_JIT_FIELD_NUMBER: _ClassVar[int]
+    HAS_USE_FORI_LOOP_FIELD_NUMBER: _ClassVar[int]
+    MAP_DIM_VALUE_FIELD_NUMBER: _ClassVar[int]
+    NEIGHBOR_RADIUS_VALUE_FIELD_NUMBER: _ClassVar[int]
+    NUM_LAX_LOOPS_VALUE_FIELD_NUMBER: _ClassVar[int]
+    NUM_STEPS_LAX_VALUE_FIELD_NUMBER: _ClassVar[int]
+    TO_JIT_VALUE_FIELD_NUMBER: _ClassVar[int]
+    USE_FORI_LOOP_VALUE_FIELD_NUMBER: _ClassVar[int]
+    box_size_value: float
+    dt_value: float
+    freq_value: float
+    has_box_size: bool
+    has_dt: bool
+    has_freq: bool
+    has_map_dim: bool
+    has_neighbor_radius: bool
+    has_num_lax_loops: bool
+    has_num_steps_lax: bool
+    has_to_jit: bool
+    has_use_fori_loop: bool
+    map_dim_value: int
+    neighbor_radius_value: float
+    num_lax_loops_value: int
+    num_steps_lax_value: int
+    to_jit_value: bool
+    use_fori_loop_value: bool
+    def __init__(self, has_box_size: bool = ..., box_size_value: _Optional[float] = ..., has_map_dim: bool = ..., map_dim_value: _Optional[int] = ..., has_num_steps_lax: bool = ..., num_steps_lax_value: _Optional[int] = ..., has_num_lax_loops: bool = ..., num_lax_loops_value: _Optional[int] = ..., has_dt: bool = ..., dt_value: _Optional[float] = ..., has_freq: bool = ..., freq_value: _Optional[float] = ..., has_neighbor_radius: bool = ..., neighbor_radius_value: _Optional[float] = ..., has_to_jit: bool = ..., to_jit_value: bool = ..., has_use_fori_loop: bool = ..., use_fori_loop_value: bool = ...) -> None: ...
 
 class Slice(_message.Message):
     __slots__ = ["start", "step", "stop"]

@@ -13,7 +13,8 @@ import logging
 from concurrent import futures
 
 from vivarium.simulator import config
-from vivarium.simulator.simulator import Simulator, VerletSimulator
+from vivarium.simulator.simulator import Simulator, VerletSimulator, EngineConfig
+from vivarium.simulator.sim_computation import dynamics_rigid
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
@@ -59,9 +60,19 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return simulator_pb2.AgentConfig(**self.simulator.agent_config.to_dict())
 
     def GetAgentConfigSerialized(self, request, context):
-        config = self.simulator.agent_config
+        config = self.simulator.agent_configs[request.idx]
         serialized = config.param.serialize_parameters(subset=config.export_fields)
         return simulator_pb2.AgentConfigSerialized(serialized=serialized)
+
+    def GetAgentConfigs(self, request, context):
+        res = []
+        for config in self.simulator.agent_configs:
+            d = config.to_dict()
+            res.append(simulator_pb2.AgentConfig(**d))
+        return simulator_pb2.AgentConfigs(agent_configs=res)
+
+    def GetAgentConfig(self, request, context):
+        config = self.simulator.agent_configs[request.idx]
 
     def GetPopulationConfigMessage(self, request, context):
         return simulator_pb2.PopulationConfig(**self.simulator.population_config.to_dict())
@@ -86,6 +97,27 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
                                          motors=ndarray_to_proto(state.motor),
                                          entity_type=state.entity_type)
 
+    def GetNVEState(self, request, context):
+        state = self.simulator.state
+        return simulator_pb2.NVEState(position=simulator_pb2.RigidBody(center=ndarray_to_proto(state.position.center),
+                                                                       orientation=ndarray_to_proto(state.position.orientation)),
+                                      momentum=simulator_pb2.RigidBody(center=ndarray_to_proto(state.momentum.center),
+                                                                       orientation=ndarray_to_proto(state.momentum.orientation)),
+                                      force=simulator_pb2.RigidBody(center=ndarray_to_proto(state.force.center),
+                                                                    orientation=ndarray_to_proto(state.force.orientation)),
+                                      mass=simulator_pb2.RigidBody(center=ndarray_to_proto(state.mass.center),
+                                                                   orientation=ndarray_to_proto(state.mass.orientation)),
+                                      prox=ndarray_to_proto(state.prox),
+                                      motor=ndarray_to_proto(state.motor),
+                                      behavior=ndarray_to_proto(state.behavior),
+                                      wheel_diameter=ndarray_to_proto(state.wheel_diameter),
+                                      base_length=ndarray_to_proto(state.base_length),
+                                      speed_mul=ndarray_to_proto(state.speed_mul),
+                                      theta_mul=ndarray_to_proto(state.theta_mul),
+                                      proxs_dist_max=ndarray_to_proto(state.proxs_dist_max),
+                                      proxs_cos_min=ndarray_to_proto(state.proxs_cos_min),
+                                      entity_type=ndarray_to_proto(state.entity_type)
+                                      )
     def Start(self, request, context):
         simulator.run(threaded=True)
         return Empty()
@@ -103,12 +135,32 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return Empty()
 
     def SetSimulationConfig(self, request, context):
+        # d_conf = {}
+        # for field in request.config.DESCRIPTOR.oneofs_by_name:
+        #     oneof = request.config.WhichOneOf(field)
+        #     if oneof != 'has_' + field:
+        #         d_conf[oneof] = getattr(request, oneof)
         d_conf = protobuf_to_dict(request.config)
-        if 'entity_behaviors' in d_conf:
-            entity_behaviors = proto_to_ndarray(request.config.entity_behaviors)
-            d_conf['entity_behaviors'] = entity_behaviors
+        # if 'entity_behaviors' in d_conf:
+        #     entity_behaviors = proto_to_ndarray(request.config.entity_behaviors)
+        #     d_conf['entity_behaviors'] = entity_behaviors
         print('SetSimulationConfig', d_conf)
         self.simulator.simulation_config.param.update(**d_conf)
+        self._record_change(request.name.name, **d_conf)
+        return Empty()
+
+    def SetAgentConfig(self, request, context):
+        # d_conf = {}
+        # for field in request.config.DESCRIPTOR.oneofs_by_name:
+        #     oneof = request.config.WhichOneOf(field)
+        #     if oneof != 'has_' + field:
+        #         d_conf[oneof] = getattr(request, oneof)
+        d_conf = protobuf_to_dict(request.config)
+        # if 'entity_behaviors' in d_conf:
+        #     entity_behaviors = proto_to_ndarray(request.config.entity_behaviors)
+        #     d_conf['entity_behaviors'] = entity_behaviors
+        print('SetAgentConfig', d_conf)
+        self.simulator.agent_configs[request.idx.idx].param.update(**d_conf)
         self._record_change(request.name.name, **d_conf)
         return Empty()
 
@@ -156,18 +208,14 @@ def serve(simulator):
 
 
 if __name__ == '__main__':
-    agent_config = config.AgentConfig()
     simulation_config = config.SimulatorConfig()
-    # simulation_config.to_jit = False
-    # population_config = config.PopulationConfig()
-    engine_config = config.EngineConfig()
-    # behavior_config = config.BehaviorConfig(population_config=population_config)
 
-    simulator = VerletSimulator(simulation_config=simulation_config, agent_config=agent_config,
-                                engine_config=engine_config)
+    engine_config = EngineConfig(simulation_config=simulation_config, dynamics_fn=dynamics_rigid)
+
+    simulator = VerletSimulator(engine_config=engine_config)
 
     #simulator.set_motors(0, np.zeros(2))
-    print('Done?')
     # simulator.init_simulator()
+    print('Done?')
     logging.basicConfig()
     serve(simulator)

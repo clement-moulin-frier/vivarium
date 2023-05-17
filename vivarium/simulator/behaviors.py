@@ -1,7 +1,7 @@
 import jax.numpy as jnp
 from enum import Enum
 from jax import vmap
-import numpy as np
+from functools import partial
 
 linear_behavior_enum = Enum('matrices', ['FEAR', 'AGGRESSION', 'LOVE', 'SHY'])
 
@@ -31,3 +31,12 @@ def apply_motors(proxs, motors):
 
 def noop(proxs, motors):
     return jnp.array([0., 0.])
+
+
+behavior_bank = [partial(linear_behavior, matrix=linear_behavior_matrices[beh])
+                 for beh in linear_behavior_enum] \
+                + [apply_motors, noop]
+
+behavior_name_map = {beh.name: i for i, beh in enumerate(linear_behavior_enum)}
+behavior_name_map['manual'] = len(behavior_bank) - 2
+behavior_name_map['noop'] = len(behavior_bank) - 1
