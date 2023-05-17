@@ -1,65 +1,35 @@
 import numpy as np
 
-# from vivarium.simulator.rest_api import SimulatorRestClient
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
-from vivarium.simulator.config import SimulatorConfig, AgentConfig
 from vivarium.simulator.simulator_controller import SimulatorController
 
 import panel as pn
-import json
-import param
-import time
 
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, Button, PointDrawTool, HoverTool, Range1d
-from bokeh.layouts import layout
 from bokeh.events import ButtonClick
 
 
 def normal(array):
     normals = np.zeros((array.shape[0], 2))
-    # print('normal', array)
     normals[:, 0] = np.cos(array)
     normals[:, 1] = np.sin(array)
     return normals
 
+
 pn.extension()
 
-#simulator = SimulatorRestClient()
 simulator = SimulatorController(client=SimulatorGRPCClient())
 
-# simulator.param.watch()
-#
-# def change_agent_
-
-# sim_config = simulator.get_sim_config()
-# print('sim_config', sim_config.param.values())
-# agent_config = simulator.get_agent_config()
-# population_config = simulator.get_population_config()
-
 state = simulator.get_nve_state()
-
-
-# def push_config(e):
-#     if e.name == 'entity_behaviors' and np.array_equal(e.old, e.new):
-#         return
-#     print('push_config', simulator.simulation_config)
-#     pcb_config.stop()
-#     #print(f"(event: {e.name} changed from {e.old} with type {type(e.old)} to {e.new} with type {type(e.new)}). Equals = {np.array_equal(e.old, e.new)}")
-#     simulator.set_simulation_config(simulator.simulation_config)
-#     # time.sleep(10)
-#     pcb_config.start()
-#
-#
-# sim_config.param.watch(push_config, sim_config.export_fields, onlychanged=True)
 
 max_agents = 1000
 all_colors = ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(np.random.rand(max_agents) * 200 + 50, np.random.rand(max_agents) * 200 + 50)]
 
+
 def get_cds_data(state):
     pos = state.position.center
     x, y = pos[:, 0], pos[:, 1]
-    # print(x)
     thetas = state.position.orientation
     radii = state.base_length / 2.
     n_agents = x.shape[0]
@@ -117,27 +87,14 @@ p.toolbar.active_tap = draw_tool
 row = pn.Row(p, pn.Column(simulator.param.agent_idx, simulator.agent_config), pn.Column(button, simulator.simulation_config))
 row.servable()
 
-
 def update_plot():
     if len(cds.selected.indices) > 0 and cds.selected.indices[0] != simulator.agent_idx:
         simulator.agent_idx = cds.selected.indices[0]
         simulator.pull_agent_config()
-    # print('update plot')
-    # print(cds.selected.indices)
-    # agent_configs = simulator.get_agent_configs()
-    # state = dict(x)
     state = simulator.get_nve_state()
     update_cds(state)
 
 
-# def pull_config():
-#     changes_dict = simulator.get_recorded_changes()
-#     # print('pull_config', changes_dict)
-#     simulator.simulation_config.param.update(**changes_dict)
-
-
 pcb_plot = pn.state.add_periodic_callback(update_plot, 10)
-
-# pcb_config = pn.state.add_periodic_callback(pull_config, 200)
 
 

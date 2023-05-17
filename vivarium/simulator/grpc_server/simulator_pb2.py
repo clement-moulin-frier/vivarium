@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0fsimulator.proto\x12\tsimulator\x1a\x1bgoogle/protobuf/empty.proto\"\x14\n\x04Name\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x14\n\x04Time\x12\x0c\n\x04time\x18\x01 \x01(\x05\"2\n\x05Slice\x12\r\n\x05start\x18\x01 \x01(\x05\x12\x0c\n\x04stop\x18\x02 \x01(\x05\x12\x0c\n\x04step\x18\x03 \x01(\x05\"S\n\x06Motors\x12%\n\x0b\x61gent_slice\x18\x01 \x01(\x0b\x32\x10.simulator.Slice\x12\"\n\x06motors\x18\x02 \x01(\x0b\x32\x12.simulator.NDArray\"D\n\tBehaviors\x12%\n\x0b\x61gent_slice\x18\x01 \x01(\x0b\x32\x10.simulator.Slice\x12\x10\n\x08\x62\x65havior\x18\x02 \x01(\t\"\xbd\x01\n\x10SimulationConfig\x12\x10\n\x08\x62ox_size\x18\x01 \x01(\x02\x12\x0f\n\x07map_dim\x18\x02 \x01(\x05\x12\x15\n\rnum_steps_lax\x18\x03 \x01(\x05\x12\x15\n\rnum_lax_loops\x18\x04 \x01(\x05\x12\n\n\x02\x64t\x18\x05 \x01(\x02\x12\x0c\n\x04\x66req\x18\x06 \x01(\x02\x12\x17\n\x0fneighbor_radius\x18\x07 \x01(\x02\x12\x0e\n\x06to_jit\x18\x08 \x01(\x08\x12\x15\n\ruse_fori_loop\x18\t \x01(\x08\"\xe4\x04\n\x19SimulationConfigWithOneOf\x12\x16\n\x0chas_box_size\x18\x01 \x01(\x08H\x00\x12\x18\n\x0e\x62ox_size_value\x18\x02 \x01(\x02H\x00\x12\x15\n\x0bhas_map_dim\x18\x03 \x01(\x08H\x01\x12\x17\n\rmap_dim_value\x18\x04 \x01(\x05H\x01\x12\x1b\n\x11has_num_steps_lax\x18\x05 \x01(\x08H\x02\x12\x1d\n\x13num_steps_lax_value\x18\x06 \x01(\x05H\x02\x12\x1b\n\x11has_num_lax_loops\x18\x07 \x01(\x08H\x03\x12\x1d\n\x13num_lax_loops_value\x18\x08 \x01(\x05H\x03\x12\x10\n\x06has_dt\x18\t \x01(\x08H\x04\x12\x12\n\x08\x64t_value\x18\n \x01(\x02H\x04\x12\x12\n\x08has_freq\x18\x0b \x01(\x08H\x05\x12\x14\n\nfreq_value\x18\x0c \x01(\x02H\x05\x12\x1d\n\x13has_neighbor_radius\x18\r \x01(\x08H\x06\x12\x1f\n\x15neighbor_radius_value\x18\x0e \x01(\x02H\x06\x12\x14\n\nhas_to_jit\x18\x0f \x01(\x08H\x07\x12\x16\n\x0cto_jit_value\x18\x10 \x01(\x08H\x07\x12\x1b\n\x11has_use_fori_loop\x18\x11 \x01(\x08H\x08\x12\x1d\n\x13use_fori_loop_value\x18\x12 \x01(\x08H\x08\x42\n\n\x08\x62ox_sizeB\t\n\x07map_dimB\x0f\n\rnum_steps_laxB\x0f\n\rnum_lax_loopsB\x04\n\x02\x64tB\x06\n\x04\x66reqB\x11\n\x0fneighbor_radiusB\x08\n\x06to_jitB\x0f\n\ruse_fori_loop\"h\n\x1aSimulationConfigSenderName\x12+\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x1b.simulator.SimulationConfig\x12\x1d\n\x04name\x18\x02 \x01(\x0b\x32\x0f.simulator.Name\"0\n\x1aSimulationConfigSerialized\x12\x12\n\nserialized\x18\x01 \x01(\t\"u\n\x0eSerializedDict\x12\x17\n\x0fserialized_dict\x18\x01 \x01(\t\x12\x1c\n\x14has_entity_behaviors\x18\x02 \x01(\x08\x12,\n\x10\x65ntity_behaviors\x18\x03 \x01(\x0b\x32\x12.simulator.NDArray\"\x17\n\x08\x41gentIdx\x12\x0b\n\x03idx\x18\x01 \x01(\x05\"\xb6\x01\n\x0b\x41gentConfig\x12\x16\n\x0ewheel_diameter\x18\x01 \x01(\x02\x12\x13\n\x0b\x62\x61se_length\x18\x02 \x01(\x02\x12\x11\n\tspeed_mul\x18\x03 \x01(\x02\x12\x11\n\ttheta_mul\x18\x04 \x01(\x02\x12\x16\n\x0eproxs_dist_max\x18\x06 \x01(\x02\x12\x15\n\rproxs_cos_min\x18\x07 \x01(\x02\x12\x10\n\x08\x62\x65havior\x18\x08 \x01(\t\x12\x13\n\x0b\x65ntity_type\x18\t \x01(\x05\"\x83\x01\n\x18\x41gentConfigIdxSenderName\x12&\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x16.simulator.AgentConfig\x12\x1d\n\x04name\x18\x02 \x01(\x0b\x32\x0f.simulator.Name\x12 \n\x03idx\x18\x03 \x01(\x0b\x32\x13.simulator.AgentIdx\"=\n\x0c\x41gentConfigs\x12-\n\ragent_configs\x18\x01 \x03(\x0b\x32\x16.simulator.AgentConfig\"+\n\x15\x41gentConfigSerialized\x12\x12\n\nserialized\x18\x01 \x01(\t\"$\n\x10PopulationConfig\x12\x10\n\x08n_agents\x18\x01 \x01(\x05\"0\n\x1aPopulationConfigSerialized\x12\x12\n\nserialized\x18\x01 \x01(\t\" \n\x08Position\x12\t\n\x01x\x18\x01 \x03(\x02\x12\t\n\x01y\x18\x02 \x03(\x02\"?\n\x05State\x12&\n\tpositions\x18\x01 \x01(\x0b\x32\x13.simulator.Position\x12\x0e\n\x06thetas\x18\x02 \x03(\x02\"\x1a\n\x07NDArray\x12\x0f\n\x07ndarray\x18\x01 \x01(\x0c\"\xb4\x01\n\x0bStateArrays\x12%\n\tpositions\x18\x01 \x01(\x0b\x32\x12.simulator.NDArray\x12\"\n\x06thetas\x18\x02 \x01(\x0b\x32\x12.simulator.NDArray\x12!\n\x05proxs\x18\x03 \x01(\x0b\x32\x12.simulator.NDArray\x12\"\n\x06motors\x18\x04 \x01(\x0b\x32\x12.simulator.NDArray\x12\x13\n\x0b\x65ntity_type\x18\x05 \x01(\x05\"X\n\tRigidBody\x12\"\n\x06\x63\x65nter\x18\x01 \x01(\x0b\x32\x12.simulator.NDArray\x12\'\n\x0borientation\x18\x02 \x01(\x0b\x32\x12.simulator.NDArray\"\xb1\x04\n\x08NVEState\x12&\n\x08position\x18\x01 \x01(\x0b\x32\x14.simulator.RigidBody\x12&\n\x08momentum\x18\x02 \x01(\x0b\x32\x14.simulator.RigidBody\x12#\n\x05\x66orce\x18\x03 \x01(\x0b\x32\x14.simulator.RigidBody\x12\"\n\x04mass\x18\x04 \x01(\x0b\x32\x14.simulator.RigidBody\x12 \n\x04prox\x18\x05 \x01(\x0b\x32\x12.simulator.NDArray\x12!\n\x05motor\x18\x06 \x01(\x0b\x32\x12.simulator.NDArray\x12$\n\x08\x62\x65havior\x18\x07 \x01(\x0b\x32\x12.simulator.NDArray\x12*\n\x0ewheel_diameter\x18\x08 \x01(\x0b\x32\x12.simulator.NDArray\x12\'\n\x0b\x62\x61se_length\x18\t \x01(\x0b\x32\x12.simulator.NDArray\x12%\n\tspeed_mul\x18\n \x01(\x0b\x32\x12.simulator.NDArray\x12%\n\ttheta_mul\x18\x0b \x01(\x0b\x32\x12.simulator.NDArray\x12*\n\x0eproxs_dist_max\x18\x0c \x01(\x0b\x32\x12.simulator.NDArray\x12)\n\rproxs_cos_min\x18\r \x01(\x0b\x32\x12.simulator.NDArray\x12\'\n\x0b\x65ntity_type\x18\x0e \x01(\x0b\x32\x12.simulator.NDArray\"$\n\x0eIsStartedState\x12\x12\n\nis_started\x18\x01 \x01(\x08\x32\xf2\x0f\n\x0fSimulatorServer\x12S\n\x1aGetSimulationConfigMessage\x12\x16.google.protobuf.Empty\x1a\x1b.simulator.SimulationConfig\"\x00\x12`\n\x1dGetSimulationConfigSerialized\x12\x16.google.protobuf.Empty\x1a%.simulator.SimulationConfigSerialized\"\x00\x12\x42\n\x12GetRecordedChanges\x12\x0f.simulator.Name\x1a\x19.simulator.SerializedDict\"\x00\x12I\n\x15GetAgentConfigMessage\x12\x16.google.protobuf.Empty\x1a\x16.simulator.AgentConfig\"\x00\x12S\n\x18GetAgentConfigSerialized\x12\x13.simulator.AgentIdx\x1a .simulator.AgentConfigSerialized\"\x00\x12\x44\n\x0fGetAgentConfigs\x12\x16.google.protobuf.Empty\x1a\x17.simulator.AgentConfigs\"\x00\x12?\n\x0eGetAgentConfig\x12\x13.simulator.AgentIdx\x1a\x16.simulator.AgentConfig\"\x00\x12S\n\x1aGetPopulationConfigMessage\x12\x16.google.protobuf.Empty\x1a\x1b.simulator.PopulationConfig\"\x00\x12`\n\x1dGetPopulationConfigSerialized\x12\x16.google.protobuf.Empty\x1a%.simulator.PopulationConfigSerialized\"\x00\x12`\n\x1dSetSimulationConfigSerialized\x12%.simulator.SimulationConfigSerialized\x1a\x16.google.protobuf.Empty\"\x00\x12V\n\x13SetSimulationConfig\x12%.simulator.SimulationConfigSenderName\x1a\x16.google.protobuf.Empty\"\x00\x12O\n\x0eSetAgentConfig\x12#.simulator.AgentConfigIdxSenderName\x1a\x16.simulator.AgentConfig\"\x00\x12\x38\n\tSetMotors\x12\x11.simulator.Motors\x1a\x16.google.protobuf.Empty\"\x00\x12>\n\x0cSetBehaviors\x12\x14.simulator.Behaviors\x1a\x16.google.protobuf.Empty\"\x00\x12L\n\x13SetPopulationConfig\x12\x1b.simulator.PopulationConfig\x1a\x16.google.protobuf.Empty\"\x00\x12`\n\x1dSetPopulationConfigSerialized\x12%.simulator.PopulationConfigSerialized\x1a\x16.google.protobuf.Empty\"\x00\x12=\n\x0fGetStateMessage\x12\x16.google.protobuf.Empty\x1a\x10.simulator.State\"\x00\x12\x42\n\x0eGetStateArrays\x12\x16.google.protobuf.Empty\x1a\x16.simulator.StateArrays\"\x00\x12<\n\x0bGetNVEState\x12\x16.google.protobuf.Empty\x1a\x13.simulator.NVEState\"\x00\x12@\n\tIsStarted\x12\x16.google.protobuf.Empty\x1a\x19.simulator.IsStartedState\"\x00\x12\x39\n\x05Start\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x12\x38\n\x04Stop\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x12\x44\n\x10UpdateNeighborFn\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x12H\n\x14UpdateStateNeighbors\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x12H\n\x14UpdateFunctionUpdate\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x12\x43\n\x0fUpdateBehaviors\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x12:\n\rGetChangeTime\x12\x16.google.protobuf.Empty\x1a\x0f.simulator.Time\"\x00\x42\x34\n\x1aio.grpc.examples.simulatorB\x0eSimulatorProtoP\x01\xa2\x02\x03SIMb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0fsimulator.proto\x12\tsimulator\x1a\x1bgoogle/protobuf/empty.proto\"\x14\n\x04Name\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x14\n\x04Time\x12\x0c\n\x04time\x18\x01 \x01(\x05\"2\n\x05Slice\x12\r\n\x05start\x18\x01 \x01(\x05\x12\x0c\n\x04stop\x18\x02 \x01(\x05\x12\x0c\n\x04step\x18\x03 \x01(\x05\"u\n\x0eSerializedDict\x12\x17\n\x0fserialized_dict\x18\x01 \x01(\t\x12\x1c\n\x14has_entity_behaviors\x18\x02 \x01(\x08\x12,\n\x10\x65ntity_behaviors\x18\x03 \x01(\x0b\x32\x12.simulator.NDArray\"\xbd\x01\n\x10SimulationConfig\x12\x10\n\x08\x62ox_size\x18\x01 \x01(\x02\x12\x0f\n\x07map_dim\x18\x02 \x01(\x05\x12\x15\n\rnum_steps_lax\x18\x03 \x01(\x05\x12\x15\n\rnum_lax_loops\x18\x04 \x01(\x05\x12\n\n\x02\x64t\x18\x05 \x01(\x02\x12\x0c\n\x04\x66req\x18\x06 \x01(\x02\x12\x17\n\x0fneighbor_radius\x18\x07 \x01(\x02\x12\x0e\n\x06to_jit\x18\x08 \x01(\x08\x12\x15\n\ruse_fori_loop\x18\t \x01(\x08\"h\n\x1aSimulationConfigSenderName\x12+\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x1b.simulator.SimulationConfig\x12\x1d\n\x04name\x18\x02 \x01(\x0b\x32\x0f.simulator.Name\"0\n\x1aSimulationConfigSerialized\x12\x12\n\nserialized\x18\x01 \x01(\t\"\x17\n\x08\x41gentIdx\x12\x0b\n\x03idx\x18\x01 \x01(\x05\"\xb6\x01\n\x0b\x41gentConfig\x12\x16\n\x0ewheel_diameter\x18\x01 \x01(\x02\x12\x13\n\x0b\x62\x61se_length\x18\x02 \x01(\x02\x12\x11\n\tspeed_mul\x18\x03 \x01(\x02\x12\x11\n\ttheta_mul\x18\x04 \x01(\x02\x12\x16\n\x0eproxs_dist_max\x18\x06 \x01(\x02\x12\x15\n\rproxs_cos_min\x18\x07 \x01(\x02\x12\x10\n\x08\x62\x65havior\x18\x08 \x01(\t\x12\x13\n\x0b\x65ntity_type\x18\t \x01(\x05\"\x83\x01\n\x18\x41gentConfigIdxSenderName\x12&\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x16.simulator.AgentConfig\x12\x1d\n\x04name\x18\x02 \x01(\x0b\x32\x0f.simulator.Name\x12 \n\x03idx\x18\x03 \x01(\x0b\x32\x13.simulator.AgentIdx\"=\n\x0c\x41gentConfigs\x12-\n\ragent_configs\x18\x01 \x03(\x0b\x32\x16.simulator.AgentConfig\"+\n\x15\x41gentConfigSerialized\x12\x12\n\nserialized\x18\x01 \x01(\t\"\x1a\n\x07NDArray\x12\x0f\n\x07ndarray\x18\x01 \x01(\x0c\"X\n\tRigidBody\x12\"\n\x06\x63\x65nter\x18\x01 \x01(\x0b\x32\x12.simulator.NDArray\x12\'\n\x0borientation\x18\x02 \x01(\x0b\x32\x12.simulator.NDArray\"\xb1\x04\n\x08NVEState\x12&\n\x08position\x18\x01 \x01(\x0b\x32\x14.simulator.RigidBody\x12&\n\x08momentum\x18\x02 \x01(\x0b\x32\x14.simulator.RigidBody\x12#\n\x05\x66orce\x18\x03 \x01(\x0b\x32\x14.simulator.RigidBody\x12\"\n\x04mass\x18\x04 \x01(\x0b\x32\x14.simulator.RigidBody\x12 \n\x04prox\x18\x05 \x01(\x0b\x32\x12.simulator.NDArray\x12!\n\x05motor\x18\x06 \x01(\x0b\x32\x12.simulator.NDArray\x12$\n\x08\x62\x65havior\x18\x07 \x01(\x0b\x32\x12.simulator.NDArray\x12*\n\x0ewheel_diameter\x18\x08 \x01(\x0b\x32\x12.simulator.NDArray\x12\'\n\x0b\x62\x61se_length\x18\t \x01(\x0b\x32\x12.simulator.NDArray\x12%\n\tspeed_mul\x18\n \x01(\x0b\x32\x12.simulator.NDArray\x12%\n\ttheta_mul\x18\x0b \x01(\x0b\x32\x12.simulator.NDArray\x12*\n\x0eproxs_dist_max\x18\x0c \x01(\x0b\x32\x12.simulator.NDArray\x12)\n\rproxs_cos_min\x18\r \x01(\x0b\x32\x12.simulator.NDArray\x12\'\n\x0b\x65ntity_type\x18\x0e \x01(\x0b\x32\x12.simulator.NDArray\"$\n\x0eIsStartedState\x12\x12\n\nis_started\x18\x01 \x01(\x08\x32\xef\x08\n\x0fSimulatorServer\x12S\n\x1aGetSimulationConfigMessage\x12\x16.google.protobuf.Empty\x1a\x1b.simulator.SimulationConfig\"\x00\x12`\n\x1dGetSimulationConfigSerialized\x12\x16.google.protobuf.Empty\x1a%.simulator.SimulationConfigSerialized\"\x00\x12\x42\n\x12GetRecordedChanges\x12\x0f.simulator.Name\x1a\x19.simulator.SerializedDict\"\x00\x12I\n\x15GetAgentConfigMessage\x12\x16.google.protobuf.Empty\x1a\x16.simulator.AgentConfig\"\x00\x12S\n\x18GetAgentConfigSerialized\x12\x13.simulator.AgentIdx\x1a .simulator.AgentConfigSerialized\"\x00\x12\x44\n\x0fGetAgentConfigs\x12\x16.google.protobuf.Empty\x1a\x17.simulator.AgentConfigs\"\x00\x12?\n\x0eGetAgentConfig\x12\x13.simulator.AgentIdx\x1a\x16.simulator.AgentConfig\"\x00\x12`\n\x1dSetSimulationConfigSerialized\x12%.simulator.SimulationConfigSerialized\x1a\x16.google.protobuf.Empty\"\x00\x12V\n\x13SetSimulationConfig\x12%.simulator.SimulationConfigSenderName\x1a\x16.google.protobuf.Empty\"\x00\x12O\n\x0eSetAgentConfig\x12#.simulator.AgentConfigIdxSenderName\x1a\x16.simulator.AgentConfig\"\x00\x12<\n\x0bGetNVEState\x12\x16.google.protobuf.Empty\x1a\x13.simulator.NVEState\"\x00\x12@\n\tIsStarted\x12\x16.google.protobuf.Empty\x1a\x19.simulator.IsStartedState\"\x00\x12\x39\n\x05Start\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x12\x38\n\x04Stop\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x12:\n\rGetChangeTime\x12\x16.google.protobuf.Empty\x1a\x0f.simulator.Time\"\x00\x42\x34\n\x1aio.grpc.examples.simulatorB\x0eSimulatorProtoP\x01\xa2\x02\x03SIMb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'simulator_pb2', globals())
@@ -28,48 +28,32 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _TIME._serialized_end=101
   _SLICE._serialized_start=103
   _SLICE._serialized_end=153
-  _MOTORS._serialized_start=155
-  _MOTORS._serialized_end=238
-  _BEHAVIORS._serialized_start=240
-  _BEHAVIORS._serialized_end=308
-  _SIMULATIONCONFIG._serialized_start=311
-  _SIMULATIONCONFIG._serialized_end=500
-  _SIMULATIONCONFIGWITHONEOF._serialized_start=503
-  _SIMULATIONCONFIGWITHONEOF._serialized_end=1115
-  _SIMULATIONCONFIGSENDERNAME._serialized_start=1117
-  _SIMULATIONCONFIGSENDERNAME._serialized_end=1221
-  _SIMULATIONCONFIGSERIALIZED._serialized_start=1223
-  _SIMULATIONCONFIGSERIALIZED._serialized_end=1271
-  _SERIALIZEDDICT._serialized_start=1273
-  _SERIALIZEDDICT._serialized_end=1390
-  _AGENTIDX._serialized_start=1392
-  _AGENTIDX._serialized_end=1415
-  _AGENTCONFIG._serialized_start=1418
-  _AGENTCONFIG._serialized_end=1600
-  _AGENTCONFIGIDXSENDERNAME._serialized_start=1603
-  _AGENTCONFIGIDXSENDERNAME._serialized_end=1734
-  _AGENTCONFIGS._serialized_start=1736
-  _AGENTCONFIGS._serialized_end=1797
-  _AGENTCONFIGSERIALIZED._serialized_start=1799
-  _AGENTCONFIGSERIALIZED._serialized_end=1842
-  _POPULATIONCONFIG._serialized_start=1844
-  _POPULATIONCONFIG._serialized_end=1880
-  _POPULATIONCONFIGSERIALIZED._serialized_start=1882
-  _POPULATIONCONFIGSERIALIZED._serialized_end=1930
-  _POSITION._serialized_start=1932
-  _POSITION._serialized_end=1964
-  _STATE._serialized_start=1966
-  _STATE._serialized_end=2029
-  _NDARRAY._serialized_start=2031
-  _NDARRAY._serialized_end=2057
-  _STATEARRAYS._serialized_start=2060
-  _STATEARRAYS._serialized_end=2240
-  _RIGIDBODY._serialized_start=2242
-  _RIGIDBODY._serialized_end=2330
-  _NVESTATE._serialized_start=2333
-  _NVESTATE._serialized_end=2894
-  _ISSTARTEDSTATE._serialized_start=2896
-  _ISSTARTEDSTATE._serialized_end=2932
-  _SIMULATORSERVER._serialized_start=2935
-  _SIMULATORSERVER._serialized_end=4969
+  _SERIALIZEDDICT._serialized_start=155
+  _SERIALIZEDDICT._serialized_end=272
+  _SIMULATIONCONFIG._serialized_start=275
+  _SIMULATIONCONFIG._serialized_end=464
+  _SIMULATIONCONFIGSENDERNAME._serialized_start=466
+  _SIMULATIONCONFIGSENDERNAME._serialized_end=570
+  _SIMULATIONCONFIGSERIALIZED._serialized_start=572
+  _SIMULATIONCONFIGSERIALIZED._serialized_end=620
+  _AGENTIDX._serialized_start=622
+  _AGENTIDX._serialized_end=645
+  _AGENTCONFIG._serialized_start=648
+  _AGENTCONFIG._serialized_end=830
+  _AGENTCONFIGIDXSENDERNAME._serialized_start=833
+  _AGENTCONFIGIDXSENDERNAME._serialized_end=964
+  _AGENTCONFIGS._serialized_start=966
+  _AGENTCONFIGS._serialized_end=1027
+  _AGENTCONFIGSERIALIZED._serialized_start=1029
+  _AGENTCONFIGSERIALIZED._serialized_end=1072
+  _NDARRAY._serialized_start=1074
+  _NDARRAY._serialized_end=1100
+  _RIGIDBODY._serialized_start=1102
+  _RIGIDBODY._serialized_end=1190
+  _NVESTATE._serialized_start=1193
+  _NVESTATE._serialized_end=1754
+  _ISSTARTEDSTATE._serialized_start=1756
+  _ISSTARTEDSTATE._serialized_end=1792
+  _SIMULATORSERVER._serialized_start=1795
+  _SIMULATORSERVER._serialized_end=2930
 # @@protoc_insertion_point(module_scope)

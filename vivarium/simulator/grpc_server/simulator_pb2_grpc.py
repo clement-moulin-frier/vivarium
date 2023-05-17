@@ -51,16 +51,6 @@ class SimulatorServerStub(object):
                 request_serializer=simulator__pb2.AgentIdx.SerializeToString,
                 response_deserializer=simulator__pb2.AgentConfig.FromString,
                 )
-        self.GetPopulationConfigMessage = channel.unary_unary(
-                '/simulator.SimulatorServer/GetPopulationConfigMessage',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=simulator__pb2.PopulationConfig.FromString,
-                )
-        self.GetPopulationConfigSerialized = channel.unary_unary(
-                '/simulator.SimulatorServer/GetPopulationConfigSerialized',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=simulator__pb2.PopulationConfigSerialized.FromString,
-                )
         self.SetSimulationConfigSerialized = channel.unary_unary(
                 '/simulator.SimulatorServer/SetSimulationConfigSerialized',
                 request_serializer=simulator__pb2.SimulationConfigSerialized.SerializeToString,
@@ -75,36 +65,6 @@ class SimulatorServerStub(object):
                 '/simulator.SimulatorServer/SetAgentConfig',
                 request_serializer=simulator__pb2.AgentConfigIdxSenderName.SerializeToString,
                 response_deserializer=simulator__pb2.AgentConfig.FromString,
-                )
-        self.SetMotors = channel.unary_unary(
-                '/simulator.SimulatorServer/SetMotors',
-                request_serializer=simulator__pb2.Motors.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                )
-        self.SetBehaviors = channel.unary_unary(
-                '/simulator.SimulatorServer/SetBehaviors',
-                request_serializer=simulator__pb2.Behaviors.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                )
-        self.SetPopulationConfig = channel.unary_unary(
-                '/simulator.SimulatorServer/SetPopulationConfig',
-                request_serializer=simulator__pb2.PopulationConfig.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                )
-        self.SetPopulationConfigSerialized = channel.unary_unary(
-                '/simulator.SimulatorServer/SetPopulationConfigSerialized',
-                request_serializer=simulator__pb2.PopulationConfigSerialized.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                )
-        self.GetStateMessage = channel.unary_unary(
-                '/simulator.SimulatorServer/GetStateMessage',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=simulator__pb2.State.FromString,
-                )
-        self.GetStateArrays = channel.unary_unary(
-                '/simulator.SimulatorServer/GetStateArrays',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=simulator__pb2.StateArrays.FromString,
                 )
         self.GetNVEState = channel.unary_unary(
                 '/simulator.SimulatorServer/GetNVEState',
@@ -123,26 +83,6 @@ class SimulatorServerStub(object):
                 )
         self.Stop = channel.unary_unary(
                 '/simulator.SimulatorServer/Stop',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                )
-        self.UpdateNeighborFn = channel.unary_unary(
-                '/simulator.SimulatorServer/UpdateNeighborFn',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                )
-        self.UpdateStateNeighbors = channel.unary_unary(
-                '/simulator.SimulatorServer/UpdateStateNeighbors',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                )
-        self.UpdateFunctionUpdate = channel.unary_unary(
-                '/simulator.SimulatorServer/UpdateFunctionUpdate',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                )
-        self.UpdateBehaviors = channel.unary_unary(
-                '/simulator.SimulatorServer/UpdateBehaviors',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 )
@@ -199,18 +139,6 @@ class SimulatorServerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetPopulationConfigMessage(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetPopulationConfigSerialized(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
     def SetSimulationConfigSerialized(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -224,42 +152,6 @@ class SimulatorServerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def SetAgentConfig(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def SetMotors(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def SetBehaviors(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def SetPopulationConfig(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def SetPopulationConfigSerialized(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetStateMessage(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetStateArrays(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -284,30 +176,6 @@ class SimulatorServerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def Stop(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def UpdateNeighborFn(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def UpdateStateNeighbors(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def UpdateFunctionUpdate(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def UpdateBehaviors(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -357,16 +225,6 @@ def add_SimulatorServerServicer_to_server(servicer, server):
                     request_deserializer=simulator__pb2.AgentIdx.FromString,
                     response_serializer=simulator__pb2.AgentConfig.SerializeToString,
             ),
-            'GetPopulationConfigMessage': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetPopulationConfigMessage,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=simulator__pb2.PopulationConfig.SerializeToString,
-            ),
-            'GetPopulationConfigSerialized': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetPopulationConfigSerialized,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=simulator__pb2.PopulationConfigSerialized.SerializeToString,
-            ),
             'SetSimulationConfigSerialized': grpc.unary_unary_rpc_method_handler(
                     servicer.SetSimulationConfigSerialized,
                     request_deserializer=simulator__pb2.SimulationConfigSerialized.FromString,
@@ -381,36 +239,6 @@ def add_SimulatorServerServicer_to_server(servicer, server):
                     servicer.SetAgentConfig,
                     request_deserializer=simulator__pb2.AgentConfigIdxSenderName.FromString,
                     response_serializer=simulator__pb2.AgentConfig.SerializeToString,
-            ),
-            'SetMotors': grpc.unary_unary_rpc_method_handler(
-                    servicer.SetMotors,
-                    request_deserializer=simulator__pb2.Motors.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            ),
-            'SetBehaviors': grpc.unary_unary_rpc_method_handler(
-                    servicer.SetBehaviors,
-                    request_deserializer=simulator__pb2.Behaviors.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            ),
-            'SetPopulationConfig': grpc.unary_unary_rpc_method_handler(
-                    servicer.SetPopulationConfig,
-                    request_deserializer=simulator__pb2.PopulationConfig.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            ),
-            'SetPopulationConfigSerialized': grpc.unary_unary_rpc_method_handler(
-                    servicer.SetPopulationConfigSerialized,
-                    request_deserializer=simulator__pb2.PopulationConfigSerialized.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            ),
-            'GetStateMessage': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetStateMessage,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=simulator__pb2.State.SerializeToString,
-            ),
-            'GetStateArrays': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetStateArrays,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=simulator__pb2.StateArrays.SerializeToString,
             ),
             'GetNVEState': grpc.unary_unary_rpc_method_handler(
                     servicer.GetNVEState,
@@ -429,26 +257,6 @@ def add_SimulatorServerServicer_to_server(servicer, server):
             ),
             'Stop': grpc.unary_unary_rpc_method_handler(
                     servicer.Stop,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            ),
-            'UpdateNeighborFn': grpc.unary_unary_rpc_method_handler(
-                    servicer.UpdateNeighborFn,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            ),
-            'UpdateStateNeighbors': grpc.unary_unary_rpc_method_handler(
-                    servicer.UpdateStateNeighbors,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            ),
-            'UpdateFunctionUpdate': grpc.unary_unary_rpc_method_handler(
-                    servicer.UpdateFunctionUpdate,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            ),
-            'UpdateBehaviors': grpc.unary_unary_rpc_method_handler(
-                    servicer.UpdateBehaviors,
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
@@ -588,40 +396,6 @@ class SimulatorServer(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def GetPopulationConfigMessage(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetPopulationConfigMessage',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            simulator__pb2.PopulationConfig.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def GetPopulationConfigSerialized(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetPopulationConfigSerialized',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            simulator__pb2.PopulationConfigSerialized.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
     def SetSimulationConfigSerialized(request,
             target,
             options=(),
@@ -669,108 +443,6 @@ class SimulatorServer(object):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetAgentConfig',
             simulator__pb2.AgentConfigIdxSenderName.SerializeToString,
             simulator__pb2.AgentConfig.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def SetMotors(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetMotors',
-            simulator__pb2.Motors.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def SetBehaviors(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetBehaviors',
-            simulator__pb2.Behaviors.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def SetPopulationConfig(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetPopulationConfig',
-            simulator__pb2.PopulationConfig.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def SetPopulationConfigSerialized(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetPopulationConfigSerialized',
-            simulator__pb2.PopulationConfigSerialized.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def GetStateMessage(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetStateMessage',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            simulator__pb2.State.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def GetStateArrays(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetStateArrays',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            simulator__pb2.StateArrays.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -837,74 +509,6 @@ class SimulatorServer(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/Stop',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def UpdateNeighborFn(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/UpdateNeighborFn',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def UpdateStateNeighbors(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/UpdateStateNeighbors',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def UpdateFunctionUpdate(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/UpdateFunctionUpdate',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def UpdateBehaviors(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/UpdateBehaviors',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options, channel_credentials,

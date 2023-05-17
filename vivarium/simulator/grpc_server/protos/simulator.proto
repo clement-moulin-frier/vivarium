@@ -21,7 +21,6 @@ option java_outer_classname = "SimulatorProto";
 option objc_class_prefix = "SIM";
 
 import "google/protobuf/empty.proto";
-//import "ndarray.proto";
 package simulator;
 
 // Interface exported by the server.
@@ -36,23 +35,11 @@ service SimulatorServer {
   rpc GetAgentConfigs(google.protobuf.Empty) returns (AgentConfigs) {}
   rpc GetAgentConfig(AgentIdx) returns (AgentConfig) {}
 
-  rpc GetPopulationConfigMessage(google.protobuf.Empty) returns (PopulationConfig) {}
-  rpc GetPopulationConfigSerialized(google.protobuf.Empty) returns (PopulationConfigSerialized) {}
 
   rpc SetSimulationConfigSerialized(SimulationConfigSerialized) returns (google.protobuf.Empty) {}
   rpc SetSimulationConfig(SimulationConfigSenderName) returns (google.protobuf.Empty) {}
 
   rpc SetAgentConfig(AgentConfigIdxSenderName) returns (AgentConfig) {}
-
-  rpc SetMotors(Motors) returns (google.protobuf.Empty) {}
-  rpc SetBehaviors(Behaviors) returns (google.protobuf.Empty) {}
-
-  rpc SetPopulationConfig(PopulationConfig) returns (google.protobuf.Empty) {}
-  rpc SetPopulationConfigSerialized(PopulationConfigSerialized) returns (google.protobuf.Empty) {}
-
-  rpc GetStateMessage(google.protobuf.Empty) returns (State) {}
-
-  rpc GetStateArrays(google.protobuf.Empty) returns (StateArrays) {}
 
   rpc GetNVEState(google.protobuf.Empty) returns (NVEState) {}
 
@@ -61,14 +48,6 @@ service SimulatorServer {
   rpc Start(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 
   rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-
-  rpc UpdateNeighborFn(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-
-  rpc UpdateStateNeighbors(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-
-  rpc UpdateFunctionUpdate(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-
-  rpc UpdateBehaviors(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 
   rpc GetChangeTime(google.protobuf.Empty) returns (Time) {}
 
@@ -88,14 +67,10 @@ message Slice {
   int32 step = 3;
 }
 
-message Motors {
-  Slice agent_slice = 1;
-  NDArray motors = 2;
-}
-
-message Behaviors {
-  Slice agent_slice = 1;
-  string behavior = 2;
+message SerializedDict {
+  string serialized_dict = 1;
+  bool has_entity_behaviors = 2;
+  NDArray entity_behaviors = 3;
 }
 
 message SimulationConfig {
@@ -110,45 +85,6 @@ message SimulationConfig {
   bool use_fori_loop = 9;
 }
 
-message SimulationConfigWithOneOf {
-  oneof box_size {
-    bool has_box_size = 1;
-    float box_size_value = 2;
-  }
-  oneof map_dim {
-    bool has_map_dim = 3;
-    int32 map_dim_value = 4;
-  }
-  oneof num_steps_lax {
-    bool has_num_steps_lax = 5;
-    int32 num_steps_lax_value = 6;
-  }
-  oneof num_lax_loops {
-    bool has_num_lax_loops = 7;
-    int32 num_lax_loops_value = 8;
-  }
-  oneof dt {
-    bool has_dt = 9;
-    float dt_value = 10;
-  }
-  oneof freq {
-    bool has_freq = 11;
-    float freq_value = 12;
-  }
-  oneof neighbor_radius {
-    bool has_neighbor_radius = 13;
-    float neighbor_radius_value = 14;
-  }
-  oneof to_jit {
-    bool has_to_jit = 15;
-    bool to_jit_value = 16;
-  }
-  oneof use_fori_loop {
-    bool has_use_fori_loop = 17;
-    bool use_fori_loop_value = 18;
-  }
-}
-
 message SimulationConfigSenderName {
   SimulationConfig config = 1;
   Name name = 2;
@@ -156,12 +92,6 @@ message SimulationConfigSenderName {
 
 message SimulationConfigSerialized {
   string serialized = 1;
-}
-
-message SerializedDict {
-  string serialized_dict = 1;
-  bool has_entity_behaviors = 2;
-  NDArray entity_behaviors = 3;
 }
 
 message AgentIdx {
@@ -193,34 +123,8 @@ message AgentConfigSerialized {
   string serialized = 1;
 }
 
-message PopulationConfig {
-  int32 n_agents = 1;
-}
-
-message PopulationConfigSerialized {
-  string serialized = 1;
-}
-
-message Position {
-  repeated float x = 1;
-  repeated float y = 2;
-}
-
-message State {
-  Position positions = 1;
-  repeated float thetas = 2;
-}
-
 message NDArray {
   bytes ndarray = 1;
-}
-
-message StateArrays {
-  NDArray positions = 1;
-  NDArray thetas = 2;
-  NDArray proxs = 3;
-  NDArray motors = 4;
-  int32 entity_type = 5;
 }
 
 message RigidBody {

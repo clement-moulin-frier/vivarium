@@ -5,17 +5,15 @@ from vivarium.simulator.grpc_server import simulator_pb2_grpc
 import vivarium.simulator.grpc_server.simulator_pb2 as simulator_pb2
 
 from vivarium.simulator.config import SimulatorConfig, AgentConfig
-from vivarium.simulator.sim_computation import Population, NVEState
+from vivarium.simulator.sim_computation import NVEState
 from vivarium.simulator.simulator_client_abc import SimulatorClient
 
 from jax_md.rigid_body import RigidBody
-
 
 from numproto.numproto import ndarray_to_proto, proto_to_ndarray
 
 from protobuf_to_dict import protobuf_to_dict, dict_to_protobuf
 
-import numpy as np
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
@@ -41,7 +39,6 @@ class SimulatorGRPCClient(SimulatorClient):
 
     def get_sim_config(self):
         serialized = self.stub.GetSimulationConfigSerialized(Empty()).serialized
-        # print('get_sim_config', serialized)
         return SimulatorConfig(**SimulatorConfig.param.deserialize_parameters(serialized))
 
     def get_recorded_changes(self):
@@ -67,23 +64,10 @@ class SimulatorGRPCClient(SimulatorClient):
             res.append(AgentConfig(**d))
         return config
 
-    def get_population_config_dict(self):
-        config = self.stub.GetPopulationConfig(Empty())
-        return protobuf_to_dict(config)
-
-    def get_population_config(self):
-        serialized = self.stub.GetPopulationConfigSerialized(Empty()).serialized
-        return PopulationConfig(**PopulationConfig.param.deserialize_parameters(serialized))
-
-    def set_population_config(self, population_config):
-        config = simulator_pb2.PopulationConfig(**population_config.to_dict())
-        self.stub.SetPopulationConfig(config)
 
     def set_simulation_config(self, simulation_config):
         d = simulation_config.to_dict()
         print('set_simulation_config', d)
-        # if 'entity_behaviors' in d:
-        #     d['entity_behaviors'] = ndarray_to_proto(d['entity_behaviors'])
         config = simulator_pb2.SimulationConfig(**d)
         name = simulator_pb2.Name(name=self.name)
         config_sender_name = simulator_pb2.SimulationConfigSenderName(name=name, config=config)
@@ -92,8 +76,6 @@ class SimulatorGRPCClient(SimulatorClient):
     def set_agent_config(self, agent_idx, agent_config):
         d = agent_config.to_dict()
         print('set_agent_config', d)
-        # if 'entity_behaviors' in d:
-        #     d['entity_behaviors'] = ndarray_to_proto(d['entity_behaviors'])
         config = simulator_pb2.AgentConfig(**d)
         name = simulator_pb2.Name(name=self.name)
         idx = simulator_pb2.AgentIdx(idx=agent_idx)
@@ -102,7 +84,6 @@ class SimulatorGRPCClient(SimulatorClient):
 
     def set_simulation_config_serialized(self, simulation_config):
         serialized = simulation_config.param.serialize_parameters(subset=simulation_config.export_fields)
-        # print('set_simulation_config', serialized)
         self.stub.SetSimulationConfigSerialized(simulator_pb2.SimulationConfigSerialized(serialized=serialized))
 
     def set_motors(self, agent_idx, motors):
@@ -114,25 +95,9 @@ class SimulatorGRPCClient(SimulatorClient):
                                       motors=ndarray_to_proto(motors))
         self.stub.SetMotors(motors)
 
-    def set_behaviors(self, agent_idx, behavior):
-        if type(agent_idx) is int:
-            start, stop, step = agent_idx, agent_idx + 1, 1
-        else:
-            start, stop, step = agent_idx.start, agent_idx.stop, agent_idx.step
-        behavior = simulator_pb2.Behaviors(agent_slice=simulator_pb2.Slice(start=start, stop=stop, step=step),
-                                           behavior=behavior)
-        self.stub.SetBehaviors(behavior)
-
     def get_state(self):
         return self.stub.GetStateMessage(Empty())
 
-    def get_state_arrays(self):
-        state = self.stub.GetStateArrays(Empty())
-        return Population(position=proto_to_ndarray(state.positions),
-                          theta=proto_to_ndarray(state.thetas),
-                          prox=proto_to_ndarray(state.proxs),
-                          motor=proto_to_ndarray(state.motors),
-                          entity_type=state.entity_type)
 
     def get_nve_state(self):
         state = self.stub.GetNVEState(Empty())
@@ -159,14 +124,3 @@ class SimulatorGRPCClient(SimulatorClient):
     def is_started(self):
         return self.stub.IsStarted(Empty()).is_started
 
-    def update_neighbor_fn(self):
-        self.stub.UpdateNeighborFn(Empty())
-
-    def update_state_neighbors(self):
-        self.stub.UpdateStateNeighbors(Empty())
-
-    def update_function_update(self):
-        self.stub.UpdateFunctionUpdate(Empty())
-
-    def update_behaviors(self):
-        self.stub.UpdateBehaviors(Empty())

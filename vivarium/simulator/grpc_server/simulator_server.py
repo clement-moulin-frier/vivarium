@@ -13,7 +13,7 @@ import logging
 from concurrent import futures
 
 from vivarium.simulator import config
-from vivarium.simulator.simulator import Simulator, VerletSimulator, EngineConfig
+from vivarium.simulator.simulator import Simulator, EngineConfig
 from vivarium.simulator.sim_computation import dynamics_rigid
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
@@ -118,6 +118,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
                                       proxs_cos_min=ndarray_to_proto(state.proxs_cos_min),
                                       entity_type=ndarray_to_proto(state.entity_type)
                                       )
+
     def Start(self, request, context):
         simulator.run(threaded=True)
         return Empty()
@@ -135,30 +136,14 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return Empty()
 
     def SetSimulationConfig(self, request, context):
-        # d_conf = {}
-        # for field in request.config.DESCRIPTOR.oneofs_by_name:
-        #     oneof = request.config.WhichOneOf(field)
-        #     if oneof != 'has_' + field:
-        #         d_conf[oneof] = getattr(request, oneof)
         d_conf = protobuf_to_dict(request.config)
-        # if 'entity_behaviors' in d_conf:
-        #     entity_behaviors = proto_to_ndarray(request.config.entity_behaviors)
-        #     d_conf['entity_behaviors'] = entity_behaviors
         print('SetSimulationConfig', d_conf)
         self.simulator.simulation_config.param.update(**d_conf)
         self._record_change(request.name.name, **d_conf)
         return Empty()
 
     def SetAgentConfig(self, request, context):
-        # d_conf = {}
-        # for field in request.config.DESCRIPTOR.oneofs_by_name:
-        #     oneof = request.config.WhichOneOf(field)
-        #     if oneof != 'has_' + field:
-        #         d_conf[oneof] = getattr(request, oneof)
         d_conf = protobuf_to_dict(request.config)
-        # if 'entity_behaviors' in d_conf:
-        #     entity_behaviors = proto_to_ndarray(request.config.entity_behaviors)
-        #     d_conf['entity_behaviors'] = entity_behaviors
         print('SetAgentConfig', d_conf)
         self.simulator.agent_configs[request.idx.idx].param.update(**d_conf)
         self._record_change(request.name.name, **d_conf)
@@ -166,7 +151,6 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
     def SetSimulationConfigSerialized(self, request, context):
         serialized = request.serialized
-        # print('SetSimulationConfigSerialized', serialized)
         conf = config.SimulatorConfig(**config.SimulatorConfig.param.deserialize_parameters(serialized))
         self.simulator.simulation_config.param.update(**conf.to_dict())
         return Empty()
@@ -180,19 +164,21 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def SetBehaviors(self, request, context):
         ag = request.agent_slice
         self.simulator.set_behavior(slice(ag.start, ag.stop, 1 if ag.step == 0 else ag.step), request.behavior)
-        # self._record_change(request.name.name, **d_conf)
         self._change_time += 1
         return Empty()
 
     def UpdateNeighborFn(self, request, context):
         self.simulator.update_neighbor_fn()
         return Empty()
+
     def UpdateStateNeighbors(self, request, context):
         self.simulator.update_state_neighbors()
         return Empty()
+
     def UpdateFunctionUpdate(self, request, context):
         self.simulator.update_function_update()
         return Empty()
+
     def UpdateBehaviors(self, request, context):
         self.simulator.update_behaviors()
         return Empty()
@@ -212,10 +198,8 @@ if __name__ == '__main__':
 
     engine_config = EngineConfig(simulation_config=simulation_config, dynamics_fn=dynamics_rigid)
 
-    simulator = VerletSimulator(engine_config=engine_config)
+    simulator = Simulator(engine_config=engine_config)
 
-    #simulator.set_motors(0, np.zeros(2))
-    # simulator.init_simulator()
-    print('Done?')
+    print('Simulator server started')
     logging.basicConfig()
     serve(simulator)

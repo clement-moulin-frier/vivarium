@@ -16,18 +16,9 @@ def linear_behavior(proxs, motors, matrix):
     return matrix.dot(jnp.hstack((proxs, 1.)))
 
 
-def _single_weighted_behavior(w, b):
-    f = vmap(lambda w, b: w * b)
-    return f(w, b).sum(axis=0)
-
-
-def weighted_behavior(weights, behavior_set, proxs):
-    return _single_weighted_behavior(weights, behavior_set).dot(jnp.hstack((proxs, 1.)))
-
-#behavior = vmap(behavior, (0, None, 0))
-
 def apply_motors(proxs, motors):
     return motors
+
 
 def noop(proxs, motors):
     return jnp.array([0., 0.])
