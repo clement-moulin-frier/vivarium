@@ -25,16 +25,12 @@ class SimulatorController(param.Parameterized):
         threading.Thread(target=self._start_timer).start()
 
     def push_simulation_config(self, *events):
-        self.stop()
         print('push_simulation_config', self.simulation_config)
         self.client.set_simulation_config(self.simulation_config)
-        self.start()
 
     def push_agent_config(self, *events):
-        self.stop()
         print('push_agent_config', self.agent_config)
         self.client.set_agent_config(self.agent_idx, self.agent_config)
-        self.start()
 
     def pull_all_data(self):
         self.pull_agent_config()

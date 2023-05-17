@@ -6,6 +6,8 @@ import numpy as np
 from jax_md import space, partition
 
 from collections import namedtuple
+from contextlib import contextmanager
+
 
 import vivarium.simulator.behaviors as behaviors
 from vivarium.simulator.sim_computation import dynamics_rigid
@@ -143,6 +145,7 @@ class Simulator():
         self._state = self.engine_config.state
         self.neighbors = self.engine_config.neighbors
         self.is_started = False
+        self._to_stop = False
 
     @property
     def state(self):
@@ -163,20 +166,17 @@ class Simulator():
         while loop_count < num_loops:
             if self.simulation_config.freq is not None:
                 time.sleep(1. / self.simulation_config.freq)
-            if not self.is_started:
+            if self._to_stop:
+                self._to_stop = False
                 break
             if self.simulation_config.use_fori_loop:
                 new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_steps_lax, self.update_fn,
                                                     (self._state, self.neighbors))
             else:
-                #assert False, "not good, modifies self._state"
-                #val = (self._state, self.neighbors)
                 new_state = self.engine_config.state
                 neighbors = self.engine_config.neighbors
                 for i in range(0, self.simulation_config.num_steps_lax):
                     new_state, neighbors = self.engine_config.update_fn(i, (new_state, neighbors))
-                #new_state = self._state
-                #new_state, neighbors = val
             # If the neighbor list can't fit in the allocation, rebuild it but bigger.
             if neighbors.did_buffer_overflow:
                 print('REBUILDING')
@@ -186,12 +186,24 @@ class Simulator():
             self.engine_config.state = new_state
             self.engine_config.neighbors = neighbors
             loop_count += 1
-
+        self.is_started = False
         print('Run stops')
 
-    def stop(self):
-        self.is_started = False
+    def stop(self, blocking=True):
+        self._to_stop = True
+        if blocking:
+            while self.is_started:
+                time.sleep(0.01)
+                print('still started')
+            print('now stopped')
 
+    @contextmanager
+    def pause(self):
+        self.stop(blocking=True)
+        try:
+            yield self
+        finally:
+            self.run(threaded=True)
 
 
 if __name__ == "__main__":

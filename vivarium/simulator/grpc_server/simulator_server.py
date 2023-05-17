@@ -1,4 +1,5 @@
 import json
+import time
 from collections import defaultdict
 
 from numproto.numproto import ndarray_to_proto, proto_to_ndarray
@@ -145,7 +146,10 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def SetAgentConfig(self, request, context):
         d_conf = protobuf_to_dict(request.config)
         print('SetAgentConfig', d_conf)
-        self.simulator.agent_configs[request.idx.idx].param.update(**d_conf)
+
+        with self.simulator.pause() as s:
+            s.agent_configs[request.idx.idx].param.update(**d_conf)
+
         self._record_change(request.name.name, **d_conf)
         return Empty()
 
@@ -160,29 +164,6 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         self.simulator.set_motors(slice(ag.start, ag.stop, 1 if ag.step == 0 else ag.step),
                                   proto_to_ndarray(request.motors))
         return Empty()
-
-    def SetBehaviors(self, request, context):
-        ag = request.agent_slice
-        self.simulator.set_behavior(slice(ag.start, ag.stop, 1 if ag.step == 0 else ag.step), request.behavior)
-        self._change_time += 1
-        return Empty()
-
-    def UpdateNeighborFn(self, request, context):
-        self.simulator.update_neighbor_fn()
-        return Empty()
-
-    def UpdateStateNeighbors(self, request, context):
-        self.simulator.update_state_neighbors()
-        return Empty()
-
-    def UpdateFunctionUpdate(self, request, context):
-        self.simulator.update_function_update()
-        return Empty()
-
-    def UpdateBehaviors(self, request, context):
-        self.simulator.update_behaviors()
-        return Empty()
-
 
 def serve(simulator):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
