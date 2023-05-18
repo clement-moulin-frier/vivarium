@@ -63,7 +63,7 @@ class SimulatorServerStub(object):
                 )
         self.SetAgentConfig = channel.unary_unary(
                 '/simulator.SimulatorServer/SetAgentConfig',
-                request_serializer=simulator__pb2.AgentConfigIdxSenderName.SerializeToString,
+                request_serializer=simulator__pb2.SerializedDictIdxSenderName.SerializeToString,
                 response_deserializer=simulator__pb2.AgentConfig.FromString,
                 )
         self.GetNVEState = channel.unary_unary(
@@ -237,7 +237,7 @@ def add_SimulatorServerServicer_to_server(servicer, server):
             ),
             'SetAgentConfig': grpc.unary_unary_rpc_method_handler(
                     servicer.SetAgentConfig,
-                    request_deserializer=simulator__pb2.AgentConfigIdxSenderName.FromString,
+                    request_deserializer=simulator__pb2.SerializedDictIdxSenderName.FromString,
                     response_serializer=simulator__pb2.AgentConfig.SerializeToString,
             ),
             'GetNVEState': grpc.unary_unary_rpc_method_handler(
@@ -441,7 +441,7 @@ class SimulatorServer(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetAgentConfig',
-            simulator__pb2.AgentConfigIdxSenderName.SerializeToString,
+            simulator__pb2.SerializedDictIdxSenderName.SerializeToString,
             simulator__pb2.AgentConfig.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

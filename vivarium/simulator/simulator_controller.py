@@ -30,7 +30,8 @@ class SimulatorController(param.Parameterized):
 
     def push_agent_config(self, *events):
         print('push_agent_config', self.agent_config)
-        self.client.set_agent_config(self.agent_idx, self.agent_config)
+        d = {e.name: e.new for e in events}
+        self.client.set_agent_config(self.agent_idx, d)
 
     def pull_all_data(self):
         self.pull_agent_config()

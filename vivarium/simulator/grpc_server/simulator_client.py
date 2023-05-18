@@ -73,14 +73,14 @@ class SimulatorGRPCClient(SimulatorClient):
         config_sender_name = simulator_pb2.SimulationConfigSenderName(name=name, config=config)
         self.stub.SetSimulationConfig(config_sender_name)
 
-    def set_agent_config(self, agent_idx, agent_config):
-        d = agent_config.to_dict()
-        print('set_agent_config', d)
-        config = simulator_pb2.AgentConfig(**d)
+    def set_agent_config(self, agent_idx, agent_config_dict):
+        print('set_agent_config', agent_config_dict)
+        serial_dict = json.dumps(agent_config_dict)
+        serial_dict = simulator_pb2.SerializedDict(serialized=serial_dict)
         name = simulator_pb2.Name(name=self.name)
         idx = simulator_pb2.AgentIdx(idx=agent_idx)
-        config_idx_sender_name = simulator_pb2.AgentConfigIdxSenderName(name=name, config=config, idx=idx)
-        self.stub.SetAgentConfig(config_idx_sender_name)
+        dict_idx_sender_name = simulator_pb2.SerializedDictIdxSenderName(name=name, dict=serial_dict, idx=idx)
+        self.stub.SetAgentConfig(dict_idx_sender_name)
 
     def set_simulation_config_serialized(self, simulation_config):
         serialized = simulation_config.param.serialize_parameters(subset=simulation_config.export_fields)

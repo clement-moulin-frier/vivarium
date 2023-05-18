@@ -144,13 +144,13 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return Empty()
 
     def SetAgentConfig(self, request, context):
-        d_conf = protobuf_to_dict(request.config)
-        print('SetAgentConfig', d_conf)
+        d = json.loads(request.dict.serialized)
+        print('SetAgentConfig', d)
 
         with self.simulator.pause() as s:
-            s.agent_configs[request.idx.idx].param.update(**d_conf)
+            s.agent_configs[request.idx.idx].param.update(**d)
 
-        self._record_change(request.name.name, **d_conf)
+        self._record_change(request.name.name, **d)
         return Empty()
 
     def SetSimulationConfigSerialized(self, request, context):

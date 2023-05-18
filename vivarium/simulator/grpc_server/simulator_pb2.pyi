@@ -113,14 +113,20 @@ class RigidBody(_message.Message):
     def __init__(self, center: _Optional[_Union[NDArray, _Mapping]] = ..., orientation: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class SerializedDict(_message.Message):
-    __slots__ = ["entity_behaviors", "has_entity_behaviors", "serialized_dict"]
-    ENTITY_BEHAVIORS_FIELD_NUMBER: _ClassVar[int]
-    HAS_ENTITY_BEHAVIORS_FIELD_NUMBER: _ClassVar[int]
-    SERIALIZED_DICT_FIELD_NUMBER: _ClassVar[int]
-    entity_behaviors: NDArray
-    has_entity_behaviors: bool
-    serialized_dict: str
-    def __init__(self, serialized_dict: _Optional[str] = ..., has_entity_behaviors: bool = ..., entity_behaviors: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
+    __slots__ = ["serialized"]
+    SERIALIZED_FIELD_NUMBER: _ClassVar[int]
+    serialized: str
+    def __init__(self, serialized: _Optional[str] = ...) -> None: ...
+
+class SerializedDictIdxSenderName(_message.Message):
+    __slots__ = ["dict", "idx", "name"]
+    DICT_FIELD_NUMBER: _ClassVar[int]
+    IDX_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    dict: SerializedDict
+    idx: AgentIdx
+    name: Name
+    def __init__(self, dict: _Optional[_Union[SerializedDict, _Mapping]] = ..., name: _Optional[_Union[Name, _Mapping]] = ..., idx: _Optional[_Union[AgentIdx, _Mapping]] = ...) -> None: ...
 
 class SimulationConfig(_message.Message):
     __slots__ = ["box_size", "dt", "freq", "map_dim", "neighbor_radius", "num_lax_loops", "num_steps_lax", "to_jit", "use_fori_loop"]
