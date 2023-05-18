@@ -3,7 +3,6 @@ import time
 from collections import defaultdict
 
 from numproto.numproto import ndarray_to_proto, proto_to_ndarray
-from protobuf_to_dict import protobuf_to_dict, dict_to_protobuf
 
 import grpc
 import simulator_pb2_grpc
@@ -12,6 +11,7 @@ import simulator_pb2
 import numpy as np
 import logging
 from concurrent import futures
+from threading import Lock
 
 from vivarium.simulator import config
 from vivarium.simulator.simulator import Simulator, EngineConfig
@@ -25,6 +25,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         self.simulator = simulator
         self.recorded_change_dict = defaultdict(dict)
         self._change_time = 0
+        self._lock = Lock()
 
     def _record_change(self, name, **kwargs):
         for k in self.recorded_change_dict.keys():
@@ -131,26 +132,24 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         self.simulator.stop()
         return Empty()
 
-    def SetPopulationConfig(self, request, context):
-        d_pop = protobuf_to_dict(request)
-        self.simulator.population_config.param.update(**d_pop)
-        return Empty()
-
     def SetSimulationConfig(self, request, context):
-        d_conf = protobuf_to_dict(request.config)
-        print('SetSimulationConfig', d_conf)
-        self.simulator.simulation_config.param.update(**d_conf)
-        self._record_change(request.name.name, **d_conf)
+        with self._lock:
+            d = json.loads(request.dict.serialized)
+            print('SetSimulationConfig', d)
+            with self.simulator.pause() as s:
+                s.simulation_config.param.update(**d)
+            self._record_change(request.name.name, **d)
         return Empty()
 
     def SetAgentConfig(self, request, context):
-        d = json.loads(request.dict.serialized)
-        print('SetAgentConfig', d)
+        with self._lock:
+            d = json.loads(request.dict.serialized)
+            print('SetAgentConfig', d)
 
-        with self.simulator.pause() as s:
-            s.agent_configs[request.idx.idx].param.update(**d)
+            with self.simulator.pause() as s:
+                s.agent_configs[request.idx.idx].param.update(**d)
 
-        self._record_change(request.name.name, **d)
+            self._record_change(request.name.name, **d)
         return Empty()
 
     def SetSimulationConfigSerialized(self, request, context):

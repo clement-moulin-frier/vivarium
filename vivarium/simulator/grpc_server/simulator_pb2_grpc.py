@@ -58,7 +58,7 @@ class SimulatorServerStub(object):
                 )
         self.SetSimulationConfig = channel.unary_unary(
                 '/simulator.SimulatorServer/SetSimulationConfig',
-                request_serializer=simulator__pb2.SimulationConfigSenderName.SerializeToString,
+                request_serializer=simulator__pb2.SerializedDictSenderName.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 )
         self.SetAgentConfig = channel.unary_unary(
@@ -232,7 +232,7 @@ def add_SimulatorServerServicer_to_server(servicer, server):
             ),
             'SetSimulationConfig': grpc.unary_unary_rpc_method_handler(
                     servicer.SetSimulationConfig,
-                    request_deserializer=simulator__pb2.SimulationConfigSenderName.FromString,
+                    request_deserializer=simulator__pb2.SerializedDictSenderName.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
             'SetAgentConfig': grpc.unary_unary_rpc_method_handler(
@@ -424,7 +424,7 @@ class SimulatorServer(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetSimulationConfig',
-            simulator__pb2.SimulationConfigSenderName.SerializeToString,
+            simulator__pb2.SerializedDictSenderName.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -37,7 +37,7 @@ service SimulatorServer {
 
 
   rpc SetSimulationConfigSerialized(SimulationConfigSerialized) returns (google.protobuf.Empty) {}
-  rpc SetSimulationConfig(SimulationConfigSenderName) returns (google.protobuf.Empty) {}
+  rpc SetSimulationConfig(SerializedDictSenderName) returns (google.protobuf.Empty) {}
 
   rpc SetAgentConfig(SerializedDictIdxSenderName) returns (AgentConfig) {}
 
@@ -113,6 +113,11 @@ message AgentConfigIdxSenderName {
   AgentConfig config = 1;
   Name name = 2;
   AgentIdx idx = 3;
+}
+
+message SerializedDictSenderName {
+  SerializedDict dict = 1;
+  Name name = 2;
 }
 
 message SerializedDictIdxSenderName {

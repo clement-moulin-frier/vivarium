@@ -12,9 +12,6 @@ from jax_md.rigid_body import RigidBody
 
 from numproto.numproto import ndarray_to_proto, proto_to_ndarray
 
-from protobuf_to_dict import protobuf_to_dict, dict_to_protobuf
-
-
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
 
@@ -33,10 +30,6 @@ class SimulatorGRPCClient(SimulatorClient):
     def get_change_time(self):
         return self.stub.GetChangeTime(Empty()).time
 
-    def get_sim_config_dict(self):
-        config = self.stub.GetSimulationConfig(Empty())
-        return protobuf_to_dict(config)
-
     def get_sim_config(self):
         serialized = self.stub.GetSimulationConfigSerialized(Empty()).serialized
         return SimulatorConfig(**SimulatorConfig.param.deserialize_parameters(serialized))
@@ -48,30 +41,18 @@ class SimulatorGRPCClient(SimulatorClient):
             d['entity_behaviors'] = proto_to_ndarray(changes.entity_behaviors)
         return d
 
-    def get_agent_config_dict(self):
-        config = self.stub.GetAgentConfig(Empty())
-        return protobuf_to_dict(config)
-
     def get_agent_config(self, idx):
         serialized = self.stub.GetAgentConfigSerialized(simulator_pb2.AgentIdx(idx=idx)).serialized
         return AgentConfig(**AgentConfig.param.deserialize_parameters(serialized))
 
-    def get_agent_configs(self):
-        agent_configs_message = self.stub.GetAgentConfigs(Empty()).agent_configs
-        res = []
-        for config in agent_configs_message:
-            d = protobuf_to_dict(config)
-            res.append(AgentConfig(**d))
-        return config
 
-
-    def set_simulation_config(self, simulation_config):
-        d = simulation_config.to_dict()
-        print('set_simulation_config', d)
-        config = simulator_pb2.SimulationConfig(**d)
+    def set_simulation_config(self, simulation_config_dict):
+        print('set_simulation_config', simulation_config_dict)
+        serial_dict = json.dumps(simulation_config_dict)
+        serial_dict = simulator_pb2.SerializedDict(serialized=serial_dict)
         name = simulator_pb2.Name(name=self.name)
-        config_sender_name = simulator_pb2.SimulationConfigSenderName(name=name, config=config)
-        self.stub.SetSimulationConfig(config_sender_name)
+        dict_sender_name = simulator_pb2.SerializedDictSenderName(name=name, dict=serial_dict)
+        self.stub.SetSimulationConfig(dict_sender_name)
 
     def set_agent_config(self, agent_idx, agent_config_dict):
         print('set_agent_config', agent_config_dict)

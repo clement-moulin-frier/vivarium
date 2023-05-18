@@ -128,6 +128,14 @@ class SerializedDictIdxSenderName(_message.Message):
     name: Name
     def __init__(self, dict: _Optional[_Union[SerializedDict, _Mapping]] = ..., name: _Optional[_Union[Name, _Mapping]] = ..., idx: _Optional[_Union[AgentIdx, _Mapping]] = ...) -> None: ...
 
+class SerializedDictSenderName(_message.Message):
+    __slots__ = ["dict", "name"]
+    DICT_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    dict: SerializedDict
+    name: Name
+    def __init__(self, dict: _Optional[_Union[SerializedDict, _Mapping]] = ..., name: _Optional[_Union[Name, _Mapping]] = ...) -> None: ...
+
 class SimulationConfig(_message.Message):
     __slots__ = ["box_size", "dt", "freq", "map_dim", "neighbor_radius", "num_lax_loops", "num_steps_lax", "to_jit", "use_fori_loop"]
     BOX_SIZE_FIELD_NUMBER: _ClassVar[int]
