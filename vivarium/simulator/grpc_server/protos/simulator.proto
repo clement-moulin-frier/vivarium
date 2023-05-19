@@ -41,6 +41,8 @@ service SimulatorServer {
 
   rpc SetAgentConfig(SerializedDictIdxSenderName) returns (AgentConfig) {}
 
+  rpc SetMotors(MotorInfo) returns (google.protobuf.Empty) {}
+
   rpc GetNVEState(google.protobuf.Empty) returns (NVEState) {}
 
   rpc IsStarted(google.protobuf.Empty) returns (IsStartedState) {}
@@ -158,6 +160,12 @@ message NVEState {
   NDArray proxs_dist_max = 12;
   NDArray proxs_cos_min = 13;
   NDArray entity_type = 14;
+}
+
+message MotorInfo {
+  int32 agent_idx = 1;
+  int32 motor_idx = 2;
+  float value = 3;
 }
 
 message IsStartedState {

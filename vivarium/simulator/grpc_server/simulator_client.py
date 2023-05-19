@@ -63,18 +63,13 @@ class SimulatorGRPCClient(SimulatorClient):
         dict_idx_sender_name = simulator_pb2.SerializedDictIdxSenderName(name=name, dict=serial_dict, idx=idx)
         self.stub.SetAgentConfig(dict_idx_sender_name)
 
+    def set_motors(self, agent_idx, motor_idx, value):
+        motor_info = simulator_pb2.MotorInfo(agent_idx=agent_idx, motor_idx=motor_idx, value=value)
+        self.stub.SetMotors(motor_info)
+
     def set_simulation_config_serialized(self, simulation_config):
         serialized = simulation_config.param.serialize_parameters(subset=simulation_config.export_fields)
         self.stub.SetSimulationConfigSerialized(simulator_pb2.SimulationConfigSerialized(serialized=serialized))
-
-    def set_motors(self, agent_idx, motors):
-        if type(agent_idx) is int:
-            start, stop, step = agent_idx, agent_idx + 1, 1
-        else:
-            start, stop, step = agent_idx.start, agent_idx.stop, agent_idx.step
-        motors = simulator_pb2.Motors(agent_slice=simulator_pb2.Slice(start=start, stop=stop, step=step),
-                                      motors=ndarray_to_proto(motors))
-        self.stub.SetMotors(motors)
 
     def get_state(self):
         return self.stub.GetStateMessage(Empty())

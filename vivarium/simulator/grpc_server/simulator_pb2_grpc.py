@@ -66,6 +66,11 @@ class SimulatorServerStub(object):
                 request_serializer=simulator__pb2.SerializedDictIdxSenderName.SerializeToString,
                 response_deserializer=simulator__pb2.AgentConfig.FromString,
                 )
+        self.SetMotors = channel.unary_unary(
+                '/simulator.SimulatorServer/SetMotors',
+                request_serializer=simulator__pb2.MotorInfo.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                )
         self.GetNVEState = channel.unary_unary(
                 '/simulator.SimulatorServer/GetNVEState',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
@@ -157,6 +162,12 @@ class SimulatorServerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def SetMotors(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def GetNVEState(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -239,6 +250,11 @@ def add_SimulatorServerServicer_to_server(servicer, server):
                     servicer.SetAgentConfig,
                     request_deserializer=simulator__pb2.SerializedDictIdxSenderName.FromString,
                     response_serializer=simulator__pb2.AgentConfig.SerializeToString,
+            ),
+            'SetMotors': grpc.unary_unary_rpc_method_handler(
+                    servicer.SetMotors,
+                    request_deserializer=simulator__pb2.MotorInfo.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
             'GetNVEState': grpc.unary_unary_rpc_method_handler(
                     servicer.GetNVEState,
@@ -443,6 +459,23 @@ class SimulatorServer(object):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetAgentConfig',
             simulator__pb2.SerializedDictIdxSenderName.SerializeToString,
             simulator__pb2.AgentConfig.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def SetMotors(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetMotors',
+            simulator__pb2.MotorInfo.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

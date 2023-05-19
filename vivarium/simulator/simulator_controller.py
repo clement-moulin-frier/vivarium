@@ -1,7 +1,8 @@
 import param
-from .grpc_server.simulator_client import SimulatorGRPCClient
-from . import config
+from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
+from vivarium.simulator import config
 import time, threading
+from collections import namedtuple
 
 param.Dynamic.time_dependent = True
 
@@ -14,6 +15,8 @@ class SimulatorController(param.Parameterized):
     agent_idx = param.Integer(0)
     refresh_change_period = param.Number(1)
     change_time = param.Integer(0)
+    left_motor = param.Number(0., bounds=(0., 1.))
+    right_motor = param.Number(0., bounds=(0., 1.))
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -21,6 +24,7 @@ class SimulatorController(param.Parameterized):
         self.simulation_config.param.watch(self.push_simulation_config, self.simulation_config.export_fields, onlychanged=True) #, queued=True)
         self.agent_config.param.watch(self.push_agent_config, self.agent_config.export_fields, onlychanged=True) #, queued=True)
         self.param.watch(self.pull_agent_config, ['agent_idx'], onlychanged=True)
+        self.param.watch(self.push_motors, ['left_motor', 'right_motor'], onlychanged=True)
         self.client.name = self.name
         threading.Thread(target=self._start_timer).start()
 
@@ -33,6 +37,18 @@ class SimulatorController(param.Parameterized):
         print('push_agent_config', self.agent_config)
         d = {e.name: e.new for e in events}
         self.client.set_agent_config(self.agent_idx, d)
+
+    def push_motors(self, *events):
+        print(events)
+        print('push_motors', {e.name for e in events})
+        for e in events:
+            if e.name == 'left_motor':
+                motor_idx = 0
+            elif e.name == 'right_motor':
+                motor_idx = 1
+            else:
+                raise(ValueError, 'events {e.name} not recognized')
+            self.client.set_motors(self.agent_idx, motor_idx, e.new)
 
     def pull_all_data(self):
         self.pull_agent_config()
@@ -78,3 +94,10 @@ class SimulatorController(param.Parameterized):
 
     def set_motors(self, agent_idx, motors):
         return self.client.set_motors(agent_idx, motors)
+
+if __name__ == "__main__":
+
+    simulator = SimulatorController(client=SimulatorGRPCClient())
+    MockEvent = namedtuple('MockEvent', ['name', 'new'])
+    e = MockEvent(name='left_motor', new=0.1)
+    simulator.push_motors(e)

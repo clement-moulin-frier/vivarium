@@ -135,6 +135,11 @@ class EngineConfig(param.Parameterized):
                 d[k] = jnp.array([getattr(config, k) for config in self.agent_configs], dtype=dtype)
         return d
 
+    def from_array_dict(self, array_dict):
+        for i, config in enumerate(self.agent_configs):
+            ag_dict = {k: v[i] for k, v in array_dict}
+            config.param.update(**ag_dict)
+
 
 class Simulator():
 
@@ -188,6 +193,9 @@ class Simulator():
             loop_count += 1
         self.is_started = False
         print('Run stops')
+
+    def set_motors(self, agent_idx, motor_idx, value):
+        self.engine_config.state = self.state.set(motor=self.engine_config.state.motor.at[agent_idx, motor_idx].set(value))
 
     def stop(self, blocking=True):
         self._to_stop = True

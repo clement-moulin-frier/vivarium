@@ -84,7 +84,13 @@ p.add_tools(draw_tool)
 p.toolbar.active_tap = draw_tool
 
 
-row = pn.Row(p, pn.Column(simulator.param.agent_idx, simulator.agent_config), pn.Column(button, simulator.simulation_config))
+# https://panel.holoviz.org/how_to/param/custom.html
+motors = pn.Param(simulator.param,
+                  widgets={'left_motor': pn.widgets.FloatSlider,  # {'widget_type': pn.widgets.FloatSlider, 'orientation': 'vertical'},
+                           'right_motor': pn.widgets.FloatSlider,  # {'widget_type': pn.widgets.FloatSlider, 'orientation': 'vertical'}
+                           })
+
+row = pn.Row(p, motors, pn.Column(simulator.param.agent_idx, simulator.agent_config), pn.Column(button, simulator.simulation_config))
 row.servable()
 
 def update_plot():

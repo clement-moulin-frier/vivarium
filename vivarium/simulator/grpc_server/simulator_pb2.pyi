@@ -60,6 +60,16 @@ class IsStartedState(_message.Message):
     is_started: bool
     def __init__(self, is_started: bool = ...) -> None: ...
 
+class MotorInfo(_message.Message):
+    __slots__ = ["agent_idx", "motor_idx", "value"]
+    AGENT_IDX_FIELD_NUMBER: _ClassVar[int]
+    MOTOR_IDX_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    agent_idx: int
+    motor_idx: int
+    value: float
+    def __init__(self, agent_idx: _Optional[int] = ..., motor_idx: _Optional[int] = ..., value: _Optional[float] = ...) -> None: ...
+
 class NDArray(_message.Message):
     __slots__ = ["ndarray"]
     NDARRAY_FIELD_NUMBER: _ClassVar[int]

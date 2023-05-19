@@ -159,9 +159,8 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return Empty()
 
     def SetMotors(self, request, context):
-        ag = request.agent_slice
-        self.simulator.set_motors(slice(ag.start, ag.stop, 1 if ag.step == 0 else ag.step),
-                                  proto_to_ndarray(request.motors))
+        with self._lock:
+            self.simulator.set_motors(request.agent_idx, request.motor_idx, request.value)
         return Empty()
 
 def serve(simulator):
