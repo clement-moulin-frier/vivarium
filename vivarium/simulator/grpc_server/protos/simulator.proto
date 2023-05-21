@@ -78,13 +78,14 @@ message SerializedDict {
 message SimulationConfig {
   float box_size = 1;
   int32 map_dim = 2;
-  int32 num_steps_lax = 3;
-  int32 num_lax_loops = 4;
-  float dt = 5;
-  float freq = 6;
-  float neighbor_radius = 7;
-  bool to_jit = 8;
-  bool use_fori_loop = 9;
+  int32 n_agents = 3;
+  int32 num_steps_lax = 4;
+  int32 num_lax_loops = 5;
+  float dt = 6;
+  float freq = 7;
+  float neighbor_radius = 8;
+  bool to_jit = 9;
+  bool use_fori_loop = 10;
 }
 
 message SimulationConfigSenderName {
@@ -97,7 +98,7 @@ message SimulationConfigSerialized {
 }
 
 message AgentIdx {
-  int32 idx = 1;
+  repeated int32 idx = 1;
 }
 
 message AgentConfig {
@@ -163,7 +164,7 @@ message NVEState {
 }
 
 message MotorInfo {
-  int32 agent_idx = 1;
+  AgentIdx agent_idx = 1;
   int32 motor_idx = 2;
   float value = 3;
 }

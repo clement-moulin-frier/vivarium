@@ -29,7 +29,6 @@ def generate_positions_orientations(key, n_agents, box_size):
 
 class EngineConfig(param.Parameterized):
     simulation_config = param.ClassSelector(SimulatorConfig, instantiate=False)
-    n_agents = param.Integer(10)
     agent_configs = param.List(None)
     dynamics_fn = param.Parameter()
     displacement = param.Parameter()
@@ -42,7 +41,7 @@ class EngineConfig(param.Parameterized):
 
     def __init__(self, **params):
         super().__init__(**params)
-        self.agent_configs = self.agent_configs or [AgentConfig() for _ in range(self.n_agents)]
+        self.agent_configs = self.agent_configs or [AgentConfig() for _ in range(self.simulation_config.n_agents)]
         self.key = key = jax.random.PRNGKey(0)
         self.simulation_config.param.watch(self.update_space, ['box_size'], onlychanged=True, precedence=0)
         self.param.watch(self.update_neighbor_fn, ['displacement'], onlychanged=True, precedence=1)

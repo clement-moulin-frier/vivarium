@@ -54,16 +54,17 @@ class SimulatorGRPCClient(SimulatorClient):
         dict_sender_name = simulator_pb2.SerializedDictSenderName(name=name, dict=serial_dict)
         self.stub.SetSimulationConfig(dict_sender_name)
 
-    def set_agent_config(self, agent_idx, agent_config_dict):
+    def set_agent_config(self, selected_agents, agent_config_dict):
         print('set_agent_config', agent_config_dict)
         serial_dict = json.dumps(agent_config_dict)
         serial_dict = simulator_pb2.SerializedDict(serialized=serial_dict)
         name = simulator_pb2.Name(name=self.name)
-        idx = simulator_pb2.AgentIdx(idx=agent_idx)
+        idx = simulator_pb2.AgentIdx(idx=selected_agents)
         dict_idx_sender_name = simulator_pb2.SerializedDictIdxSenderName(name=name, dict=serial_dict, idx=idx)
         self.stub.SetAgentConfig(dict_idx_sender_name)
 
-    def set_motors(self, agent_idx, motor_idx, value):
+    def set_motors(self, selected_agents, motor_idx, value):
+        agent_idx = simulator_pb2.AgentIdx(idx=selected_agents)
         motor_info = simulator_pb2.MotorInfo(agent_idx=agent_idx, motor_idx=motor_idx, value=value)
         self.stub.SetMotors(motor_info)
 

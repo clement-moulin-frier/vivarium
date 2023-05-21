@@ -51,8 +51,8 @@ class AgentConfigs(_message.Message):
 class AgentIdx(_message.Message):
     __slots__ = ["idx"]
     IDX_FIELD_NUMBER: _ClassVar[int]
-    idx: int
-    def __init__(self, idx: _Optional[int] = ...) -> None: ...
+    idx: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, idx: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class IsStartedState(_message.Message):
     __slots__ = ["is_started"]
@@ -65,10 +65,10 @@ class MotorInfo(_message.Message):
     AGENT_IDX_FIELD_NUMBER: _ClassVar[int]
     MOTOR_IDX_FIELD_NUMBER: _ClassVar[int]
     VALUE_FIELD_NUMBER: _ClassVar[int]
-    agent_idx: int
+    agent_idx: AgentIdx
     motor_idx: int
     value: float
-    def __init__(self, agent_idx: _Optional[int] = ..., motor_idx: _Optional[int] = ..., value: _Optional[float] = ...) -> None: ...
+    def __init__(self, agent_idx: _Optional[_Union[AgentIdx, _Mapping]] = ..., motor_idx: _Optional[int] = ..., value: _Optional[float] = ...) -> None: ...
 
 class NDArray(_message.Message):
     __slots__ = ["ndarray"]
@@ -147,7 +147,7 @@ class SerializedDictSenderName(_message.Message):
     def __init__(self, dict: _Optional[_Union[SerializedDict, _Mapping]] = ..., name: _Optional[_Union[Name, _Mapping]] = ...) -> None: ...
 
 class SimulationConfig(_message.Message):
-    __slots__ = ["box_size", "dt", "freq", "map_dim", "neighbor_radius", "num_lax_loops", "num_steps_lax", "to_jit", "use_fori_loop"]
+    __slots__ = ["box_size", "dt", "freq", "map_dim", "n_agents", "neighbor_radius", "num_lax_loops", "num_steps_lax", "to_jit", "use_fori_loop"]
     BOX_SIZE_FIELD_NUMBER: _ClassVar[int]
     DT_FIELD_NUMBER: _ClassVar[int]
     FREQ_FIELD_NUMBER: _ClassVar[int]
@@ -155,18 +155,20 @@ class SimulationConfig(_message.Message):
     NEIGHBOR_RADIUS_FIELD_NUMBER: _ClassVar[int]
     NUM_LAX_LOOPS_FIELD_NUMBER: _ClassVar[int]
     NUM_STEPS_LAX_FIELD_NUMBER: _ClassVar[int]
+    N_AGENTS_FIELD_NUMBER: _ClassVar[int]
     TO_JIT_FIELD_NUMBER: _ClassVar[int]
     USE_FORI_LOOP_FIELD_NUMBER: _ClassVar[int]
     box_size: float
     dt: float
     freq: float
     map_dim: int
+    n_agents: int
     neighbor_radius: float
     num_lax_loops: int
     num_steps_lax: int
     to_jit: bool
     use_fori_loop: bool
-    def __init__(self, box_size: _Optional[float] = ..., map_dim: _Optional[int] = ..., num_steps_lax: _Optional[int] = ..., num_lax_loops: _Optional[int] = ..., dt: _Optional[float] = ..., freq: _Optional[float] = ..., neighbor_radius: _Optional[float] = ..., to_jit: bool = ..., use_fori_loop: bool = ...) -> None: ...
+    def __init__(self, box_size: _Optional[float] = ..., map_dim: _Optional[int] = ..., n_agents: _Optional[int] = ..., num_steps_lax: _Optional[int] = ..., num_lax_loops: _Optional[int] = ..., dt: _Optional[float] = ..., freq: _Optional[float] = ..., neighbor_radius: _Optional[float] = ..., to_jit: bool = ..., use_fori_loop: bool = ...) -> None: ...
 
 class SimulationConfigSenderName(_message.Message):
     __slots__ = ["config", "name"]

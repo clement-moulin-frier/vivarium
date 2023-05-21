@@ -90,12 +90,13 @@ motors = pn.Param(simulator.param,
                            'right_motor': pn.widgets.FloatSlider,  # {'widget_type': pn.widgets.FloatSlider, 'orientation': 'vertical'}
                            })
 
-row = pn.Row(p, motors, pn.Column(simulator.param.agent_idx, simulator.agent_config), pn.Column(button, simulator.simulation_config))
+row = pn.Row(p, motors, pn.Column(simulator.param.selected_agents, simulator.agent_config), pn.Column(button, simulator.simulation_config))
 row.servable()
 
 def update_plot():
-    if len(cds.selected.indices) > 0 and cds.selected.indices[0] != simulator.agent_idx:
-        simulator.agent_idx = cds.selected.indices[0]
+    print(simulator.selected_agents)
+    if len(cds.selected.indices) > 0 and cds.selected.indices != simulator.selected_agents:
+        simulator.selected_agents = cds.selected.indices
         simulator.pull_agent_config()
     state = simulator.get_nve_state()
     update_cds(state)

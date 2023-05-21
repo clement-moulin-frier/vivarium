@@ -46,6 +46,7 @@ class AgentConfig(Config):
 class SimulatorConfig(Config):
     box_size = param.Number(100., bounds=(0, None))
     map_dim = param.Integer(2, bounds=(1, None))
+    n_agents = param.Integer(10)
     num_steps_lax = param.Integer(50)
     num_lax_loops = param.Integer(1)
     dt = param.Number(0.1)

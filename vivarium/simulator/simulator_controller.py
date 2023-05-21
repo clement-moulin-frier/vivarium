@@ -12,7 +12,7 @@ class SimulatorController(param.Parameterized):
     client = param.Parameter(SimulatorGRPCClient())
     simulation_config = param.ClassSelector(config.SimulatorConfig, config.SimulatorConfig())
     agent_config = param.ClassSelector(config.AgentConfig, config.AgentConfig())
-    agent_idx = param.Integer(0)
+    selected_agents = param.ListSelector([0], objects=[0])
     refresh_change_period = param.Number(1)
     change_time = param.Integer(0)
     left_motor = param.Number(0., bounds=(0., 1.))
@@ -21,9 +21,10 @@ class SimulatorController(param.Parameterized):
     def __init__(self, **params):
         super().__init__(**params)
         self.pull_all_data()
+        self.param.selected_agents.objects = range(self.simulation_config.n_agents)
         self.simulation_config.param.watch(self.push_simulation_config, self.simulation_config.export_fields, onlychanged=True) #, queued=True)
         self.agent_config.param.watch(self.push_agent_config, self.agent_config.export_fields, onlychanged=True) #, queued=True)
-        self.param.watch(self.pull_agent_config, ['agent_idx'], onlychanged=True)
+        self.param.watch(self.pull_agent_config, ['selected_agents'], onlychanged=True)
         self.param.watch(self.push_motors, ['left_motor', 'right_motor'], onlychanged=True)
         self.client.name = self.name
         threading.Thread(target=self._start_timer).start()
@@ -36,7 +37,7 @@ class SimulatorController(param.Parameterized):
     def push_agent_config(self, *events):
         print('push_agent_config', self.agent_config)
         d = {e.name: e.new for e in events}
-        self.client.set_agent_config(self.agent_idx, d)
+        self.client.set_agent_config(self.selected_agents, d)
 
     def push_motors(self, *events):
         print(events)
@@ -48,7 +49,7 @@ class SimulatorController(param.Parameterized):
                 motor_idx = 1
             else:
                 raise(ValueError, 'events {e.name} not recognized')
-            self.client.set_motors(self.agent_idx, motor_idx, e.new)
+            self.client.set_motors(self.selected_agents, motor_idx, e.new)
 
     def pull_all_data(self):
         self.pull_agent_config()
@@ -60,7 +61,8 @@ class SimulatorController(param.Parameterized):
 
     def pull_agent_config(self, *events):
         print('pull_agent_config')
-        agent_config_dict = self.client.get_agent_config(self.agent_idx).to_dict()
+        print(self.selected_agents)
+        agent_config_dict = self.client.get_agent_config(self.selected_agents).to_dict()
         self.agent_config.param.update(**agent_config_dict)
         print(self.agent_config)
 
@@ -92,8 +94,8 @@ class SimulatorController(param.Parameterized):
     def get_agent_configs(self):
         return self.client.get_agent_configs()
 
-    def set_motors(self, agent_idx, motors):
-        return self.client.set_motors(agent_idx, motors)
+    # def set_motors(self, agent_idx, motors):
+    #     return self.client.set_motors(agent_idx, motors)
 
 if __name__ == "__main__":
 

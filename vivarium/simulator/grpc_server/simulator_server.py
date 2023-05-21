@@ -62,7 +62,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return simulator_pb2.AgentConfig(**self.simulator.agent_config.to_dict())
 
     def GetAgentConfigSerialized(self, request, context):
-        config = self.simulator.agent_configs[request.idx]
+        config = self.simulator.agent_configs[request.idx[0]]
         serialized = config.param.serialize_parameters(subset=config.export_fields)
         return simulator_pb2.AgentConfigSerialized(serialized=serialized)
 
@@ -75,14 +75,6 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
     def GetAgentConfig(self, request, context):
         config = self.simulator.agent_configs[request.idx]
-
-    def GetPopulationConfigMessage(self, request, context):
-        return simulator_pb2.PopulationConfig(**self.simulator.population_config.to_dict())
-
-    def GetPopulationConfigSerialized(self, request, context):
-        config = self.simulator.population_config
-        serialized = config.param.serialize_parameters(subset=config.export_fields)
-        return simulator_pb2.PopulationConfigSerialized(serialized=serialized)
 
     def GetStateMessage(self, request, context):
         state = self.simulator.state
@@ -147,7 +139,8 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
             print('SetAgentConfig', d)
 
             with self.simulator.pause() as s:
-                s.agent_configs[request.idx.idx].param.update(**d)
+                for idx in request.idx.idx:
+                    s.agent_configs[idx].param.update(**d)
 
             self._record_change(request.name.name, **d)
         return Empty()
@@ -160,7 +153,8 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
     def SetMotors(self, request, context):
         with self._lock:
-            self.simulator.set_motors(request.agent_idx, request.motor_idx, request.value)
+            for idx in request.agent_idx.idx:
+                self.simulator.set_motors(idx, request.motor_idx, request.value)
         return Empty()
 
 def serve(simulator):
