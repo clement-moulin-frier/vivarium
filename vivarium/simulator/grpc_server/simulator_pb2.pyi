@@ -194,6 +194,16 @@ class Slice(_message.Message):
     stop: int
     def __init__(self, start: _Optional[int] = ..., stop: _Optional[int] = ..., step: _Optional[int] = ...) -> None: ...
 
+class StateChange(_message.Message):
+    __slots__ = ["agent_idx", "nested_field", "value"]
+    AGENT_IDX_FIELD_NUMBER: _ClassVar[int]
+    NESTED_FIELD_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    agent_idx: AgentIdx
+    nested_field: _containers.RepeatedScalarFieldContainer[str]
+    value: NDArray
+    def __init__(self, agent_idx: _Optional[_Union[AgentIdx, _Mapping]] = ..., nested_field: _Optional[_Iterable[str]] = ..., value: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
+
 class Time(_message.Message):
     __slots__ = ["time"]
     TIME_FIELD_NUMBER: _ClassVar[int]

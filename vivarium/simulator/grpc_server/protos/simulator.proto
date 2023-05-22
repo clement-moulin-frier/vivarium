@@ -43,6 +43,8 @@ service SimulatorServer {
 
   rpc SetMotors(MotorInfo) returns (google.protobuf.Empty) {}
 
+  rpc SetState(StateChange) returns (google.protobuf.Empty) {}
+
   rpc GetNVEState(google.protobuf.Empty) returns (NVEState) {}
 
   rpc IsStarted(google.protobuf.Empty) returns (IsStartedState) {}
@@ -167,6 +169,12 @@ message MotorInfo {
   AgentIdx agent_idx = 1;
   int32 motor_idx = 2;
   float value = 3;
+}
+
+message StateChange {
+  AgentIdx agent_idx = 1;
+  repeated string nested_field = 2;
+  NDArray value = 3;
 }
 
 message IsStartedState {

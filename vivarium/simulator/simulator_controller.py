@@ -42,6 +42,9 @@ class SimulatorController(param.Parameterized):
 
     def push_motors(self, *events):
         print(events)
+        print('push_motors', {e.name for e in events})
+        state = self.get_nve_state()
+        motors = state.motor[self.selected_agents, :]
         for e in events:
             if e.name == 'left_motor':
                 motor_idx = 0
@@ -49,7 +52,8 @@ class SimulatorController(param.Parameterized):
                 motor_idx = 1
             else:
                 raise(ValueError, 'events {e.name} not recognized')
-            self.client.set_motors(self.selected_agents, motor_idx, e.new)
+            motors[:, motor_idx] = e.new
+            self.client.set_state(self.selected_agents, ['motor'], motors)
 
     def pull_all_data(self):
         self.pull_agent_config()

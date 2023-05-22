@@ -196,6 +196,23 @@ class Simulator():
     def set_motors(self, agent_idx, motor_idx, value):
         self.engine_config.state = self.state.set(motor=self.engine_config.state.motor.at[agent_idx, motor_idx].set(value))
 
+    def _rec_set_dataclass(self, var, agent_idx, nested_field, value):
+
+        assert len(nested_field) > 0
+
+        if len(nested_field) == 1:
+            field = nested_field[0]
+            return {field: getattr(var, field).at[agent_idx].set(value)}
+        else:
+            next_var = getattr(var, nested_field[0])
+            d = self._rec_set_dataclass(next_var, agent_idx, nested_field[1:], value)
+            return {nested_field[0]: next_var.set(**d)}
+
+    def set_state(self, agent_idx, nested_field, value):
+        change = self._rec_set_dataclass(self.engine_config.state, agent_idx, nested_field, value)
+        self.engine_config.state = self.engine_config.state.set(**change)
+
+
     def stop(self, blocking=True):
         self._to_stop = True
         if blocking:

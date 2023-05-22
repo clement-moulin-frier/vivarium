@@ -68,6 +68,12 @@ class SimulatorGRPCClient(SimulatorClient):
         motor_info = simulator_pb2.MotorInfo(agent_idx=agent_idx, motor_idx=motor_idx, value=value)
         self.stub.SetMotors(motor_info)
 
+    def set_state(self, agent_indexes, nested_field, value):
+        agent_idx = simulator_pb2.AgentIdx(idx=agent_indexes)
+        state_change = simulator_pb2.StateChange(agent_idx=agent_idx, nested_field=nested_field,
+                                                 value=ndarray_to_proto(value))
+        self.stub.SetState(state_change)
+
     def set_simulation_config_serialized(self, simulation_config):
         serialized = simulation_config.param.serialize_parameters(subset=simulation_config.export_fields)
         self.stub.SetSimulationConfigSerialized(simulator_pb2.SimulationConfigSerialized(serialized=serialized))

@@ -157,6 +157,12 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
                 self.simulator.set_motors(idx, request.motor_idx, request.value)
         return Empty()
 
+    def SetState(self, request, context):
+        with self._lock:
+            idx = np.array(request.agent_idx.idx)
+            self.simulator.set_state(idx, request.nested_field, proto_to_ndarray(request.value))
+        return Empty()
+
 def serve(simulator):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     simulator_pb2_grpc.add_SimulatorServerServicer_to_server(
@@ -172,6 +178,8 @@ if __name__ == '__main__':
     engine_config = EngineConfig(simulation_config=simulation_config, dynamics_fn=dynamics_rigid)
 
     simulator = Simulator(engine_config=engine_config)
+
+    # simulator.set_state(0, ['position', 'center'], np.array([0., 1.]))
 
     print('Simulator server started')
     logging.basicConfig()
