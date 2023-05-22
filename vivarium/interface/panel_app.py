@@ -17,9 +17,22 @@ def normal(array):
     return normals
 
 
+def update_selected(*events):
+    cds.selected.indices = simulator.selected_agents
+
+def update_color(*events):
+    print('update_color', simulator.selected_agents, simulator.color)
+    for ag in simulator.selected_agents:
+        all_colors[ag] = simulator.color
+    # all_colors[simulator.selected_agents] = simulator.color
+
 pn.extension()
 
 simulator = SimulatorController(client=SimulatorGRPCClient())
+
+simulator.param.watch(update_selected, ['selected_agents'], onlychanged=True)
+simulator.param.watch(update_color, ['color'], onlychanged=True)
+
 
 state = simulator.get_nve_state()
 
@@ -85,12 +98,12 @@ p.toolbar.active_tap = draw_tool
 
 
 # https://panel.holoviz.org/how_to/param/custom.html
-motors = pn.Param(simulator.param,
+sim_panel = pn.Param(simulator.param,
                   widgets={'left_motor': pn.widgets.FloatSlider,  # {'widget_type': pn.widgets.FloatSlider, 'orientation': 'vertical'},
                            'right_motor': pn.widgets.FloatSlider,  # {'widget_type': pn.widgets.FloatSlider, 'orientation': 'vertical'}
                            })
 
-row = pn.Row(p, motors, pn.Column(simulator.param.selected_agents, simulator.agent_config), pn.Column(button, simulator.simulation_config))
+row = pn.Row(pn.Column(button, p), sim_panel)  # , pn.Column(simulator.param.selected_agents, simulator.agent_config), pn.Column(button, simulator.simulation_config))
 row.servable()
 
 def update_plot():

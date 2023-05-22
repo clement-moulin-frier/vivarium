@@ -46,11 +46,11 @@ class AgentConfig(Config):
 class SimulatorConfig(Config):
     box_size = param.Number(100., bounds=(0, None))
     map_dim = param.Integer(2, bounds=(1, None))
-    n_agents = param.Integer(10)
+    n_agents = param.Integer(30)
     num_steps_lax = param.Integer(50)
     num_lax_loops = param.Integer(1)
     dt = param.Number(0.1)
-    freq = param.Number(100., allow_None=True)
+    freq = param.Number(40., allow_None=True)
     neighbor_radius = param.Number(100., bounds=(0, None))
     to_jit = param.Boolean(True)
     use_fori_loop = param.Boolean(False)

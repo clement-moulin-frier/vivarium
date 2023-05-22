@@ -15,6 +15,7 @@ class SimulatorController(param.Parameterized):
     selected_agents = param.ListSelector([0], objects=[0])
     refresh_change_period = param.Number(1)
     change_time = param.Integer(0)
+    color = param.Color('#EEFF00')
     left_motor = param.Number(0., bounds=(0., 1.))
     right_motor = param.Number(0., bounds=(0., 1.))
 
@@ -41,7 +42,6 @@ class SimulatorController(param.Parameterized):
 
     def push_motors(self, *events):
         print(events)
-        print('push_motors', {e.name for e in events})
         for e in events:
             if e.name == 'left_motor':
                 motor_idx = 0
