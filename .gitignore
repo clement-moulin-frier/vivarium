@@ -154,3 +154,4 @@ env_vivarium/
 .idea/
 vivarium/.DS_Store
 .DS_Store
+profiler_stats
