@@ -4,6 +4,8 @@ from jax import lax
 import jax
 import numpy as np
 from jax_md import space, partition
+from jax_md.rigid_body import RigidBody
+from jax_md.util import f32
 
 from collections import namedtuple
 from contextlib import contextmanager
@@ -12,6 +14,7 @@ from contextlib import contextmanager
 import vivarium.simulator.behaviors as behaviors
 from vivarium.simulator.sim_computation import dynamics_rigid
 from vivarium.simulator.config import AgentConfig, SimulatorConfig
+from vivarium import utils
 
 import time
 import threading
@@ -38,11 +41,13 @@ class EngineConfig(param.Parameterized):
     neighbor_fn = param.Parameter()
     state = param.Parameter(None)
 
-
     def __init__(self, **params):
         super().__init__(**params)
-        self.agent_configs = self.agent_configs or [AgentConfig() for _ in range(self.simulation_config.n_agents)]
-        self.key = key = jax.random.PRNGKey(0)
+        self.agent_configs = self.agent_configs or [AgentConfig(idx=i, x_position=np.random.rand() * self.simulation_config.box_size,
+                                                                y_position=np.random.rand() * self.simulation_config.box_size,
+                                                                orientation=np.random.rand() * 2. * np.pi)
+                                                    for i in range(self.simulation_config.n_agents)]
+        self.key = jax.random.PRNGKey(0)
         self.simulation_config.param.watch(self.update_space, ['box_size'], onlychanged=True, precedence=0)
         self.param.watch(self.update_neighbor_fn, ['displacement'], onlychanged=True, precedence=1)
         self.simulation_config.param.watch(self.update_state, ['box_size'], onlychanged=True)
@@ -86,10 +91,25 @@ class EngineConfig(param.Parameterized):
                                                                       n_agents=len(self.agent_configs),
                                                                       box_size=self.simulation_config.box_size)
 
-            self.state = self.init_fn(self.key, positions=positions, orientations=orientations,
-                                      agent_configs_as_array_dict=self.agent_configs_as_array_dict())
+            # rigid_body = self.agent_configs_as_array_dict(fields=['x_position', 'y_position', 'orientation'])['position']
+            state_kwargs = utils.agent_configs_to_array_dict(self.agent_configs, fields=['idx', 'position', 'mass',
+                                                                                         'prox', 'motor', 'behavior',
+                                                                                         'wheel_diameter',
+                                                                                         'base_length',
+                                                                                         'speed_mul',
+                                                                                         'theta_mul',
+                                                                                         'proxs_dist_max',
+                                                                                         'proxs_cos_min',
+                                                                                         'color',
+                                                                                         'entity_type'
+                                                                                         ]
+                                                             )
+
+            self.state = self.init_fn(self.key, **state_kwargs)
+
         else:  # when a change is made from the interface or controller
-            self.state = self.state.set(**self.agent_configs_as_array_dict())
+
+            self.state = utils.set_state_from_agent_configs([e.obj for e in events], self.state, params=[e.name for e in events])
 
     def update_neighbors(self, *events):
         if self.state is None:
@@ -122,25 +142,12 @@ class EngineConfig(param.Parameterized):
         print('update_behaviors', [e.name for e in events])
         self.entity_behaviors = jnp.array([self.behavior_name_map[config.behavior.name] for config in self.simulation_config.agent_configs], dtype=int)
 
-    def agent_configs_as_array_dict(self):
-        keys = self.agent_configs[0].to_dict().keys()
-        d = {}
-        for k in keys:
-            if k == 'behavior':
-                d[k] = jnp.array([self.behavior_name_map[config.behavior]
-                                  for config in self.agent_configs], dtype=int)
-            else:
-                dtype = type(getattr(self.agent_configs[0], k))
-                d[k] = jnp.array([getattr(config, k) for config in self.agent_configs], dtype=dtype)
-        return d
-
-    def from_array_dict(self, array_dict):
-        for i, config in enumerate(self.agent_configs):
-            ag_dict = {k: v[i] for k, v in array_dict}
-            config.param.update(**ag_dict)
+    def _config_attribute_as_array(self, attr):
+        dtype = type(getattr(self.agent_configs[0], attr))
+        return jnp.array([f32(getattr(config, attr)) for config in self.agent_configs], dtype=dtype)
 
 
-class Simulator():
+class Simulator:
 
     def __init__(self, engine_config):
         self.engine_config = engine_config
@@ -173,22 +180,26 @@ class Simulator():
             if self._to_stop:
                 self._to_stop = False
                 break
+            new_state = self.engine_config.state
+            neighbors = self.engine_config.neighbors
             if self.simulation_config.use_fori_loop:
-                new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_steps_lax, self.update_fn,
-                                                    (self._state, self.neighbors))
+                new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_steps_lax, self.engine_config.update_fn,
+                                                    (new_state, neighbors))
             else:
-                new_state = self.engine_config.state
-                neighbors = self.engine_config.neighbors
+
                 for i in range(0, self.simulation_config.num_steps_lax):
                     new_state, neighbors = self.engine_config.update_fn(i, (new_state, neighbors))
             # If the neighbor list can't fit in the allocation, rebuild it but bigger.
             if neighbors.did_buffer_overflow:
                 print('REBUILDING')
-                neighbors = self.simulation_config.neighbor_fn.allocate(self._state.positions)
-                new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_lax_loops, self.update_fn, (self._state, neighbors))
+                neighbors = self.engine_config.neighbor_fn.allocate(new_state.position.center)
+                # new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_lax_loops, self.update_fn, (self._state, neighbors))
+                for i in range(0, self.simulation_config.num_steps_lax):
+                    new_state, neighbors = self.engine_config.update_fn(i, (self.engine_config.state, neighbors))
                 assert not neighbors.did_buffer_overflow
             self.engine_config.state = new_state
             self.engine_config.neighbors = neighbors
+            # print(self.engine_config.state)
             loop_count += 1
         self.is_started = False
         print('Run stops')

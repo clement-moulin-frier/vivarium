@@ -20,19 +20,12 @@ def normal(array):
 def update_selected(*events):
     cds.selected.indices = simulator.selected_agents
 
-def update_color(*events):
-    print('update_color', simulator.selected_agents, simulator.color)
-    for ag in simulator.selected_agents:
-        all_colors[ag] = simulator.color
-    # all_colors[simulator.selected_agents] = simulator.color
 
 pn.extension()
 
 simulator = SimulatorController(client=SimulatorGRPCClient())
 
 simulator.param.watch(update_selected, ['selected_agents'], onlychanged=True)
-simulator.param.watch(update_color, ['color'], onlychanged=True)
-
 
 state = simulator.get_nve_state()
 
@@ -48,7 +41,7 @@ def get_cds_data(state):
     n_agents = x.shape[0]
     colors = all_colors[:n_agents]  # ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
 
-    normals = normal(thetas)
+    normals = normal(np.array(thetas))
 
     orientation_lines_x = [[xx, xx + r * n[0]] for xx, n, r in zip(x, normals, radii)]
     orientation_lines_y = [[yy, yy + r * n[1]] for yy, n, r in zip(y, normals, radii)]
@@ -98,12 +91,13 @@ p.toolbar.active_tap = draw_tool
 
 
 # https://panel.holoviz.org/how_to/param/custom.html
-sim_panel = pn.Param(simulator.param,
-                  widgets={'left_motor': pn.widgets.FloatSlider,  # {'widget_type': pn.widgets.FloatSlider, 'orientation': 'vertical'},
-                           'right_motor': pn.widgets.FloatSlider,  # {'widget_type': pn.widgets.FloatSlider, 'orientation': 'vertical'}
-                           })
+sim_panel = pn.Param(simulator.param)
+                  #    ,
+                  # widgets={'left_motor': pn.widgets.FloatSlider,  # {'widget_type': pn.widgets.FloatSlider, 'orientation': 'vertical'},
+                  #          'right_motor': pn.widgets.FloatSlider,  # {'widget_type': pn.widgets.FloatSlider, 'orientation': 'vertical'}
+                  #          })
 
-row = pn.Row(pn.Column(button, p), sim_panel)  # , pn.Column(simulator.param.selected_agents, simulator.agent_config), pn.Column(button, simulator.simulation_config))
+row = pn.Row(pn.Column(button, p), sim_panel, simulator.agent_config, [])  # , pn.Column(simulator.param.selected_agents, simulator.agent_config), pn.Column(button, simulator.simulation_config))
 row.servable()
 
 def update_plot():

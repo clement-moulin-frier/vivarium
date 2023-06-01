@@ -42,9 +42,13 @@ class SimulatorGRPCClient(SimulatorClient):
         return d
 
     def get_agent_config(self, idx):
+        print('get_agent_config')
         serialized = self.stub.GetAgentConfigSerialized(simulator_pb2.AgentIdx(idx=idx)).serialized
         return AgentConfig(**AgentConfig.param.deserialize_parameters(serialized))
 
+    def get_agent_configs(self):
+        serialized = self.stub.GetAgentConfigsSerialized(Empty()).serialized
+        return [AgentConfig(**AgentConfig.param.deserialize_parameters(s)) for s in serialized]
 
     def set_simulation_config(self, simulation_config_dict):
         print('set_simulation_config', simulation_config_dict)
@@ -84,24 +88,26 @@ class SimulatorGRPCClient(SimulatorClient):
 
     def get_nve_state(self):
         state = self.stub.GetNVEState(Empty())
-        return NVEState(position=RigidBody(center=proto_to_ndarray(state.position.center),
-                                           orientation=proto_to_ndarray(state.position.orientation)),
-                        momentum=RigidBody(center=proto_to_ndarray(state.momentum.center),
-                                           orientation=proto_to_ndarray(state.momentum.orientation)),
-                        force=RigidBody(center=proto_to_ndarray(state.force.center),
-                                        orientation=proto_to_ndarray(state.force.orientation)),
-                        mass=RigidBody(center=proto_to_ndarray(state.mass.center),
-                                       orientation=proto_to_ndarray(state.mass.orientation)),
-                        prox=proto_to_ndarray(state.prox),
-                        motor=proto_to_ndarray(state.motor),
-                        behavior=proto_to_ndarray(state.behavior),
-                        wheel_diameter=proto_to_ndarray(state.wheel_diameter),
-                        base_length=proto_to_ndarray(state.base_length),
-                        speed_mul=proto_to_ndarray(state.speed_mul),
-                        theta_mul=proto_to_ndarray(state.theta_mul),
-                        proxs_dist_max=proto_to_ndarray(state.proxs_dist_max),
-                        proxs_cos_min=proto_to_ndarray(state.proxs_cos_min),
-                        entity_type=proto_to_ndarray(state.entity_type)
+        return NVEState(position=RigidBody(center=proto_to_ndarray(state.position.center).astype(float),
+                                           orientation=proto_to_ndarray(state.position.orientation).astype(float)),
+                        momentum=RigidBody(center=proto_to_ndarray(state.momentum.center).astype(float),
+                                           orientation=proto_to_ndarray(state.momentum.orientation).astype(float)),
+                        force=RigidBody(center=proto_to_ndarray(state.force.center).astype(float),
+                                        orientation=proto_to_ndarray(state.force.orientation).astype(float)),
+                        mass=RigidBody(center=proto_to_ndarray(state.mass.center).astype(float),
+                                       orientation=proto_to_ndarray(state.mass.orientation).astype(float)),
+                        idx=proto_to_ndarray(state.idx).astype(int),
+                        prox=proto_to_ndarray(state.prox).astype(float),
+                        motor=proto_to_ndarray(state.motor).astype(float),
+                        behavior=proto_to_ndarray(state.behavior).astype(int),
+                        wheel_diameter=proto_to_ndarray(state.wheel_diameter).astype(float),
+                        base_length=proto_to_ndarray(state.base_length).astype(float),
+                        speed_mul=proto_to_ndarray(state.speed_mul).astype(float),
+                        theta_mul=proto_to_ndarray(state.theta_mul).astype(float),
+                        proxs_dist_max=proto_to_ndarray(state.proxs_dist_max).astype(float),
+                        proxs_cos_min=proto_to_ndarray(state.proxs_cos_min).astype(float),
+                        color=proto_to_ndarray(state.color).astype(float),
+                        entity_type=proto_to_ndarray(state.entity_type).astype(int)
                         )
 
     def is_started(self):

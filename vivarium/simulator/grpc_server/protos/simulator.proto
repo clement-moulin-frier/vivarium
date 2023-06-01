@@ -32,6 +32,7 @@ service SimulatorServer {
 
   rpc GetAgentConfigMessage(google.protobuf.Empty) returns (AgentConfig) {}
   rpc GetAgentConfigSerialized(AgentIdx) returns (AgentConfigSerialized) {}
+  rpc GetAgentConfigsSerialized(google.protobuf.Empty) returns (AgentConfigsSerialized) {}
   rpc GetAgentConfigs(google.protobuf.Empty) returns (AgentConfigs) {}
   rpc GetAgentConfig(AgentIdx) returns (AgentConfig) {}
 
@@ -111,7 +112,8 @@ message AgentConfig {
     float proxs_dist_max = 6;
     float proxs_cos_min = 7;
     string behavior = 8;
-    int32 entity_type = 9;
+    string color = 9;
+    int32 entity_type = 10;
 }
 
 message AgentConfigIdxSenderName {
@@ -139,6 +141,10 @@ message AgentConfigSerialized {
   string serialized = 1;
 }
 
+message AgentConfigsSerialized {
+  repeated string serialized = 1;
+}
+
 message NDArray {
   bytes ndarray = 1;
 }
@@ -162,7 +168,9 @@ message NVEState {
   NDArray theta_mul = 11;
   NDArray proxs_dist_max = 12;
   NDArray proxs_cos_min = 13;
-  NDArray entity_type = 14;
+  NDArray color = 14;
+  NDArray entity_type = 15;
+  NDArray idx = 16;
 }
 
 message MotorInfo {

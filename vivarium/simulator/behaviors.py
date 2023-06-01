@@ -31,3 +31,5 @@ behavior_bank = [partial(linear_behavior, matrix=linear_behavior_matrices[beh])
 behavior_name_map = {beh.name: i for i, beh in enumerate(linear_behavior_enum)}
 behavior_name_map['manual'] = len(behavior_bank) - 2
 behavior_name_map['noop'] = len(behavior_bank) - 1
+
+reversed_behavior_name_map = {i: name for name, i in behavior_name_map.items()}

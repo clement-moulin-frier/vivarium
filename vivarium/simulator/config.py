@@ -1,7 +1,15 @@
 import param
 from param import Parameterized
+import numpy as np
 
 import vivarium.simulator.behaviors as behaviors
+
+from jax_md.rigid_body import monomer
+
+
+mass = monomer.mass()
+mass_center = float(mass.center[0])
+mass_orientation = float(mass.orientation[0])
 
 class Config(Parameterized):
     export_fields_include = param.List(None, allow_None=True)
@@ -32,14 +40,25 @@ class Config(Parameterized):
 
 
 class AgentConfig(Config):
+    idx = param.Integer()
+    x_position = param.Number(0.)
+    y_position = param.Number(0.)
+    orientation = param.Number(0.)
+    mass_center = param.Number(mass_center)
+    mass_orientation = param.Number(mass_orientation)
     behavior = param.ObjectSelector(default=behaviors.linear_behavior_enum.AGGRESSION.name,
                                     objects=behaviors.behavior_name_map.keys())
+    left_motor = param.Number(0., bounds=(0., 1.))
+    right_motor = param.Number(0., bounds=(0., 1.))
+    left_prox = param.Number(0., bounds=(0., 1.))
+    right_prox = param.Number(0., bounds=(0., 1.))
     wheel_diameter = param.Number(2.)
-    base_length = param.Number(10.)
+    base_length = param.Number(2.)
     speed_mul = param.Number(0.1)
     theta_mul = param.Number(0.1)
     proxs_dist_max = param.Number(100., bounds=(0, None))
     proxs_cos_min = param.Number(0., bounds=(-1., 1.))
+    color = param.Color('blue')
     entity_type = param.Integer(0)
 
 

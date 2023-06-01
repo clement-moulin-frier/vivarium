@@ -63,8 +63,15 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
     def GetAgentConfigSerialized(self, request, context):
         config = self.simulator.agent_configs[request.idx[0]]
+        print('GetAgentConfigSerialized', config.to_dict())
         serialized = config.param.serialize_parameters(subset=config.export_fields)
         return simulator_pb2.AgentConfigSerialized(serialized=serialized)
+
+    def GetAgentConfigsSerialized(self, request, context):
+        self.simulator.engine_config.update_agent_configs_from_state()
+        serialized = [config.param.serialize_parameters(subset=config.export_fields) for config in self.simulator.agent_configs]
+        # self._change_time += 1
+        return simulator_pb2.AgentConfigsSerialized(serialized=serialized)
 
     def GetAgentConfigs(self, request, context):
         res = []
@@ -101,6 +108,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
                                                                     orientation=ndarray_to_proto(state.force.orientation)),
                                       mass=simulator_pb2.RigidBody(center=ndarray_to_proto(state.mass.center),
                                                                    orientation=ndarray_to_proto(state.mass.orientation)),
+                                      idx=ndarray_to_proto(state.idx),
                                       prox=ndarray_to_proto(state.prox),
                                       motor=ndarray_to_proto(state.motor),
                                       behavior=ndarray_to_proto(state.behavior),
@@ -110,6 +118,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
                                       theta_mul=ndarray_to_proto(state.theta_mul),
                                       proxs_dist_max=ndarray_to_proto(state.proxs_dist_max),
                                       proxs_cos_min=ndarray_to_proto(state.proxs_cos_min),
+                                      color=ndarray_to_proto(state.color),
                                       entity_type=ndarray_to_proto(state.entity_type)
                                       )
 
@@ -173,13 +182,11 @@ def serve(simulator):
 
 
 if __name__ == '__main__':
-    simulation_config = config.SimulatorConfig()
+    simulation_config = config.SimulatorConfig(to_jit=True)
 
     engine_config = EngineConfig(simulation_config=simulation_config, dynamics_fn=dynamics_rigid)
 
     simulator = Simulator(engine_config=engine_config)
-
-    # simulator.set_state(0, ['position', 'center'], np.array([0., 1.]))
 
     print('Simulator server started')
     logging.basicConfig()

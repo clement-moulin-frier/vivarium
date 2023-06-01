@@ -12,6 +12,7 @@ f32 = util.f32
 
 @dataclass
 class NVEState(simulate.NVEState):
+    idx : util.Array
     prox: util.Array
     motor: util.Array
     behavior: util.Array
@@ -21,6 +22,7 @@ class NVEState(simulate.NVEState):
     theta_mul: util.Array
     proxs_dist_max: util.Array
     proxs_cos_min: util.Array
+    color: util.Array
     entity_type: util.Array
 
 
@@ -56,23 +58,22 @@ def get_verlet_force_fn(displacement, map_dim):
     return force_fn
 
 
-
-# util.register_custom_simulation_type(RigidRobot)
 def dynamics_rigid(displacement, shift, map_dim, dt, behavior_bank, force_fn=None, **sim_kwargs):
     force_fn = force_fn or get_verlet_force_fn(displacement, map_dim)
-    shape = rigid_body.monomer
-    def init_fn(key, positions, orientations, agent_configs_as_array_dict, kT=0.):
+    # shape = rigid_body.monomer
+
+    def init_fn(key, kT=0., **kwargs):
         key, subkey = jax.random.split(key)
-        n_agents = positions.shape[0]
-        proxs = jnp.zeros((n_agents, 2))
-        motors = jnp.zeros((n_agents, 2))
-        body_positions = rigid_body.RigidBody(center=positions, orientation=orientations)
+        n_agents = kwargs['position'].center.shape[0]
         force = rigid_body.RigidBody(center=jnp.zeros((n_agents, map_dim)), orientation=jnp.zeros(n_agents))
-        state = simulate.NVEState(position=body_positions, momentum=None, force=force, mass=shape.mass())
+        state = simulate.NVEState(position=kwargs['position'], momentum=None, force=force, mass=kwargs['mass'])  #mass=shape.mass()
+        del kwargs['position']
+        del kwargs['mass']
         state = simulate.canonicalize_mass(state)
         state = simulate.initialize_momenta(state, key, kT)
         return NVEState(position=state.position, momentum=state.momentum, force=state.force, mass=state.mass,
-                        prox=proxs, motor=motors, **agent_configs_as_array_dict)
+                        **kwargs)
+
 
     def physics_fn(state, force, shift_fn, dt, neighbor):
         """Apply a single step of velocity Verlet integration to a state."""

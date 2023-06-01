@@ -41,6 +41,11 @@ class SimulatorServerStub(object):
                 request_serializer=simulator__pb2.AgentIdx.SerializeToString,
                 response_deserializer=simulator__pb2.AgentConfigSerialized.FromString,
                 )
+        self.GetAgentConfigsSerialized = channel.unary_unary(
+                '/simulator.SimulatorServer/GetAgentConfigsSerialized',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=simulator__pb2.AgentConfigsSerialized.FromString,
+                )
         self.GetAgentConfigs = channel.unary_unary(
                 '/simulator.SimulatorServer/GetAgentConfigs',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
@@ -132,6 +137,12 @@ class SimulatorServerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def GetAgentConfigSerialized(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetAgentConfigsSerialized(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -236,6 +247,11 @@ def add_SimulatorServerServicer_to_server(servicer, server):
                     servicer.GetAgentConfigSerialized,
                     request_deserializer=simulator__pb2.AgentIdx.FromString,
                     response_serializer=simulator__pb2.AgentConfigSerialized.SerializeToString,
+            ),
+            'GetAgentConfigsSerialized': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAgentConfigsSerialized,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=simulator__pb2.AgentConfigsSerialized.SerializeToString,
             ),
             'GetAgentConfigs': grpc.unary_unary_rpc_method_handler(
                     servicer.GetAgentConfigs,
@@ -390,6 +406,23 @@ class SimulatorServer(object):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetAgentConfigSerialized',
             simulator__pb2.AgentIdx.SerializeToString,
             simulator__pb2.AgentConfigSerialized.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetAgentConfigsSerialized(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetAgentConfigsSerialized',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            simulator__pb2.AgentConfigsSerialized.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
