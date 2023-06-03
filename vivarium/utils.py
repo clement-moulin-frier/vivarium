@@ -1,3 +1,4 @@
+import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -127,3 +128,31 @@ def agent_configs_to_array_dict(agent_configs, fields=None):
     fields = fields or state_fields
     state = set_state_from_agent_configs(agent_configs)
     return {f: getattr(state, f) for f in fields}
+
+
+# def generate_positions_orientations(key, n_agents, box_size):
+#     key, subkey = jax.random.split(key)
+#     positions = box_size * jax.random.uniform(subkey, (n_agents, 2))
+#     key, subkey = jax.random.split(key)
+#     orientations = jax.random.uniform(subkey, (n_agents,), maxval=2 * np.pi)
+#     return key, positions, orientations
+
+def get_init_state_kwargs(agent_configs):
+    # key, subkey = jax.random.split(key)
+    # key, positions, orientations = generate_positions_orientations(key=key,
+    #                                                           n_agents=len(agent_configs),
+    #                                                           box_size=box_size)
+    #
+    # rigid_body = self.agent_configs_as_array_dict(fields=['x_position', 'y_position', 'orientation'])['position']
+    state_kwargs = agent_configs_to_array_dict(agent_configs, fields=['idx', 'position', 'mass',
+                                                                                 'prox', 'motor', 'behavior',
+                                                                                 'wheel_diameter',
+                                                                                 'base_length',
+                                                                                 'speed_mul',
+                                                                                 'theta_mul',
+                                                                                 'proxs_dist_max',
+                                                                                 'proxs_cos_min',
+                                                                                 'color',
+                                                                                 'entity_type'
+                                                                            ])
+    return state_kwargs
