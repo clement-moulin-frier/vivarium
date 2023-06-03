@@ -38,8 +38,7 @@ def get_cds_data(state):
     x, y = pos[:, 0], pos[:, 1]
     thetas = state.position.orientation
     radii = state.base_length / 2.
-    n_agents = x.shape[0]
-    colors = all_colors[:n_agents]  # ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
+    colors = state.color  # ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
 
     normals = normal(np.array(thetas))
 

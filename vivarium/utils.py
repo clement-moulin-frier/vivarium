@@ -13,6 +13,8 @@ from vivarium.simulator.config import AgentConfig
 from vivarium.simulator.sim_computation import NVEState
 from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
 
+import matplotlib.colors as mcolors
+
 
 config_fields = AgentConfig.param.objects().keys()
 state_fields = [f.name for f in jax_md.dataclasses.fields(NVEState)]
@@ -32,8 +34,8 @@ identity_s_to_c = lambda x, typ: typ(x)
 identity_c_to_s = lambda x: x
 behavior_s_to_c = lambda x, typ: reversed_behavior_name_map[x]
 behavior_c_to_s = lambda x: behavior_name_map[x]
-color_s_to_c = lambda x, typ: 'blue'  # Warning : temporary (below as well)
-color_c_to_s = lambda x: 0.
+color_s_to_c = lambda x, typ: mcolors.to_hex(x)  # Warning : temporary (below as well)
+color_c_to_s = lambda x: mcolors.to_rgb(x)
 
 
 agent_configs_to_state_dict = {'x_position': StateFieldInfo(('position', 'center'), 0, identity_s_to_c, identity_c_to_s),
@@ -66,7 +68,7 @@ def get_default_state(n_agents):
                     theta_mul=jnp.zeros(n_agents),
                     proxs_dist_max=jnp.zeros(n_agents),
                     proxs_cos_min=jnp.zeros(n_agents),
-                    color=jnp.zeros(n_agents),
+                    color=jnp.zeros((n_agents, 3)),
                     entity_type=jnp.zeros(n_agents, dtype=int),
                     idx=jnp.zeros(n_agents, dtype=int)
                     )
