@@ -61,11 +61,14 @@ class AgentConfig(Config):
     color = param.Color('blue')
     entity_type = param.Integer(0)
 
+    def __init__(self, **params):
+        super().__init__(**params)
+        # self.export_fields_exclude = ['idx']
 
 class SimulatorConfig(Config):
     box_size = param.Number(100., bounds=(0, None))
     map_dim = param.Integer(2, bounds=(1, None))
-    n_agents = param.Integer(30)
+    n_agents = param.Integer(10)
     num_steps_lax = param.Integer(50)
     num_lax_loops = param.Integer(1)
     dt = param.Number(0.1)

@@ -34,6 +34,7 @@ class EngineConfig(param.Parameterized):
         self.simulation_config.param.watch(self.update_space, ['box_size'], onlychanged=True, precedence=0)
         self.simulation_config.param.watch(self.init_state, ['box_size', 'n_agents'], onlychanged=True, precedence=1)
         self._neighbor_fn_watcher = self.simulation_config.param.watch(self.update_neighbor_fn, ['box_size', 'neighbor_radius'], onlychanged=True, precedence=2)
+        self.simulation_config.param.watch(self.allocate_neighbors, ['n_agents'], onlychanged=True, precedence=2)
         self.simulation_config.param.watch(self.update_function_update, ['box_size', 'behavior_bank', 'dynamics_fn'], onlychanged=True, precedence=2)
         self._function_update_watcher = self.simulation_config.param.watch(self.update_function_update,
                                            ['dt', 'map_dim', 'to_jit'],
@@ -65,12 +66,20 @@ class EngineConfig(param.Parameterized):
         events_kwargs = {e.name: e.new for e in events}
         kwargs.update(events_kwargs)
         self.simulator.update_neighbor_fn(**kwargs)
-        self.simulator.update_neighbors()
+        self.allocate_neighbors()
+
+    # @param.depends('update_neighbor_fn', watch=True, on_init=False)
+    def allocate_neighbors(self, *events):
+        print('allocate_neighbors')
+        # if self.simulator is not None:
+        self.simulator.allocate_neighbors()
 
     def init_state(self, *events):
+        print('init_state')
         self.simulator.init_state(**utils.get_init_state_kwargs(self.agent_configs))
 
     def update_state(self, *events):
+        print('update_state')
         self.simulator.state = utils.set_state_from_agent_configs([e.obj for e in events], self.simulator.state,
                                                                       params=[e.name for e in events])
 
@@ -103,7 +112,7 @@ class Simulator:
         self.update_function_update(map_dim, dt, to_jit)
         self.init_state(**state_kwargs)
         self.update_neighbor_fn(box_size, neighbor_radius)
-        self.update_neighbors()
+        self.allocate_neighbors()
 
 
     def run(self, threaded=False):
@@ -201,7 +210,7 @@ class Simulator:
                                                    capacity_multiplier=1.5,
                                                    format=partition.Sparse)
 
-    def update_neighbors(self):
+    def allocate_neighbors(self):
         self.neighbors = self.neighbor_fn.allocate(self.state.position.center)
 
 
@@ -212,3 +221,5 @@ if __name__ == "__main__":
     engine_config = EngineConfig(simulation_config=simulation_config)
 
     engine_config.simulator.run()
+
+

@@ -32,7 +32,7 @@ class StateFieldInfo:
 
 identity_s_to_c = lambda x, typ: typ(x)
 identity_c_to_s = lambda x: x
-behavior_s_to_c = lambda x, typ: reversed_behavior_name_map[x]
+behavior_s_to_c = lambda x, typ: reversed_behavior_name_map[int(x)]
 behavior_c_to_s = lambda x: behavior_name_map[x]
 color_s_to_c = lambda x, typ: mcolors.to_hex(x)  # Warning : temporary (below as well)
 color_c_to_s = lambda x: mcolors.to_rgb(x)
@@ -108,7 +108,11 @@ def set_state_from_agent_configs(agent_configs, state=None, params=None):
     return state
 
 
-def set_agent_configs_from_state(state, agent_configs, first_nested_fields):
+def set_agent_configs_from_state(state, agent_configs, first_nested_fields=['position', 'prox', 'motor', 'behavior',
+                                                                               'wheel_diameter', 'base_length',
+                                                                               'speed_mul', 'theta_mul',
+                                                                               'proxs_dist_max', 'proxs_cos_min',
+                                                                               'entity_type']):
     for field in first_nested_fields:
         for param, state_field_info in agent_configs_to_state_dict.items():
             if field == state_field_info.nested_field[0]:
@@ -119,11 +123,11 @@ def set_agent_configs_from_state(state, agent_configs, first_nested_fields):
                     t = type(getattr(config, param))
                     # value = np.array(value).astype(t)
                     if state_field_info.column_idx is None:
-                        value = value[config.idx]
+                        value_to_set = value[config.idx]
                     else:
-                        value = value[config.idx, state_field_info.column_idx]
-                    value = state_field_info.state_to_config(value, t)
-                    config.param.update(**{param: value})
+                        value_to_set = value[config.idx, state_field_info.column_idx]
+                    value_to_set = state_field_info.state_to_config(value_to_set, t)
+                    config.param.update(**{param: value_to_set})
 
 
 def agent_configs_to_array_dict(agent_configs, fields=None):

@@ -24,9 +24,11 @@ class SimulatorController(param.Parameterized):
         self.state = None
         self._agent_config_watcher = self.watch_agent_config()
         self.pull_all_data()
-        self.param.selected_agents.objects = range(self.simulation_config.n_agents)
+        self.update_agent_list()
+        # self.param.selected_agents.objects = range(self.simulation_config.n_agents)
         self.simulation_config.param.watch(self.push_simulation_config, self.simulation_config.export_fields, onlychanged=True) #, queued=True)
         self.param.watch(self.pull_agent_config, ['selected_agents'], onlychanged=True)
+        self.simulation_config.param.watch(self.update_agent_list, ['n_agents'], onlychanged=True)
         self.client.name = self.name
         threading.Thread(target=self._start_timer).start()
 
@@ -51,6 +53,9 @@ class SimulatorController(param.Parameterized):
         d = {e.name: e.new for e in events}
         self.client.set_agent_config(self.selected_agents, d)
 
+    def update_agent_list(self, *events):
+        self.param.selected_agents.objects = range(self.simulation_config.n_agents)
+
     def pull_all_data(self):
         self.pull_agent_config()
         self.pull_simulation_config()
@@ -63,17 +68,16 @@ class SimulatorController(param.Parameterized):
         print('pull_agent_config')
         print(self.selected_agents)
         agent_config_dict = self.client.get_agent_config(self.selected_agents).to_dict()
-        if self.state is None:
-            self.get_nve_state()  ## Until the first time, then assumes that it is periodically called from elsewhere (e.g. from panel_app.py)
+        state = self.get_nve_state()
         with self.dont_push_agent_config():
             self.agent_config.param.update(**agent_config_dict)
-            utils.set_agent_configs_from_state(self.state, [self.agent_config], ['position', 'prox', 'motor', 'behavior',
+            utils.set_agent_configs_from_state(state, [self.agent_config], ['position', 'prox', 'motor', 'behavior',
                                                                                'wheel_diameter', 'base_length',
                                                                                'speed_mul', 'theta_mul',
                                                                                'proxs_dist_max', 'proxs_cos_min',
                                                                                'entity_type'])
             # self.agent_config.update_from_state(self.state)
-        print('updated_agent_config', self.agent_config.to_dict())
+        print('updated_agent_config', agent_config_dict, self.agent_config.to_dict())
 
     def _start_timer(self):
         while True:
@@ -107,10 +111,13 @@ class SimulatorController(param.Parameterized):
             self.agent_config.param.update(**configs[self.selected_agents[0]].to_dict())
         return configs
 
+    def add_agents(self, n_agents):
+        _ = self.client.add_agents(n_agents, self.agent_config)
+
 
 if __name__ == "__main__":
 
-    simulator = SimulatorController(client=SimulatorGRPCClient())
-    MockEvent = namedtuple('MockEvent', ['name', 'new'])
-    e = MockEvent(name='left_motor', new=0.1)
-    simulator.push_motors(e)
+    controller = SimulatorController()
+    controller.get_nve_state()
+    controller.selected_agents = [1]
+    print('idx = ', controller.agent_config.idx, 'y = ', controller.agent_config.y_position)

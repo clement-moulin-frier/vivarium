@@ -14,6 +14,7 @@ from concurrent import futures
 from threading import Lock
 
 from vivarium.simulator import config
+from vivarium import utils
 from vivarium.simulator.simulator import Simulator, EngineConfig
 from vivarium.simulator.sim_computation import dynamics_rigid
 
@@ -145,7 +146,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def SetAgentConfig(self, request, context):
         with self._lock:
             d = json.loads(request.dict.serialized)
-            print('SetAgentConfig', d)
+            print('SetAgentConfig', request.idx, d)
 
             with self.engine_config.simulator.pause():
                 for idx in request.idx.idx:
@@ -172,6 +173,28 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
             self.engine_config.simulator.set_state(idx, request.nested_field, proto_to_ndarray(request.value))
         return Empty()
 
+    def AddAgents(self, request, context):
+        with self._lock:
+            d = json.loads(request.serialized_config)
+
+            prev_num_agents = len(self.engine_config.agent_configs)
+            new_configs = []
+            for i in range(request.n_agents):
+                d['x_position'] += np.random.randn() * self.engine_config.simulation_config.box_size / 100.
+                d['y_position'] += np.random.randn() * self.engine_config.simulation_config.box_size / 100.
+                d['idx'] = prev_num_agents + i
+                new_configs.append(config.AgentConfig(**d))
+
+            for c in new_configs:
+                c.param.watch(self.engine_config.update_state, list(c.to_dict().keys()), onlychanged=True)
+
+            with self.engine_config.simulator.pause():
+                self.engine_config.agent_configs += new_configs
+                self.engine_config.simulation_config.n_agents += request.n_agents
+            self._change_time += 1
+        return simulator_pb2.AgentIdx(idx=[c.idx for c in self.engine_config.agent_configs])
+
+
 def serve(engine_config):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     simulator_pb2_grpc.add_SimulatorServerServicer_to_server(
@@ -186,6 +209,14 @@ if __name__ == '__main__':
 
     engine_config = EngineConfig(simulation_config=simulation_config)
 
+    #engine_config.param.agent_configs.objects = [engine_config.param.agent_config.objects[0]]
+
+    # new_configs = engine_config.param.agent_configs.objects + [config.AgentConfig(idx=100)
+    #                                          for i in range(1)]
+    # engine_config.param.agent_configs.objects = new_configs
+
     print('Simulator server started')
     logging.basicConfig()
     serve(engine_config)
+
+

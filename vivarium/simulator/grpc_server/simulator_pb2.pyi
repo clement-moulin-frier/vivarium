@@ -6,6 +6,14 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class AddAgentInput(_message.Message):
+    __slots__ = ["n_agents", "serialized_config"]
+    N_AGENTS_FIELD_NUMBER: _ClassVar[int]
+    SERIALIZED_CONFIG_FIELD_NUMBER: _ClassVar[int]
+    n_agents: int
+    serialized_config: str
+    def __init__(self, n_agents: _Optional[int] = ..., serialized_config: _Optional[str] = ...) -> None: ...
+
 class AgentConfig(_message.Message):
     __slots__ = ["base_length", "behavior", "color", "entity_type", "proxs_cos_min", "proxs_dist_max", "speed_mul", "theta_mul", "wheel_diameter"]
     BASE_LENGTH_FIELD_NUMBER: _ClassVar[int]

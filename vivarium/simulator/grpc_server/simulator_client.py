@@ -110,6 +110,12 @@ class SimulatorGRPCClient(SimulatorClient):
                         entity_type=proto_to_ndarray(state.entity_type).astype(int)
                         )
 
+    def add_agents(self, n_agents, agent_config):
+        d = agent_config.param.serialize_parameters(subset=agent_config.export_fields)
+        # config = simulator_pb2.AgentConfig(**agent_config.to_dict())
+        input = simulator_pb2.AddAgentInput(n_agents=n_agents,
+                                            serialized_config=d)
+        return self.stub.AddAgents(input)
     def is_started(self):
         return self.stub.IsStarted(Empty()).is_started
 

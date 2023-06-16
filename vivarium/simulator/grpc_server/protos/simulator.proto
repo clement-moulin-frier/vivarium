@@ -48,6 +48,8 @@ service SimulatorServer {
 
   rpc GetNVEState(google.protobuf.Empty) returns (NVEState) {}
 
+  rpc AddAgents(AddAgentInput) returns (AgentIdx) {}
+
   rpc IsStarted(google.protobuf.Empty) returns (IsStartedState) {}
 
   rpc Start(google.protobuf.Empty) returns (google.protobuf.Empty) {}
@@ -183,6 +185,11 @@ message StateChange {
   AgentIdx agent_idx = 1;
   repeated string nested_field = 2;
   NDArray value = 3;
+}
+
+message AddAgentInput {
+  int32 n_agents = 1;
+  string serialized_config =2;
 }
 
 message IsStartedState {
