@@ -194,6 +194,16 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
             self._change_time += 1
         return simulator_pb2.AgentIdx(idx=[c.idx for c in self.engine_config.agent_configs])
 
+    def RemoveAgents(self, request, context):
+        with self._lock:
+            with self.engine_config.simulator.pause():
+                for i in request.idx:
+                    self.engine_config.agent_configs.pop(i)
+                for i, c in enumerate(self.engine_config.agent_configs):
+                    c.idx = i
+                self.engine_config.simulation_config.n_agents -= len(request.idx)
+        self._change_time += 1
+        return Empty()
 
 def serve(engine_config):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

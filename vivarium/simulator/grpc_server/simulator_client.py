@@ -116,6 +116,10 @@ class SimulatorGRPCClient(SimulatorClient):
         input = simulator_pb2.AddAgentInput(n_agents=n_agents,
                                             serialized_config=d)
         return self.stub.AddAgents(input)
+
+    def remove_agents(self, agent_idx):
+        self.stub.RemoveAgents(simulator_pb2.AgentIdx(idx=agent_idx))
+
     def is_started(self):
         return self.stub.IsStarted(Empty()).is_started
 

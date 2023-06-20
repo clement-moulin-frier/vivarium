@@ -72,9 +72,9 @@ r = p.circle('x', 'y', radius='r',
 
 button = Button(name="Start" if simulator.is_started() else "Stop")
 
-add_agent_text_pre = pn.widgets.StaticText(name='Pre text', value='Add ')
-n_new_agents = pn.widgets.IntInput(name='N new agents', value=0, step=1, start=0, end=1000)
-add_agent_text_post = pn.widgets.StaticText(name='Pre text', value=' agents')
+# add_agent_text_pre = pn.widgets.StaticText(name='Pre text', value='Add ')
+n_new_agents = pn.widgets.IntInput(name='Add new agents', value=0, step=1, start=0, end=1000)
+# add_agent_text_post = pn.widgets.StaticText(name='Pre text', value=' agents')
 add_agent_button = pn.widgets.Button(name='Add agents')
 
 
@@ -82,6 +82,14 @@ def add_agents(event):
     simulator.add_agents(n_new_agents.value)
 
 add_agent_button.on_click(add_agents)
+
+
+remove_agent_button = pn.widgets.Button(name='Remove selected agents')
+
+def remove_agents(event):
+    simulator.remove_agents()
+
+remove_agent_button.on_click(remove_agents)
 
 def callback(event):
     if simulator.is_started():
@@ -106,7 +114,7 @@ sim_panel = pn.Param(simulator.param)
                   #          'right_motor': pn.widgets.FloatSlider,  # {'widget_type': pn.widgets.FloatSlider, 'orientation': 'vertical'}
                   #          })
 
-row = pn.Row(pn.Column(button, p, pn.Row(add_agent_text_pre, n_new_agents,add_agent_text_post, add_agent_button)), sim_panel, simulator.agent_config)  # , pn.Column(simulator.param.selected_agents, simulator.agent_config), pn.Column(button, simulator.simulation_config))
+row = pn.Row(pn.Column(button, p, pn.Row(n_new_agents, add_agent_button), remove_agent_button), sim_panel, simulator.agent_config)  # , pn.Column(simulator.param.selected_agents, simulator.agent_config), pn.Column(button, simulator.simulation_config))
 row.servable()
 
 def update_plot():

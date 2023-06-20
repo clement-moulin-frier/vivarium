@@ -114,6 +114,9 @@ class SimulatorController(param.Parameterized):
     def add_agents(self, n_agents):
         _ = self.client.add_agents(n_agents, self.agent_config)
 
+    def remove_agents(self):
+        self.client.remove_agents(self.selected_agents)
+
 
 if __name__ == "__main__":
 

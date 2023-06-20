@@ -49,6 +49,7 @@ service SimulatorServer {
   rpc GetNVEState(google.protobuf.Empty) returns (NVEState) {}
 
   rpc AddAgents(AddAgentInput) returns (AgentIdx) {}
+  rpc RemoveAgents(AgentIdx) returns (google.protobuf.Empty) {}
 
   rpc IsStarted(google.protobuf.Empty) returns (IsStartedState) {}
 

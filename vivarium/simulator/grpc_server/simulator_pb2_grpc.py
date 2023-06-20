@@ -91,6 +91,11 @@ class SimulatorServerStub(object):
                 request_serializer=simulator__pb2.AddAgentInput.SerializeToString,
                 response_deserializer=simulator__pb2.AgentIdx.FromString,
                 )
+        self.RemoveAgents = channel.unary_unary(
+                '/simulator.SimulatorServer/RemoveAgents',
+                request_serializer=simulator__pb2.AgentIdx.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                )
         self.IsStarted = channel.unary_unary(
                 '/simulator.SimulatorServer/IsStarted',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
@@ -207,6 +212,12 @@ class SimulatorServerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RemoveAgents(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def IsStarted(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -308,6 +319,11 @@ def add_SimulatorServerServicer_to_server(servicer, server):
                     servicer.AddAgents,
                     request_deserializer=simulator__pb2.AddAgentInput.FromString,
                     response_serializer=simulator__pb2.AgentIdx.SerializeToString,
+            ),
+            'RemoveAgents': grpc.unary_unary_rpc_method_handler(
+                    servicer.RemoveAgents,
+                    request_deserializer=simulator__pb2.AgentIdx.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
             'IsStarted': grpc.unary_unary_rpc_method_handler(
                     servicer.IsStarted,
@@ -592,6 +608,23 @@ class SimulatorServer(object):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/AddAgents',
             simulator__pb2.AddAgentInput.SerializeToString,
             simulator__pb2.AgentIdx.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def RemoveAgents(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/RemoveAgents',
+            simulator__pb2.AgentIdx.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
