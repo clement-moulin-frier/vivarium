@@ -183,9 +183,10 @@ message MotorInfo {
 }
 
 message StateChange {
-  AgentIdx agent_idx = 1;
-  repeated string nested_field = 2;
-  NDArray value = 3;
+  repeated int32 row_idx= 1;
+  repeated int32 col_idx= 2;
+  repeated string nested_field = 3;
+  NDArray value = 4;
 }
 
 message AddAgentInput {

@@ -72,9 +72,8 @@ class SimulatorGRPCClient(SimulatorClient):
         motor_info = simulator_pb2.MotorInfo(agent_idx=agent_idx, motor_idx=motor_idx, value=value)
         self.stub.SetMotors(motor_info)
 
-    def set_state(self, agent_indexes, nested_field, value):
-        agent_idx = simulator_pb2.AgentIdx(idx=agent_indexes)
-        state_change = simulator_pb2.StateChange(agent_idx=agent_idx, nested_field=nested_field,
+    def set_state(self, nested_field, row_idx, column_idx, value):
+        state_change = simulator_pb2.StateChange(nested_field=nested_field, row_idx=row_idx, col_idx=column_idx,
                                                  value=ndarray_to_proto(value))
         self.stub.SetState(state_change)
 

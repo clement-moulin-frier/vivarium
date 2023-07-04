@@ -215,14 +215,16 @@ class Slice(_message.Message):
     def __init__(self, start: _Optional[int] = ..., stop: _Optional[int] = ..., step: _Optional[int] = ...) -> None: ...
 
 class StateChange(_message.Message):
-    __slots__ = ["agent_idx", "nested_field", "value"]
-    AGENT_IDX_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ["col_idx", "nested_field", "row_idx", "value"]
+    COL_IDX_FIELD_NUMBER: _ClassVar[int]
     NESTED_FIELD_FIELD_NUMBER: _ClassVar[int]
+    ROW_IDX_FIELD_NUMBER: _ClassVar[int]
     VALUE_FIELD_NUMBER: _ClassVar[int]
-    agent_idx: AgentIdx
+    col_idx: _containers.RepeatedScalarFieldContainer[int]
     nested_field: _containers.RepeatedScalarFieldContainer[str]
+    row_idx: _containers.RepeatedScalarFieldContainer[int]
     value: NDArray
-    def __init__(self, agent_idx: _Optional[_Union[AgentIdx, _Mapping]] = ..., nested_field: _Optional[_Iterable[str]] = ..., value: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
+    def __init__(self, row_idx: _Optional[_Iterable[int]] = ..., col_idx: _Optional[_Iterable[int]] = ..., nested_field: _Optional[_Iterable[str]] = ..., value: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class Time(_message.Message):
     __slots__ = ["time"]

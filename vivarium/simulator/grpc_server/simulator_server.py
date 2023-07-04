@@ -169,8 +169,10 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
     def SetState(self, request, context):
         with self._lock:
-            idx = np.array(request.agent_idx.idx)
-            self.engine_config.simulator.set_state(idx, request.nested_field, proto_to_ndarray(request.value))
+            row_idx = np.array(request.row_idx)
+            col_idx = np.array(request.col_idx)
+            self.engine_config.simulator.set_state(request.nested_field, row_idx, col_idx,
+                                                   proto_to_ndarray(request.value))
         return Empty()
 
     def AddAgents(self, request, context):

@@ -25,7 +25,7 @@ common_fields = [f for f in config_fields if f in state_fields]
 @dataclasses.dataclass
 class StateFieldInfo:
     nested_field: typing.Tuple
-    column_idx: int
+    column_idx: np.array
     state_to_config: typing.Callable
     config_to_state: typing.Callable
 
@@ -38,17 +38,17 @@ color_s_to_c = lambda x, typ: mcolors.to_hex(x)  # Warning : temporary (below as
 color_c_to_s = lambda x: mcolors.to_rgb(x)
 
 
-agent_configs_to_state_dict = {'x_position': StateFieldInfo(('position', 'center'), 0, identity_s_to_c, identity_c_to_s),
-                               'y_position': StateFieldInfo(('position', 'center'), 1, identity_s_to_c, identity_c_to_s),
+agent_configs_to_state_dict = {'x_position': StateFieldInfo(('position', 'center'), np.array([0]), identity_s_to_c, identity_c_to_s),
+                               'y_position': StateFieldInfo(('position', 'center'), np.array([1]), identity_s_to_c, identity_c_to_s),
                                'orientation': StateFieldInfo(('position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
                                'mass_center': StateFieldInfo(('mass', 'center'), None, identity_s_to_c, identity_c_to_s),
                                'mass_orientation': StateFieldInfo(('mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
-                               'left_motor': StateFieldInfo(('motor',), 0, identity_s_to_c, identity_c_to_s),
-                               'right_motor': StateFieldInfo(('motor',), 1, identity_s_to_c, identity_c_to_s),
-                               'left_prox': StateFieldInfo(('prox',), 0, identity_s_to_c, identity_c_to_s),
-                               'right_prox': StateFieldInfo(('prox',), 1, identity_s_to_c, identity_c_to_s),
+                               'left_motor': StateFieldInfo(('motor',), np.array([0]), identity_s_to_c, identity_c_to_s),
+                               'right_motor': StateFieldInfo(('motor',), np.array([1]), identity_s_to_c, identity_c_to_s),
+                               'left_prox': StateFieldInfo(('prox',), np.array([0]), identity_s_to_c, identity_c_to_s),
+                               'right_prox': StateFieldInfo(('prox',), np.array([1]), identity_s_to_c, identity_c_to_s),
                                'behavior': StateFieldInfo(('behavior',), None, behavior_s_to_c, behavior_c_to_s),
-                               'color': StateFieldInfo(('color',), None, color_s_to_c, color_c_to_s)
+                               'color': StateFieldInfo(('color',), np.arange(3), color_s_to_c, color_c_to_s)
                                }
 
 agent_configs_to_state_dict.update({f: StateFieldInfo((f,), None, identity_s_to_c, identity_c_to_s) for f in common_fields if f not in agent_configs_to_state_dict})
@@ -85,10 +85,10 @@ def rec_set_dataclass(var, nested_field, row_idx, column_idx, value):
 
     if len(nested_field) == 1:
         field = nested_field[0]
-        if column_idx is None:
-            d = {field: getattr(var, field).at[row_idx].set(value)}
+        if column_idx is None or len(column_idx) == 0:
+            d = {field: getattr(var, field).at[row_idx].set(value.reshape(-1))}
         else:
-            d = {field: getattr(var, field).at[row_idx, column_idx].set(value)}
+            d = {field: getattr(var, field).at[jnp.ix_(row_idx, column_idx)].set(value.reshape(len(row_idx), len(column_idx)))}
         return d
     else:
         next_var = getattr(var, nested_field[0])

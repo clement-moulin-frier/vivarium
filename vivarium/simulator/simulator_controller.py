@@ -2,10 +2,10 @@ import param
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.simulator import config
 from vivarium import utils
-import time, threading
-from collections import namedtuple
+import time
+import threading
 from contextlib import contextmanager
-
+import numpy as np
 
 param.Dynamic.time_dependent = True
 
@@ -33,7 +33,8 @@ class SimulatorController(param.Parameterized):
         threading.Thread(target=self._start_timer).start()
 
     def watch_agent_config(self):
-        return self.agent_config.param.watch(self.push_agent_config, self.agent_config.export_fields, onlychanged=True) #, queued=True)
+        # return self.agent_config.param.watch(self.push_agent_config, self.agent_config.export_fields, onlychanged=True) #, queued=True)
+        return self.agent_config.param.watch(self.push_state, self.agent_config.export_fields, onlychanged=True) #, queued=True)
 
     @contextmanager
     def dont_push_agent_config(self):
@@ -52,6 +53,17 @@ class SimulatorController(param.Parameterized):
         print('push_agent_config', self.agent_config)
         d = {e.name: e.new for e in events}
         self.client.set_agent_config(self.selected_agents, d)
+
+    def push_state(self, *events):
+        print('push_state')
+        d = {e.name: e.new for e in events}
+        for param, value in d.items():
+            state_field_info = utils.agent_configs_to_state_dict[param]
+            arr = np.tile(np.array(state_field_info.config_to_state(value)), (len(self.selected_agents), 1))
+            self.client.set_state(state_field_info.nested_field,
+                                  np.array(self.selected_agents),
+                                  state_field_info.column_idx,
+                                  arr)
 
     def update_agent_list(self, *events):
         self.param.selected_agents.objects = range(self.simulation_config.n_agents)
