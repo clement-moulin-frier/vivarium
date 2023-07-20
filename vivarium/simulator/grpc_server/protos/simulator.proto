@@ -36,6 +36,16 @@ service SimulatorServer {
   rpc GetAgentConfigs(google.protobuf.Empty) returns (AgentConfigs) {}
   rpc GetAgentConfig(AgentIdx) returns (AgentConfig) {}
 
+  rpc SensoryMotorStream(stream Motor) returns (stream Prox) {}
+
+  rpc NVEStateStream (google.protobuf.Empty) returns (stream NVEState) {}
+  rpc StopNVEStream (google.protobuf.Empty) returns (google.protobuf.Empty) {}
+
+  rpc StartBehavior(Behavior) returns (google.protobuf.Empty) {}
+
+  rpc AgentStep(Motor) returns (Prox) {}
+
+  rpc Step(google.protobuf.Empty) returns (NVEState) {}
 
   rpc SetSimulationConfigSerialized(SimulationConfigSerialized) returns (google.protobuf.Empty) {}
   rpc SetSimulationConfig(SerializedDictSenderName) returns (google.protobuf.Empty) {}
@@ -180,6 +190,22 @@ message MotorInfo {
   AgentIdx agent_idx = 1;
   int32 motor_idx = 2;
   float value = 3;
+}
+
+message Motor {
+  int32 agent_idx = 1;
+  repeated float motor = 2;
+}
+
+message Prox {
+  int32 agent_idx = 1;
+  repeated float prox = 2;
+}
+
+
+message Behavior {
+  int32 agent_idx = 1;
+  bytes function =2;
 }
 
 message StateChange {

@@ -87,22 +87,28 @@ def dynamics_rigid(displacement, shift, map_dim, dt, behavior_bank, force_fn=Non
 
         return state
 
-    def sensorimotor(state, neighbor):
+    def compute_prox(state, neighbor):
         body = state.position
         senders, receivers = neighbor.idx
         Ra = body.center[senders]
         Rb = body.center[receivers]
         dR = - space.map_bond(displacement)(Ra, Rb) # Looks like it should be opposite, but don't understand why
         prox = sensor(dR, body.orientation[senders], state.proxs_dist_max[senders], state.proxs_cos_min[senders], neighbor)
-        motor = multi_switch(state.behavior, behavior_bank, prox, state.motor)
+        return state.set(prox=prox)
 
-        return state.set(prox=prox, motor=motor)
+    def sensorimotor(state, neighbor):
+
+        motor = multi_switch(state.behavior, behavior_bank, state.prox, state.motor)
+
+        return state.set(motor=motor)
 
     def step_fn(state, neighbor, **kwargs):
         # _dt = kwargs.pop('dt', dt)
+        state = compute_prox(state, neighbor)
         state = sensorimotor(state, neighbor)
         force = force_fn(state, neighbor)
-        return physics_fn(state, force, shift, dt, neighbor=neighbor)
+        state = physics_fn(state, force, shift, dt, neighbor=neighbor)
+        return state
 
     return init_fn, step_fn
 
@@ -177,3 +183,4 @@ def total_collision_energy(positions, base_length, neighbor, displacement, epsil
     l_b = base_length[receivers]
     e = collision_energy(displacement, Ra, Rb, l_a, l_b, epsilon, alpha)
     return jnp.sum(e)
+

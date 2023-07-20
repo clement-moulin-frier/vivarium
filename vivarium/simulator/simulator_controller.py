@@ -6,6 +6,11 @@ import time
 import threading
 from contextlib import contextmanager
 import numpy as np
+import jax_md
+from jax_md.rigid_body import RigidBody
+from vivarium.simulator.sim_computation import NVEState
+import math
+
 
 param.Dynamic.time_dependent = True
 
@@ -129,10 +134,125 @@ class SimulatorController(param.Parameterized):
     def remove_agents(self):
         self.client.remove_agents(self.selected_agents)
 
+class Agent:
+    def __init__(self, idx, state):
+        self.idx = idx
+        self.state = state
+        self.subscribers = []
+        self.behaviors = {}
+
+    def sensors(self, key):
+        return self.state.prox
+
+    def subscribe(self, obj):
+        self.subscribers.append(obj)
+
+    def __getattr__(self, item):
+        return self.state.item
+
+    @property
+    def motors(self):
+        return self.state.motor
+
+    @motors.setter
+    def motors(self, value):
+        for s in self.subscribers:
+            s.notify(self.idx, 'motor', value)
+
+    def attach_behavior(self, behavior_fn, name=None, weight=1.):
+        self.behaviors[name or behavior_fn.__name__] = (behavior_fn, weight)
+
+    def detach_behavior(self, name):
+        del self.behaviors[name]
+
+    def motors_from_behaviors(self):
+        total_weights = 0.
+        total_motor = np.zeros(2)
+        for fn, w in self.behaviors.values():
+            total_motor += w * np.array(fn(self))
+            total_weights += w
+        # print('motors_from_behaviors', total_motor, total_weights)
+        print('motors', total_motor / total_weights)
+        return total_motor / total_weights
+
+class AgentList:
+
+    def __init__(self, state):
+        self.state = state
+        n_agents = state.position.center.shape[0]
+        self.agents = [Agent(ag, self.agent_state(ag)) for ag in range(n_agents)]
+
+    def __getitem__(self, item):
+        return self.agents[item]
+
+    def subscribe(self, obj):
+        for ag in self.agents:
+            ag.subscribe(obj)
+
+    def update(self, state):
+        self.state = state
+        for ag in self.agents:
+            ag.state = self.agent_state(ag.idx)
+
+    def agent_state(self, item):
+        state_fields = [f.name for f in jax_md.dataclasses.fields(NVEState)]
+        state_kwargs = {}
+        for field in state_fields:
+            state_array = getattr(self.state, field)
+            if isinstance(state_array, RigidBody):
+                state_kwargs[field] = RigidBody(center=state_array[item], orientation=state_array[item])
+            elif isinstance(state_array, np.ndarray):
+                state_kwargs[field] = state_array[item]
+            else:
+                TypeError(f'state_kwargs has unknown field {type(state_kwargs)}')
+        agent_state = NVEState(**state_kwargs)
+        return agent_state  # Agent(item, agent_state)
+
+
+class NotebookController(SimulatorController):
+
+    def __init__(self, **params):
+        super().__init__(**params)
+        self.agent_list = AgentList(self.client.get_nve_state())
+        self.agent_list.subscribe(self)
+        self.from_stream = True
+    @property
+    def agents(self):
+        state = self.client.state if self.from_stream else self.client.get_nve_state()
+        self.agent_list.update(state)
+        return self.agent_list
+        # return AgentList(self.client.get_nve_state())
+
+    def notify(self, idx, field, value):
+        # print('notify')
+        self.client.set_state((field,), np.array([idx]), np.arange(2), value)
+
+    def start_behavior(self, agent_idx, behavior_fn):
+        self.client.start_behavior(agent_idx, behavior_fn)
+
+    def run_all_behaviors(self, n_steps=math.inf):
+        t = 0
+        while t < n_steps:
+            state = self.client.step()
+            all_motor = np.zeros_like(state.motor)
+            for ag in self.agents.agents:
+                all_motor[ag.idx, :] = ag.motors_from_behaviors()
+            print('all_motor', all_motor)
+            self.client.set_state(('motor',), np.arange(all_motor.shape[0]), np.arange(all_motor.shape[1]), all_motor)
+            t += 1
+
+
 
 if __name__ == "__main__":
 
-    controller = SimulatorController()
-    controller.get_nve_state()
-    controller.selected_agents = [1]
-    print('idx = ', controller.agent_config.idx, 'y = ', controller.agent_config.y_position)
+    # controller = SimulatorController()
+    # controller.get_nve_state()
+    # controller.selected_agents = [1]
+    # print('idx = ', controller.agent_config.idx, 'y = ', controller.agent_config.y_position)
+
+    controller = NotebookController()
+    def behavior(prox):
+        return [prox[1], prox[0]]
+
+    for _ in range(30):
+        controller.start_behavior(0, behavior)

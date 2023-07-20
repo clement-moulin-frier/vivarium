@@ -31,6 +31,7 @@ class EngineConfig(param.Parameterized):
                                                                 orientation=np.random.rand() * 2. * np.pi)
                                                     for i in range(self.simulation_config.n_agents)]
         # self.key = jax.random.PRNGKey(0)
+        self.simulation_config.param.watch(self.update_sim_parameters, ['num_steps_lax', 'freq', 'use_fori_loop'], onlychanged=True)
         self.simulation_config.param.watch(self.update_space, ['box_size'], onlychanged=True, precedence=0)
         self.simulation_config.param.watch(self.init_state, ['box_size', 'n_agents'], onlychanged=True, precedence=1)
         self._neighbor_fn_watcher = self.simulation_config.param.watch(self.update_neighbor_fn, ['box_size', 'neighbor_radius'], onlychanged=True, precedence=2)
@@ -48,6 +49,9 @@ class EngineConfig(param.Parameterized):
                                    self.simulation_config.neighbor_radius, self.simulation_config.to_jit,
                                    self.simulation_config.behavior_bank, self.simulation_config.dynamics_fn,
                                    **utils.get_init_state_kwargs(self.agent_configs))
+
+    def update_sim_parameters(self, event):
+        setattr(self.simulator, event.name, event.new)
 
     def update_space(self, event):
         print('update_space', event.name)
@@ -114,14 +118,23 @@ class Simulator:
         self.update_neighbor_fn(box_size, neighbor_radius)
         self.allocate_neighbors()
 
+        self._subscribers = []
 
-    def run(self, threaded=False):
+    def subscribe(self, obj):
+        self._subscribers.append(obj)
+
+    def notify_subscribers(self, *args, **kwargs):
+        for s in self._subscribers:
+            s.notify(*args, **kwargs)
+
+
+    def run(self, threaded=False, num_loops=math.inf):
         if self.is_started:
             raise Exception("Simulator is already started")
         if threaded:
             threading.Thread(target=self._run).start()
         else:
-            return self._run()
+            return self._run(num_loops)
 
     def _run(self, num_loops=math.inf):
         self.is_started = True
@@ -154,6 +167,7 @@ class Simulator:
             self.neighbors = neighbors
             # print(self.state)
             loop_count += 1
+            self.notify_subscribers(simulation_time=loop_count)
         self.is_started = False
         print('Run stops')
 

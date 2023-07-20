@@ -56,6 +56,36 @@ class SimulatorServerStub(object):
                 request_serializer=simulator__pb2.AgentIdx.SerializeToString,
                 response_deserializer=simulator__pb2.AgentConfig.FromString,
                 )
+        self.SensoryMotorStream = channel.stream_stream(
+                '/simulator.SimulatorServer/SensoryMotorStream',
+                request_serializer=simulator__pb2.Motor.SerializeToString,
+                response_deserializer=simulator__pb2.Prox.FromString,
+                )
+        self.NVEStateStream = channel.unary_stream(
+                '/simulator.SimulatorServer/NVEStateStream',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=simulator__pb2.NVEState.FromString,
+                )
+        self.StopNVEStream = channel.unary_unary(
+                '/simulator.SimulatorServer/StopNVEStream',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                )
+        self.StartBehavior = channel.unary_unary(
+                '/simulator.SimulatorServer/StartBehavior',
+                request_serializer=simulator__pb2.Behavior.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                )
+        self.AgentStep = channel.unary_unary(
+                '/simulator.SimulatorServer/AgentStep',
+                request_serializer=simulator__pb2.Motor.SerializeToString,
+                response_deserializer=simulator__pb2.Prox.FromString,
+                )
+        self.Step = channel.unary_unary(
+                '/simulator.SimulatorServer/Step',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=simulator__pb2.NVEState.FromString,
+                )
         self.SetSimulationConfigSerialized = channel.unary_unary(
                 '/simulator.SimulatorServer/SetSimulationConfigSerialized',
                 request_serializer=simulator__pb2.SimulationConfigSerialized.SerializeToString,
@@ -165,6 +195,42 @@ class SimulatorServerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def GetAgentConfig(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SensoryMotorStream(self, request_iterator, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def NVEStateStream(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StopNVEStream(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StartBehavior(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AgentStep(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Step(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -284,6 +350,36 @@ def add_SimulatorServerServicer_to_server(servicer, server):
                     servicer.GetAgentConfig,
                     request_deserializer=simulator__pb2.AgentIdx.FromString,
                     response_serializer=simulator__pb2.AgentConfig.SerializeToString,
+            ),
+            'SensoryMotorStream': grpc.stream_stream_rpc_method_handler(
+                    servicer.SensoryMotorStream,
+                    request_deserializer=simulator__pb2.Motor.FromString,
+                    response_serializer=simulator__pb2.Prox.SerializeToString,
+            ),
+            'NVEStateStream': grpc.unary_stream_rpc_method_handler(
+                    servicer.NVEStateStream,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=simulator__pb2.NVEState.SerializeToString,
+            ),
+            'StopNVEStream': grpc.unary_unary_rpc_method_handler(
+                    servicer.StopNVEStream,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'StartBehavior': grpc.unary_unary_rpc_method_handler(
+                    servicer.StartBehavior,
+                    request_deserializer=simulator__pb2.Behavior.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'AgentStep': grpc.unary_unary_rpc_method_handler(
+                    servicer.AgentStep,
+                    request_deserializer=simulator__pb2.Motor.FromString,
+                    response_serializer=simulator__pb2.Prox.SerializeToString,
+            ),
+            'Step': grpc.unary_unary_rpc_method_handler(
+                    servicer.Step,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=simulator__pb2.NVEState.SerializeToString,
             ),
             'SetSimulationConfigSerialized': grpc.unary_unary_rpc_method_handler(
                     servicer.SetSimulationConfigSerialized,
@@ -489,6 +585,108 @@ class SimulatorServer(object):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetAgentConfig',
             simulator__pb2.AgentIdx.SerializeToString,
             simulator__pb2.AgentConfig.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def SensoryMotorStream(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_stream(request_iterator, target, '/simulator.SimulatorServer/SensoryMotorStream',
+            simulator__pb2.Motor.SerializeToString,
+            simulator__pb2.Prox.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def NVEStateStream(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(request, target, '/simulator.SimulatorServer/NVEStateStream',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            simulator__pb2.NVEState.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def StopNVEStream(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/StopNVEStream',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def StartBehavior(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/StartBehavior',
+            simulator__pb2.Behavior.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def AgentStep(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/AgentStep',
+            simulator__pb2.Motor.SerializeToString,
+            simulator__pb2.Prox.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Step(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/Step',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            simulator__pb2.NVEState.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

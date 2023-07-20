@@ -70,11 +70,27 @@ class AgentIdx(_message.Message):
     idx: _containers.RepeatedScalarFieldContainer[int]
     def __init__(self, idx: _Optional[_Iterable[int]] = ...) -> None: ...
 
+class Behavior(_message.Message):
+    __slots__ = ["agent_idx", "function"]
+    AGENT_IDX_FIELD_NUMBER: _ClassVar[int]
+    FUNCTION_FIELD_NUMBER: _ClassVar[int]
+    agent_idx: int
+    function: bytes
+    def __init__(self, agent_idx: _Optional[int] = ..., function: _Optional[bytes] = ...) -> None: ...
+
 class IsStartedState(_message.Message):
     __slots__ = ["is_started"]
     IS_STARTED_FIELD_NUMBER: _ClassVar[int]
     is_started: bool
     def __init__(self, is_started: bool = ...) -> None: ...
+
+class Motor(_message.Message):
+    __slots__ = ["agent_idx", "motor"]
+    AGENT_IDX_FIELD_NUMBER: _ClassVar[int]
+    MOTOR_FIELD_NUMBER: _ClassVar[int]
+    agent_idx: int
+    motor: _containers.RepeatedScalarFieldContainer[float]
+    def __init__(self, agent_idx: _Optional[int] = ..., motor: _Optional[_Iterable[float]] = ...) -> None: ...
 
 class MotorInfo(_message.Message):
     __slots__ = ["agent_idx", "motor_idx", "value"]
@@ -133,6 +149,14 @@ class Name(_message.Message):
     NAME_FIELD_NUMBER: _ClassVar[int]
     name: str
     def __init__(self, name: _Optional[str] = ...) -> None: ...
+
+class Prox(_message.Message):
+    __slots__ = ["agent_idx", "prox"]
+    AGENT_IDX_FIELD_NUMBER: _ClassVar[int]
+    PROX_FIELD_NUMBER: _ClassVar[int]
+    agent_idx: int
+    prox: _containers.RepeatedScalarFieldContainer[float]
+    def __init__(self, agent_idx: _Optional[int] = ..., prox: _Optional[_Iterable[float]] = ...) -> None: ...
 
 class RigidBody(_message.Message):
     __slots__ = ["center", "orientation"]

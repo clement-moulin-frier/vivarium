@@ -12,21 +12,37 @@ import numpy as np
 import logging
 from concurrent import futures
 from threading import Lock
+from contextlib import contextmanager
 
 from vivarium.simulator import config
-from vivarium import utils
-from vivarium.simulator.simulator import Simulator, EngineConfig
+from vivarium.simulator.simulator import EngineConfig
 from vivarium.simulator.sim_computation import dynamics_rigid
+
+import dill
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
+@contextmanager
+def nonblocking(lock):
+    locked = lock.acquire(False)
+    try:
+        yield locked
+    finally:
+        if locked:
+            lock.release()
 
 class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def __init__(self, engine_config):
         self.engine_config = engine_config
         self.recorded_change_dict = defaultdict(dict)
         self._change_time = 0
+        self._simulation_time = 0
         self._lock = Lock()
+        self.engine_config.simulator.subscribe(self)
+        self._stream_started = False
+
+    def notify(self, simulation_time):
+        self._simulation_time = simulation_time
 
     def _record_change(self, name, **kwargs):
         for k in self.recorded_change_dict.keys():
@@ -168,12 +184,66 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return Empty()
 
     def SetState(self, request, context):
+
         with self._lock:
             row_idx = np.array(request.row_idx)
             col_idx = np.array(request.col_idx)
+            # with self.engine_config.simulator.pause():
             self.engine_config.simulator.set_state(request.nested_field, row_idx, col_idx,
                                                    proto_to_ndarray(request.value))
         return Empty()
+
+    def SensoryMotorStream(self, request_iterator, context):
+        assert not self.engine_config.simulator.is_started
+        for motor in request_iterator:
+            print('motor', motor.motor)
+            self.engine_config.simulator.set_state(('motor',), np.array([motor.agent_idx]), np.arange(2),
+                                                   np.array([motor.motor]))
+            self.engine_config.simulator.run(threaded=False, num_loops=1)
+            prox = self.engine_config.simulator.state.prox[motor.agent_idx].tolist()
+            print('prox', prox)
+            yield simulator_pb2.Prox(agent_idx=motor.agent_idx,
+                                     prox=prox)
+
+    def NVEStateStream(self, request, context):
+        assert not self.engine_config.simulator.is_started
+        self._stream_started = True
+        t = 0
+        while self._stream_started:
+            print('t = ', t)
+            self.engine_config.simulator.run(threaded=False, num_loops=1)
+            t += 1
+            yield self.GetNVEState(request, context)
+
+    def StopNVEStream(self, request, context):
+        self._stream_started = False
+
+    def AgentStep(self, request, context):
+        assert not self.engine_config.simulator.is_started
+        self.engine_config.simulator.set_state(('motor',), np.array([request.agent_idx]), np.arange(2),
+                                               np.array([request.motor]))
+        self.engine_config.simulator.run(threaded=False, num_loops=1)
+        prox = self.engine_config.simulator.state.prox[request.agent_idx].tolist()
+        return simulator_pb2.Prox(agent_idx=request.agent_idx,
+                                  prox=prox)
+
+    def Step(self, request, context):
+        assert not self.engine_config.simulator.is_started
+        self.engine_config.simulator.run(threaded=False, num_loops=1)
+        return self.GetNVEState(request, context)
+
+    def StartBehavior(self, request, context):
+        assert not self.engine_config.simulator.is_started
+        behavior_function = dill.loads(request.function)
+        for t in range(100):
+            prox = self.engine_config.simulator.state.prox[request.agent_idx].tolist()
+            motor = behavior_function(prox)
+            self.engine_config.simulator.set_state(('motor',), np.array([request.agent_idx]), np.arange(2),
+                                                   np.array([motor]))
+            self.engine_config.simulator.run(threaded=False, num_loops=1)
+
+        return Empty()
+
 
     def AddAgents(self, request, context):
         with self._lock:
@@ -227,8 +297,20 @@ if __name__ == '__main__':
     #                                          for i in range(1)]
     # engine_config.param.agent_configs.objects = new_configs
 
+
+
+    # for idx in range(1, 10):
+    #     engine_config.agent_configs[idx].behavior = 'noop'
+
+    # engine_config.simulator.set_state(('behavior', ), np.arange(2), None, 1 * np.ones(2, dtype=int))
+    # engine_config.simulator.set_state(('position', 'center'), np.arange(2), np.arange(2), np.array([[30., 50.], [70., 50.]]))
+    # engine_config.simulator.set_state(('position', 'orientation'), np.arange(2), None, np.array([np.pi / 8., 9 * np.pi / 8.]))
+    #
+    # engine_config.simulator.run(threaded=False, num_loops=10)
+
     print('Simulator server started')
     logging.basicConfig()
     serve(engine_config)
+
 
 
