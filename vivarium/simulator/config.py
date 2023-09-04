@@ -3,6 +3,7 @@ from param import Parameterized
 import numpy as np
 
 import vivarium.simulator.behaviors as behaviors
+from vivarium.simulator.sim_computation import EntityType
 
 from jax_md.rigid_body import monomer
 
@@ -53,25 +54,44 @@ class AgentConfig(Config):
     left_prox = param.Number(0., bounds=(0., 1.))
     right_prox = param.Number(0., bounds=(0., 1.))
     wheel_diameter = param.Number(2.)
-    base_length = param.Number(5.)
+    diameter = param.Number(5.)
     speed_mul = param.Number(0.1)
     theta_mul = param.Number(0.1)
     proxs_dist_max = param.Number(100., bounds=(0, None))
     proxs_cos_min = param.Number(0., bounds=(-1., 1.))
     color = param.Color('blue')
-    entity_type = param.Integer(0)
+    friction = param.Number(1e-1)
 
     def __init__(self, **params):
         super().__init__(**params)
-        # self.export_fields_exclude = ['idx']
+
+
+class ObjectConfig(Config):
+    idx = param.Integer()
+    x_position = param.Number(0.)
+    y_position = param.Number(0.)
+    orientation = param.Number(0.)
+    mass_center = param.Number(mass_center)
+    mass_orientation = param.Number(mass_orientation)
+    diameter = param.Number(5.)
+    color = param.Color('red')
+    friction = param.Number(10.)
+
+    def __init__(self, **params):
+        super().__init__(**params)
+
+
+config_to_etype = {AgentConfig: EntityType.AGENT, ObjectConfig: EntityType.OBJECT}
+
 
 class SimulatorConfig(Config):
     box_size = param.Number(100., bounds=(0, None))
     map_dim = param.Integer(2, bounds=(1, None))
     n_agents = param.Integer(10)
+    n_objects = param.Integer(2)
     num_steps_lax = param.Integer(4)
     dt = param.Number(0.1)
-    freq = param.Number(None, allow_None=True)
+    freq = param.Number(40., allow_None=True)
     neighbor_radius = param.Number(100., bounds=(0, None))
     to_jit = param.Boolean(True)
     use_fori_loop = param.Boolean(False)

@@ -5,7 +5,7 @@ from vivarium.simulator.grpc_server import simulator_pb2_grpc
 import vivarium.simulator.grpc_server.simulator_pb2 as simulator_pb2
 
 from vivarium.simulator.config import SimulatorConfig, AgentConfig
-from vivarium.simulator.sim_computation import NVEState
+from vivarium.simulator.sim_computation import NVEState, AgentState, ObjectState, State
 from vivarium.simulator.simulator_client_abc import SimulatorClient
 
 from jax_md.rigid_body import RigidBody
@@ -18,28 +18,48 @@ import threading
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
 
-def state_proto_to_nve_state(state):
-    return NVEState(position=RigidBody(center=proto_to_ndarray(state.position.center).astype(float),
-                                       orientation=proto_to_ndarray(state.position.orientation).astype(float)),
-                    momentum=RigidBody(center=proto_to_ndarray(state.momentum.center).astype(float),
-                                       orientation=proto_to_ndarray(state.momentum.orientation).astype(float)),
-                    force=RigidBody(center=proto_to_ndarray(state.force.center).astype(float),
-                                    orientation=proto_to_ndarray(state.force.orientation).astype(float)),
-                    mass=RigidBody(center=proto_to_ndarray(state.mass.center).astype(float),
-                                   orientation=proto_to_ndarray(state.mass.orientation).astype(float)),
-                    idx=proto_to_ndarray(state.idx).astype(int),
-                    prox=proto_to_ndarray(state.prox).astype(float),
-                    motor=proto_to_ndarray(state.motor).astype(float),
-                    behavior=proto_to_ndarray(state.behavior).astype(int),
-                    wheel_diameter=proto_to_ndarray(state.wheel_diameter).astype(float),
-                    base_length=proto_to_ndarray(state.base_length).astype(float),
-                    speed_mul=proto_to_ndarray(state.speed_mul).astype(float),
-                    theta_mul=proto_to_ndarray(state.theta_mul).astype(float),
-                    proxs_dist_max=proto_to_ndarray(state.proxs_dist_max).astype(float),
-                    proxs_cos_min=proto_to_ndarray(state.proxs_cos_min).astype(float),
-                    color=proto_to_ndarray(state.color).astype(float),
-                    entity_type=proto_to_ndarray(state.entity_type).astype(int)
+def proto_to_state(state):
+    return State(nve_state=proto_to_nve_state(state.nve_state),
+                 agent_state=proto_to_agent_state(state.agent_state),
+                 object_state=proto_to_object_state(state.object_state))
+
+
+def proto_to_nve_state(nve_state):
+    return NVEState(position=RigidBody(center=proto_to_ndarray(nve_state.position.center).astype(float),
+                                       orientation=proto_to_ndarray(nve_state.position.orientation).astype(float)),
+                    momentum=RigidBody(center=proto_to_ndarray(nve_state.momentum.center).astype(float),
+                                       orientation=proto_to_ndarray(nve_state.momentum.orientation).astype(float)),
+                    force=RigidBody(center=proto_to_ndarray(nve_state.force.center).astype(float),
+                                    orientation=proto_to_ndarray(nve_state.force.orientation).astype(float)),
+                    mass=RigidBody(center=proto_to_ndarray(nve_state.mass.center).astype(float),
+                                   orientation=proto_to_ndarray(nve_state.mass.orientation).astype(float)),
+                    entity_type=proto_to_ndarray(nve_state.entity_type).astype(int),
+                    entity_idx=proto_to_ndarray(nve_state.entity_idx).astype(int),
+                    diameter=proto_to_ndarray(nve_state.diameter).astype(float),
+                    friction=proto_to_ndarray(nve_state.friction).astype(float)
                     )
+
+
+def proto_to_agent_state(agent_state):
+    return AgentState(nve_idx=proto_to_ndarray(agent_state.nve_idx).astype(int),
+                      prox=proto_to_ndarray(agent_state.prox).astype(float),
+                      motor=proto_to_ndarray(agent_state.motor).astype(float),
+                      behavior=proto_to_ndarray(agent_state.behavior).astype(int),
+                      wheel_diameter=proto_to_ndarray(agent_state.wheel_diameter).astype(float),
+                      speed_mul=proto_to_ndarray(agent_state.speed_mul).astype(float),
+                      theta_mul=proto_to_ndarray(agent_state.theta_mul).astype(float),
+                      proxs_dist_max=proto_to_ndarray(agent_state.proxs_dist_max).astype(float),
+                      proxs_cos_min=proto_to_ndarray(agent_state.proxs_cos_min).astype(float),
+                      color=proto_to_ndarray(agent_state.color).astype(float),
+                      )
+
+
+def proto_to_object_state(object_state):
+    return ObjectState(nve_idx=proto_to_ndarray(object_state.nve_idx).astype(int),
+                       custom_field=proto_to_ndarray(object_state.custom_field).astype(float),
+                       color=proto_to_ndarray(object_state.color).astype(float),
+                       )
+
 
 class SimulatorGRPCClient(SimulatorClient):
     def __init__(self, name=None):
@@ -47,7 +67,7 @@ class SimulatorGRPCClient(SimulatorClient):
         channel = grpc.insecure_channel('localhost:50051')
         self.stub = simulator_pb2_grpc.SimulatorServerStub(channel)
         self.streaming_started = False
-        self.state = self.get_nve_state()
+        self.state = self.get_state()
 
     def start(self):
         self.stub.Start(Empty())
@@ -110,12 +130,20 @@ class SimulatorGRPCClient(SimulatorClient):
         self.stub.SetSimulationConfigSerialized(simulator_pb2.SimulationConfigSerialized(serialized=serialized))
 
     def get_state(self):
-        return self.stub.GetStateMessage(Empty())
-
+        state = self.stub.GetState(Empty())
+        return proto_to_state(state)
 
     def get_nve_state(self):
-        state = self.stub.GetNVEState(Empty())
-        return state_proto_to_nve_state(state)
+        nve_state = self.stub.GetNVEState(Empty())
+        return proto_to_nve_state(nve_state)
+
+    def get_agent_state(self):
+        agent_state = self.stub.GetAgentState(Empty())
+        return proto_to_agent_state(agent_state)
+
+    def get_object_state(self):
+        object_state = self.stub.GetObjectState(Empty())
+        return proto_to_object_state(object_state)
 
     def start_behavior(self, agent_idx, behavior_fn):
         behavior = simulator_pb2.Behavior(agent_idx=agent_idx,
@@ -127,7 +155,7 @@ class SimulatorGRPCClient(SimulatorClient):
         return prox.prox
 
     def step(self):
-        self.state = state_proto_to_nve_state(self.stub.Step(Empty()))
+        self.state = proto_to_state(self.stub.Step(Empty()))
         return self.state
 
     def _start_streaming(self):

@@ -70,6 +70,40 @@ class AgentIdx(_message.Message):
     idx: _containers.RepeatedScalarFieldContainer[int]
     def __init__(self, idx: _Optional[_Iterable[int]] = ...) -> None: ...
 
+class AgentState(_message.Message):
+    __slots__ = ["behavior", "color", "motor", "nve_idx", "prox", "proxs_cos_min", "proxs_dist_max", "speed_mul", "theta_mul", "wheel_diameter"]
+    BEHAVIOR_FIELD_NUMBER: _ClassVar[int]
+    COLOR_FIELD_NUMBER: _ClassVar[int]
+    MOTOR_FIELD_NUMBER: _ClassVar[int]
+    NVE_IDX_FIELD_NUMBER: _ClassVar[int]
+    PROXS_COS_MIN_FIELD_NUMBER: _ClassVar[int]
+    PROXS_DIST_MAX_FIELD_NUMBER: _ClassVar[int]
+    PROX_FIELD_NUMBER: _ClassVar[int]
+    SPEED_MUL_FIELD_NUMBER: _ClassVar[int]
+    THETA_MUL_FIELD_NUMBER: _ClassVar[int]
+    WHEEL_DIAMETER_FIELD_NUMBER: _ClassVar[int]
+    behavior: NDArray
+    color: NDArray
+    motor: NDArray
+    nve_idx: NDArray
+    prox: NDArray
+    proxs_cos_min: NDArray
+    proxs_dist_max: NDArray
+    speed_mul: NDArray
+    theta_mul: NDArray
+    wheel_diameter: NDArray
+    def __init__(self, nve_idx: _Optional[_Union[NDArray, _Mapping]] = ..., prox: _Optional[_Union[NDArray, _Mapping]] = ..., motor: _Optional[_Union[NDArray, _Mapping]] = ..., behavior: _Optional[_Union[NDArray, _Mapping]] = ..., wheel_diameter: _Optional[_Union[NDArray, _Mapping]] = ..., speed_mul: _Optional[_Union[NDArray, _Mapping]] = ..., theta_mul: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_dist_max: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_cos_min: _Optional[_Union[NDArray, _Mapping]] = ..., color: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
+
+class AllConfigSerialized(_message.Message):
+    __slots__ = ["agent_configs", "object_configs", "simulation_config"]
+    AGENT_CONFIGS_FIELD_NUMBER: _ClassVar[int]
+    OBJECT_CONFIGS_FIELD_NUMBER: _ClassVar[int]
+    SIMULATION_CONFIG_FIELD_NUMBER: _ClassVar[int]
+    agent_configs: str
+    object_configs: str
+    simulation_config: str
+    def __init__(self, simulation_config: _Optional[str] = ..., agent_configs: _Optional[str] = ..., object_configs: _Optional[str] = ...) -> None: ...
+
 class Behavior(_message.Message):
     __slots__ = ["agent_idx", "function"]
     AGENT_IDX_FIELD_NUMBER: _ClassVar[int]
@@ -109,46 +143,40 @@ class NDArray(_message.Message):
     def __init__(self, ndarray: _Optional[bytes] = ...) -> None: ...
 
 class NVEState(_message.Message):
-    __slots__ = ["base_length", "behavior", "color", "entity_type", "force", "idx", "mass", "momentum", "motor", "position", "prox", "proxs_cos_min", "proxs_dist_max", "speed_mul", "theta_mul", "wheel_diameter"]
-    BASE_LENGTH_FIELD_NUMBER: _ClassVar[int]
-    BEHAVIOR_FIELD_NUMBER: _ClassVar[int]
-    COLOR_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ["diameter", "entity_idx", "entity_type", "force", "friction", "mass", "momentum", "position"]
+    DIAMETER_FIELD_NUMBER: _ClassVar[int]
+    ENTITY_IDX_FIELD_NUMBER: _ClassVar[int]
     ENTITY_TYPE_FIELD_NUMBER: _ClassVar[int]
     FORCE_FIELD_NUMBER: _ClassVar[int]
-    IDX_FIELD_NUMBER: _ClassVar[int]
+    FRICTION_FIELD_NUMBER: _ClassVar[int]
     MASS_FIELD_NUMBER: _ClassVar[int]
     MOMENTUM_FIELD_NUMBER: _ClassVar[int]
-    MOTOR_FIELD_NUMBER: _ClassVar[int]
     POSITION_FIELD_NUMBER: _ClassVar[int]
-    PROXS_COS_MIN_FIELD_NUMBER: _ClassVar[int]
-    PROXS_DIST_MAX_FIELD_NUMBER: _ClassVar[int]
-    PROX_FIELD_NUMBER: _ClassVar[int]
-    SPEED_MUL_FIELD_NUMBER: _ClassVar[int]
-    THETA_MUL_FIELD_NUMBER: _ClassVar[int]
-    WHEEL_DIAMETER_FIELD_NUMBER: _ClassVar[int]
-    base_length: NDArray
-    behavior: NDArray
-    color: NDArray
+    diameter: NDArray
+    entity_idx: NDArray
     entity_type: NDArray
     force: RigidBody
-    idx: NDArray
+    friction: NDArray
     mass: RigidBody
     momentum: RigidBody
-    motor: NDArray
     position: RigidBody
-    prox: NDArray
-    proxs_cos_min: NDArray
-    proxs_dist_max: NDArray
-    speed_mul: NDArray
-    theta_mul: NDArray
-    wheel_diameter: NDArray
-    def __init__(self, position: _Optional[_Union[RigidBody, _Mapping]] = ..., momentum: _Optional[_Union[RigidBody, _Mapping]] = ..., force: _Optional[_Union[RigidBody, _Mapping]] = ..., mass: _Optional[_Union[RigidBody, _Mapping]] = ..., prox: _Optional[_Union[NDArray, _Mapping]] = ..., motor: _Optional[_Union[NDArray, _Mapping]] = ..., behavior: _Optional[_Union[NDArray, _Mapping]] = ..., wheel_diameter: _Optional[_Union[NDArray, _Mapping]] = ..., base_length: _Optional[_Union[NDArray, _Mapping]] = ..., speed_mul: _Optional[_Union[NDArray, _Mapping]] = ..., theta_mul: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_dist_max: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_cos_min: _Optional[_Union[NDArray, _Mapping]] = ..., color: _Optional[_Union[NDArray, _Mapping]] = ..., entity_type: _Optional[_Union[NDArray, _Mapping]] = ..., idx: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
+    def __init__(self, position: _Optional[_Union[RigidBody, _Mapping]] = ..., momentum: _Optional[_Union[RigidBody, _Mapping]] = ..., force: _Optional[_Union[RigidBody, _Mapping]] = ..., mass: _Optional[_Union[RigidBody, _Mapping]] = ..., diameter: _Optional[_Union[NDArray, _Mapping]] = ..., entity_type: _Optional[_Union[NDArray, _Mapping]] = ..., entity_idx: _Optional[_Union[NDArray, _Mapping]] = ..., friction: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class Name(_message.Message):
     __slots__ = ["name"]
     NAME_FIELD_NUMBER: _ClassVar[int]
     name: str
     def __init__(self, name: _Optional[str] = ...) -> None: ...
+
+class ObjectState(_message.Message):
+    __slots__ = ["color", "custom_field", "nve_idx"]
+    COLOR_FIELD_NUMBER: _ClassVar[int]
+    CUSTOM_FIELD_FIELD_NUMBER: _ClassVar[int]
+    NVE_IDX_FIELD_NUMBER: _ClassVar[int]
+    color: NDArray
+    custom_field: NDArray
+    nve_idx: NDArray
+    def __init__(self, nve_idx: _Optional[_Union[NDArray, _Mapping]] = ..., custom_field: _Optional[_Union[NDArray, _Mapping]] = ..., color: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class Prox(_message.Message):
     __slots__ = ["agent_idx", "prox"]
@@ -237,6 +265,16 @@ class Slice(_message.Message):
     step: int
     stop: int
     def __init__(self, start: _Optional[int] = ..., stop: _Optional[int] = ..., step: _Optional[int] = ...) -> None: ...
+
+class State(_message.Message):
+    __slots__ = ["agent_state", "nve_state", "object_state"]
+    AGENT_STATE_FIELD_NUMBER: _ClassVar[int]
+    NVE_STATE_FIELD_NUMBER: _ClassVar[int]
+    OBJECT_STATE_FIELD_NUMBER: _ClassVar[int]
+    agent_state: AgentState
+    nve_state: NVEState
+    object_state: ObjectState
+    def __init__(self, nve_state: _Optional[_Union[NVEState, _Mapping]] = ..., agent_state: _Optional[_Union[AgentState, _Mapping]] = ..., object_state: _Optional[_Union[ObjectState, _Mapping]] = ...) -> None: ...
 
 class StateChange(_message.Message):
     __slots__ = ["col_idx", "nested_field", "row_idx", "value"]

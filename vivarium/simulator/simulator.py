@@ -9,9 +9,8 @@ from jax_md.util import f32
 
 from contextlib import contextmanager
 
-import vivarium.simulator.behaviors as behaviors
-from vivarium.simulator.sim_computation import dynamics_rigid
-from vivarium.simulator.config import AgentConfig, SimulatorConfig
+from vivarium.simulator.sim_computation import dynamics_rigid, EntityType
+from vivarium.simulator.config import AgentConfig, ObjectConfig, SimulatorConfig
 from vivarium import utils
 
 import time
@@ -23,6 +22,7 @@ import param
 class EngineConfig(param.Parameterized):
     simulation_config = param.ClassSelector(SimulatorConfig, instantiate=False)
     agent_configs = param.List(None)
+    object_configs = param.List(None)
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -30,7 +30,11 @@ class EngineConfig(param.Parameterized):
                                                                 y_position=np.random.rand() * self.simulation_config.box_size,
                                                                 orientation=np.random.rand() * 2. * np.pi)
                                                     for i in range(self.simulation_config.n_agents)]
-        # self.key = jax.random.PRNGKey(0)
+        self.object_configs = self.object_configs or [ObjectConfig(idx=self.simulation_config.n_agents + i,
+                                                                   x_position=np.random.rand() * self.simulation_config.box_size,
+                                                                   y_position=np.random.rand() * self.simulation_config.box_size,
+                                                                   orientation=np.random.rand() * 2. * np.pi)
+                                                      for i in range(self.simulation_config.n_objects)]
         self.simulation_config.param.watch(self.update_sim_parameters, ['num_steps_lax', 'freq', 'use_fori_loop'], onlychanged=True)
         self.simulation_config.param.watch(self.update_space, ['box_size'], onlychanged=True, precedence=0)
         self.simulation_config.param.watch(self.init_state, ['box_size', 'n_agents'], onlychanged=True, precedence=1)
@@ -48,7 +52,8 @@ class EngineConfig(param.Parameterized):
                                    self.simulation_config.use_fori_loop, self.simulation_config.num_steps_lax,
                                    self.simulation_config.neighbor_radius, self.simulation_config.to_jit,
                                    self.simulation_config.behavior_bank, self.simulation_config.dynamics_fn,
-                                   **utils.get_init_state_kwargs(self.agent_configs))
+                                   utils.set_state_from_config_dict({EntityType.AGENT: self.agent_configs,
+                                                                     EntityType.OBJECT: self.object_configs}))
 
     def update_sim_parameters(self, event):
         setattr(self.simulator, event.name, event.new)
@@ -80,7 +85,9 @@ class EngineConfig(param.Parameterized):
 
     def init_state(self, *events):
         print('init_state')
-        self.simulator.init_state(**utils.get_init_state_kwargs(self.agent_configs))
+        state = utils.set_state_from_config_dict({EntityType.AGENT: self.agent_configs,
+                                                  EntityType.OBJECT: self.object_configs})
+        self.simulator.init_state(state)
 
     def update_state(self, *events):
         print('update_state')
@@ -99,7 +106,7 @@ class EngineConfig(param.Parameterized):
 class Simulator:
     def __init__(self, box_size, map_dim, dt, freq, use_fori_loop, num_steps_lax, neighbor_radius, to_jit,
                  behavior_bank, dynamics_fn,
-                 **state_kwargs):
+                 state):
 
         self.behavior_bank = behavior_bank
 
@@ -114,7 +121,7 @@ class Simulator:
 
         self.update_space(box_size)
         self.update_function_update(map_dim, dt, to_jit)
-        self.init_state(**state_kwargs)
+        self.init_state(state)
         self.update_neighbor_fn(box_size, neighbor_radius)
         self.allocate_neighbors()
 
@@ -158,7 +165,7 @@ class Simulator:
             # If the neighbor list can't fit in the allocation, rebuild it but bigger.
             if neighbors.did_buffer_overflow:
                 print('REBUILDING')
-                neighbors = self.neighbor_fn.allocate(new_state.position.center)
+                neighbors = self.allocate_neighbors(new_state.position.center)
                 # new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_lax_loops, self.update_fn, (self.state, neighbors))
                 for i in range(0, self.num_steps_lax):
                     new_state, neighbors = self.update_fn(i, (self.state, neighbors))
@@ -203,8 +210,8 @@ class Simulator:
                                                       self.behavior_bank)
         def update_fn(_, state_and_neighbors):
             state, neighs = state_and_neighbors
-            neighs = neighs.update(state.position.center)
-            return (self.step_fn(state=state, neighbor=neighs),
+            neighs = neighs.update(state.nve_state.position.center)
+            return (self.step_fn(state=state, neighbor=neighs, agent_neighs_idx=self.agent_neighs_idx),
                     neighs)
 
         if to_jit:
@@ -212,18 +219,24 @@ class Simulator:
         else:
             self.update_fn = update_fn
 
-    def init_state(self, **state_kwargs):
-        self.state = self.init_fn(self.key, **state_kwargs)
+    def init_state(self, state):
+        self.state = self.init_fn(state, self.key)
 
     def update_neighbor_fn(self, box_size, neighbor_radius):
+
         self.neighbor_fn = partition.neighbor_list(self.displacement, box_size,
                                                    r_cutoff=neighbor_radius,
                                                    dr_threshold=10.,
                                                    capacity_multiplier=1.5,
+                                                   # custom_mask_function=neigh_idx_mask,
                                                    format=partition.Sparse)
 
-    def allocate_neighbors(self):
-        self.neighbors = self.neighbor_fn.allocate(self.state.position.center)
+    def allocate_neighbors(self, position=None):
+        position = position or self.state.nve_state.position.center
+        self.neighbors = self.neighbor_fn.allocate(position)
+        mask = self.state.nve_state.entity_type[self.neighbors.idx[0]] == EntityType.AGENT.value
+        self.agent_neighs_idx = self.neighbors.idx[:, mask]
+        return self.neighbors
 
 
 if __name__ == "__main__":

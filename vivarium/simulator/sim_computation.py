@@ -6,53 +6,109 @@ from jax_md import space, rigid_body, util, simulate, energy, quantity
 from jax_md.dataclasses import dataclass
 
 from functools import partial
+from enum import Enum
 
 f32 = util.f32
 
 
+class EntityType(Enum):
+    AGENT = 0
+    OBJECT = 1
+
 @dataclass
 class NVEState(simulate.NVEState):
-    idx : util.Array
+    entity_type: util.Array
+    entity_idx: util.Array  # idx in XState (e.g. AgentState)
+    diameter: util.Array
+    friction: util.Array
+
+    @property
+    def velocity(self) -> util.Array:
+        return self.momentum / self.mass
+
+@dataclass
+class AgentState:
+    nve_idx: util.Array  # idx in NVEState
     prox: util.Array
     motor: util.Array
     behavior: util.Array
     wheel_diameter: util.Array
-    base_length: util.Array
     speed_mul: util.Array
     theta_mul: util.Array
     proxs_dist_max: util.Array
     proxs_cos_min: util.Array
     color: util.Array
-    entity_type: util.Array
+
+
+@dataclass
+class ObjectState:
+    nve_idx: util.Array  # idx in NVEState
+    custom_field: util.Array
+    color: util.Array
+
+@dataclass
+class State:
+    nve_state: NVEState
+    agent_state: AgentState
+    object_state: ObjectState
+
+    def e_idx(self, e_type):
+        return self.nve_state.entity_idx[self.nve_state.entity_type == e_type.value]
+
+    def e_cond(self, e_type):
+        return self.nve_state.entity_type == e_type.value
+
+    def __getattr__(self, name):
+        def wrapper(e_type):
+            value = getattr(self.nve_state, name)
+            if isinstance(value, rigid_body.RigidBody):
+                return rigid_body.RigidBody(center=value.center[self.e_cond(e_type)],
+                                            orientation=value.orientation[self.e_cond(e_type)])
+            else:
+                return value[self.e_cond(e_type)]
+        return wrapper
+
+
+def switch_fn(fn_list):
+    def switch(index, *operands):
+        return jax.lax.switch(index, fn_list, *operands)
+    return switch
+
 
 
 def get_verlet_force_fn(displacement, map_dim):
     coll_force_fn = quantity.force(partial(total_collision_energy, displacement=displacement,
                                            epsilon=10., alpha=12))
 
-    def collision_force(state, neighbor):
-        return coll_force_fn(state.position.center, neighbor=neighbor, base_length=state.base_length)
+    def collision_force(nve_state, neighbor):
+        return coll_force_fn(nve_state.position.center, neighbor=neighbor, diameter=nve_state.diameter)
 
-    def friction_force(state, neighbor):
-        cur_vel = state.momentum.center / state.mass.center
-        return - f32(1e-1) * cur_vel
+    def friction_force(nve_state):
+        cur_vel = nve_state.momentum.center / nve_state.mass.center
+        return - jnp.tile(nve_state.friction, (map_dim, 1)).T * cur_vel
 
-    def motor_force(state, neighbor):
-        body = state.position
-        fwd, rot = motor_command(state.motor, state.base_length, state.wheel_diameter)
+    def motor_force(state):
+        agent_idx = state.agent_state.nve_idx
+        body = rigid_body.RigidBody(center=state.nve_state.position.center[agent_idx],
+                                    orientation=state.nve_state.position.orientation[agent_idx])
+        fwd, rot = motor_command(state.agent_state.motor,
+                                 state.nve_state.diameter[agent_idx],
+                                 state.agent_state.wheel_diameter)
         n = normal(body.orientation)
-        cur_vel = state.momentum.center / state.mass.center
+        cur_vel = state.nve_state.momentum.center[agent_idx] / state.nve_state.mass.center[agent_idx]
         cur_fwd_vel = vmap(jnp.dot)(cur_vel, n)
-        cur_rot_vel = state.momentum.orientation / state.mass.orientation
+        cur_rot_vel = state.nve_state.momentum.orientation[agent_idx] / state.nve_state.mass.orientation[agent_idx]
         fwd_delta = fwd - cur_fwd_vel
         rot_delta = rot - cur_rot_vel
         fwd_force = f32(1e-1) * n * jnp.tile(fwd_delta, (map_dim, 1)).T
         rot_force = f32(1e-2) * rot_delta
-        return rigid_body.RigidBody(center=fwd_force, orientation=rot_force)
+
+        return rigid_body.RigidBody(center=jnp.zeros_like(state.nve_state.position.center).at[agent_idx].set(fwd_force),
+                                    orientation=jnp.zeros_like(state.nve_state.position.orientation).at[agent_idx].set(rot_force))
 
     def force_fn(state, neighbor):
-        mf = motor_force(state, neighbor)
-        return rigid_body.RigidBody(center=collision_force(state, neighbor) + friction_force(state, neighbor) + mf.center,
+        mf = motor_force(state)
+        return rigid_body.RigidBody(center=collision_force(state.nve_state, neighbor) + friction_force(state.nve_state) + mf.center,
                                     orientation=mf.orientation)
 
     return force_fn
@@ -60,52 +116,49 @@ def get_verlet_force_fn(displacement, map_dim):
 
 def dynamics_rigid(displacement, shift, map_dim, dt, behavior_bank, force_fn=None, **sim_kwargs):
     force_fn = force_fn or get_verlet_force_fn(displacement, map_dim)
+    multi_switch = jax.vmap(switch_fn(behavior_bank), (0, 0, 0))
+
     # shape = rigid_body.monomer
 
-    def init_fn(key, kT=0., **kwargs):
+    def init_fn(state, key, kT=0.):
         key, subkey = jax.random.split(key)
-        n_agents = kwargs['position'].center.shape[0]
-        force = rigid_body.RigidBody(center=jnp.zeros((n_agents, map_dim)), orientation=jnp.zeros(n_agents))
-        state = simulate.NVEState(position=kwargs['position'], momentum=None, force=force, mass=kwargs['mass'])  #mass=shape.mass()
-        del kwargs['position']
-        del kwargs['mass']
-        state = simulate.canonicalize_mass(state)
-        state = simulate.initialize_momenta(state, key, kT)
-        return NVEState(position=state.position, momentum=state.momentum, force=state.force, mass=state.mass,
-                        **kwargs)
+        assert state.nve_state.momentum is None
+        assert not jnp.any(state.nve_state.force.center) and not jnp.any(state.nve_state.force.orientation)
 
+        state = state.set(nve_state=simulate.initialize_momenta(state.nve_state, key, kT))
+        return state
 
     def physics_fn(state, force, shift_fn, dt, neighbor):
         """Apply a single step of velocity Verlet integration to a state."""
         dt = f32(dt)
         dt_2 = f32(dt / 2)
         # state = sensorimotor(state, neighbor)  # now in step_fn
-        state = simulate.momentum_step(state, dt_2)
-        state = simulate.position_step(state, shift_fn, dt, neighbor=neighbor)
-        state = state.set(force=force)
-        state = simulate.momentum_step(state, dt_2)
+        nve_state = simulate.momentum_step(state.nve_state, dt_2)
+        nve_state = simulate.position_step(nve_state, shift_fn, dt, neighbor=neighbor)
+        nve_state = nve_state.set(force=force)
+        nve_state = simulate.momentum_step(nve_state, dt_2)
 
-        return state
+        return state.set(nve_state=nve_state)
 
-    def compute_prox(state, neighbor):
-        body = state.position
-        senders, receivers = neighbor.idx
+    def compute_prox(state, agent_neighs_idx):
+        body = state.nve_state.position
+        senders, receivers = agent_neighs_idx
         Ra = body.center[senders]
         Rb = body.center[receivers]
         dR = - space.map_bond(displacement)(Ra, Rb) # Looks like it should be opposite, but don't understand why
-        prox = sensor(dR, body.orientation[senders], state.proxs_dist_max[senders], state.proxs_cos_min[senders], neighbor)
-        return state.set(prox=prox)
+        prox = sensor(dR, body.orientation[senders], state.agent_state.proxs_dist_max[senders],
+                      state.agent_state.proxs_cos_min[senders], len(state.agent_state.nve_idx), senders)
+        return state.agent_state.set(prox=prox)
 
-    def sensorimotor(state, neighbor):
+    def sensorimotor(agent_state):
 
-        motor = multi_switch(state.behavior, behavior_bank, state.prox, state.motor)
+        motor = multi_switch(agent_state.behavior, agent_state.prox, agent_state.motor)
 
-        return state.set(motor=motor)
+        return agent_state.set(motor=motor)
 
-    def step_fn(state, neighbor, **kwargs):
-        # _dt = kwargs.pop('dt', dt)
-        state = compute_prox(state, neighbor)
-        state = sensorimotor(state, neighbor)
+    def step_fn(state, neighbor, agent_neighs_idx, **kwargs):
+        state = state.set(agent_state=compute_prox(state, agent_neighs_idx))
+        state = state.set(agent_state=sensorimotor(state.agent_state))
         force = force_fn(state, neighbor)
         state = physics_fn(state, force, shift, dt, neighbor=neighbor)
         return state
@@ -130,9 +183,9 @@ def sensor_fn(displ, theta, dist_max, cos_min):
 sensor_fn = vmap(sensor_fn, (0, 0, 0, 0))
 
 
-def sensor(displ, theta, dist_max, cos_min, neighbors):
+def sensor(displ, theta, dist_max, cos_min, n_agents, senders):
     proxs = ops.segment_max(sensor_fn(displ, theta, dist_max, cos_min),
-                            neighbors.idx[0], len(neighbors.reference_position))
+                            senders, n_agents)
     return proxs
 
 
@@ -162,9 +215,6 @@ def normal(theta):
 
 normal = vmap(normal)
 
-multi_switch = jax.vmap(jax.lax.switch, (0, None, 0, 0))
-
-
 def collision_energy(displacement_fn, r_a, r_b, l_a, l_b, epsilon, alpha):
     dist = jnp.linalg.norm(displacement_fn(r_a, r_b))
     sigma = l_a + l_b
@@ -174,13 +224,13 @@ def collision_energy(displacement_fn, r_a, r_b, l_a, l_b, epsilon, alpha):
 collision_energy = vmap(collision_energy, (None, 0, 0, 0, 0, None, None))
 
 
-def total_collision_energy(positions, base_length, neighbor, displacement, epsilon=1e-2, alpha=2, **kwargs):
-    lax.stop_gradient(base_length)
+def total_collision_energy(positions, diameter, neighbor, displacement, epsilon=1e-2, alpha=2, **kwargs):
+    diameter = lax.stop_gradient(diameter)
     senders, receivers = neighbor.idx
     Ra = positions[senders]
     Rb = positions[receivers]
-    l_a = base_length[senders]
-    l_b = base_length[receivers]
+    l_a = diameter[senders]
+    l_b = diameter[receivers]
     e = collision_energy(displacement, Ra, Rb, l_a, l_b, epsilon, alpha)
     return jnp.sum(e)
 

@@ -9,18 +9,25 @@ from jax_md.rigid_body import RigidBody
 import dataclasses
 import typing
 
-from vivarium.simulator.config import AgentConfig
-from vivarium.simulator.sim_computation import NVEState
+from vivarium.simulator.config import AgentConfig, ObjectConfig
+from vivarium.simulator.sim_computation import State, NVEState, AgentState, ObjectState, EntityType
 from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
 
 import matplotlib.colors as mcolors
 
 
-config_fields = AgentConfig.param.objects().keys()
-state_fields = [f.name for f in jax_md.dataclasses.fields(NVEState)]
+agent_config_fields = AgentConfig.param.objects().keys()
+agent_state_fields = [f.name for f in jax_md.dataclasses.fields(AgentState)]
 
-common_fields = [f for f in config_fields if f in state_fields]
+agent_common_fields = [f for f in agent_config_fields if f in agent_state_fields]
 
+object_config_fields = ObjectConfig.param.objects().keys()
+object_state_fields = [f.name for f in jax_md.dataclasses.fields(ObjectState)]
+
+object_common_fields = [f for f in object_config_fields if f in object_state_fields]
+
+state_fields_dict = {EntityType.AGENT: agent_state_fields,
+                     EntityType.OBJECT: object_state_fields}
 
 @dataclasses.dataclass
 class StateFieldInfo:
@@ -36,47 +43,75 @@ behavior_s_to_c = lambda x, typ: reversed_behavior_name_map[int(x)]
 behavior_c_to_s = lambda x: behavior_name_map[x]
 color_s_to_c = lambda x, typ: mcolors.to_hex(x)  # Warning : temporary (below as well)
 color_c_to_s = lambda x: mcolors.to_rgb(x)
+mass_center_s_to_c = lambda x, typ: typ(x)
+mass_center_c_to_s = lambda x: [x]
 
 
-agent_configs_to_state_dict = {'x_position': StateFieldInfo(('position', 'center'), np.array([0]), identity_s_to_c, identity_c_to_s),
-                               'y_position': StateFieldInfo(('position', 'center'), np.array([1]), identity_s_to_c, identity_c_to_s),
-                               'orientation': StateFieldInfo(('position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
-                               'mass_center': StateFieldInfo(('mass', 'center'), None, identity_s_to_c, identity_c_to_s),
-                               'mass_orientation': StateFieldInfo(('mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
-                               'left_motor': StateFieldInfo(('motor',), np.array([0]), identity_s_to_c, identity_c_to_s),
-                               'right_motor': StateFieldInfo(('motor',), np.array([1]), identity_s_to_c, identity_c_to_s),
-                               'left_prox': StateFieldInfo(('prox',), np.array([0]), identity_s_to_c, identity_c_to_s),
-                               'right_prox': StateFieldInfo(('prox',), np.array([1]), identity_s_to_c, identity_c_to_s),
-                               'behavior': StateFieldInfo(('behavior',), None, behavior_s_to_c, behavior_c_to_s),
-                               'color': StateFieldInfo(('color',), np.arange(3), color_s_to_c, color_c_to_s)
+agent_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'position', 'center'), np.array([0]), identity_s_to_c, identity_c_to_s),
+                               'y_position': StateFieldInfo(('nve_state', 'position', 'center'), np.array([1]), identity_s_to_c, identity_c_to_s),
+                               'orientation': StateFieldInfo(('nve_state', 'position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
+                               'mass_center': StateFieldInfo(('nve_state', 'mass', 'center'), np.array([0]), mass_center_s_to_c, mass_center_c_to_s),
+                               'mass_orientation': StateFieldInfo(('nve_state', 'mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
+                               'diameter': StateFieldInfo(('nve_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
+                               'friction': StateFieldInfo(('nve_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
+                               'left_motor': StateFieldInfo(('agent_state', 'motor',), np.array([0]), identity_s_to_c, identity_c_to_s),
+                               'right_motor': StateFieldInfo(('agent_state', 'motor',), np.array([1]), identity_s_to_c, identity_c_to_s),
+                               'left_prox': StateFieldInfo(('agent_state', 'prox',), np.array([0]), identity_s_to_c, identity_c_to_s),
+                               'right_prox': StateFieldInfo(('agent_state', 'prox',), np.array([1]), identity_s_to_c, identity_c_to_s),
+                               'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
+                               'color': StateFieldInfo(('agent_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
+                               'idx': StateFieldInfo(('agent_state', 'nve_idx',), None, identity_s_to_c, identity_c_to_s)
                                }
 
-agent_configs_to_state_dict.update({f: StateFieldInfo((f,), None, identity_s_to_c, identity_c_to_s) for f in common_fields if f not in agent_configs_to_state_dict})
+agent_configs_to_state_dict.update({f: StateFieldInfo(('agent_state', f,), None, identity_s_to_c, identity_c_to_s) for f in agent_common_fields if f not in agent_configs_to_state_dict})
+
+object_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'position', 'center'), np.array([0]), identity_s_to_c, identity_c_to_s),
+                               'y_position': StateFieldInfo(('nve_state', 'position', 'center'), np.array([1]), identity_s_to_c, identity_c_to_s),
+                               'orientation': StateFieldInfo(('nve_state', 'position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
+                               'mass_center': StateFieldInfo(('nve_state', 'mass', 'center'), np.array([0]), mass_center_s_to_c, mass_center_c_to_s),
+                               'mass_orientation': StateFieldInfo(('nve_state', 'mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
+                               'diameter': StateFieldInfo(('nve_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
+                               'friction': StateFieldInfo(('nve_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
+                               'color': StateFieldInfo(('object_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
+                               'idx': StateFieldInfo(('object_state', 'nve_idx',), None, identity_s_to_c, identity_c_to_s)
+
+                               }
+
+object_configs_to_state_dict.update({f: StateFieldInfo(('object_state', f,), None, identity_s_to_c, identity_c_to_s) for f in object_common_fields if f not in object_configs_to_state_dict})
+
+configs_to_state_dict = {EntityType.AGENT: agent_configs_to_state_dict,
+                         EntityType.OBJECT: object_configs_to_state_dict}
 
 
-def get_default_state(n_agents):
-    return NVEState(position=RigidBody(center=jnp.zeros((n_agents, 2)), orientation=jnp.zeros(n_agents)),
-                    momentum=RigidBody(center=jnp.zeros((n_agents, 2)), orientation=jnp.zeros(n_agents)),
-                    force=RigidBody(center=jnp.zeros((n_agents, 2)), orientation=jnp.zeros(n_agents)),
-                    mass=RigidBody(center=jnp.zeros(n_agents), orientation=jnp.zeros(n_agents)),
-                    prox=jnp.zeros((n_agents, 2)),
-                    motor=jnp.zeros((n_agents, 2)),
-                    behavior=jnp.zeros(n_agents, dtype=int),
-                    wheel_diameter=jnp.zeros(n_agents),
-                    base_length=jnp.zeros(n_agents),
-                    speed_mul=jnp.zeros(n_agents),
-                    theta_mul=jnp.zeros(n_agents),
-                    proxs_dist_max=jnp.zeros(n_agents),
-                    proxs_cos_min=jnp.zeros(n_agents),
-                    color=jnp.zeros((n_agents, 3)),
-                    entity_type=jnp.zeros(n_agents, dtype=int),
-                    idx=jnp.zeros(n_agents, dtype=int)
-                    )
+def get_default_state(n_entities_dict):
+    n_agents = n_entities_dict[EntityType.AGENT]
+    n_objects = n_entities_dict[EntityType.OBJECT]
+    return State(nve_state=NVEState(position=RigidBody(center=jnp.zeros((n_agents + n_objects, 2)), orientation=jnp.zeros(n_agents + n_objects)),
+                                    momentum=None,
+                                    force=RigidBody(center=jnp.zeros((n_agents + n_objects, 2)), orientation=jnp.zeros(n_agents + n_objects)),
+                                    mass=RigidBody(center=jnp.zeros((n_agents + n_objects, 1)), orientation=jnp.zeros(n_agents + n_objects)),
+                                    entity_type=jnp.array([EntityType.AGENT.value] * n_agents + [EntityType.OBJECT.value] * n_objects, dtype=int),
+                                    entity_idx = jnp.array(list(range(n_agents)) + list(range(n_objects))),
+                                    diameter=jnp.zeros(n_agents + n_objects),
+                                    friction=jnp.zeros(n_agents + n_objects)
+                                    ),
+                 agent_state=AgentState(nve_idx=jnp.zeros(n_agents, dtype=int),
+                                        prox=jnp.zeros((n_agents, 2)),
+                                        motor=jnp.zeros((n_agents, 2)),
+                                        behavior=jnp.zeros(n_agents, dtype=int),
+                                        wheel_diameter=jnp.zeros(n_agents),
+                                        speed_mul=jnp.zeros(n_agents),
+                                        theta_mul=jnp.zeros(n_agents),
+                                        proxs_dist_max=jnp.zeros(n_agents),
+                                        proxs_cos_min=jnp.zeros(n_agents),
+                                        color=jnp.zeros((n_agents, 3))),
+                 object_state=ObjectState(nve_idx=jnp.zeros(n_objects, dtype=int),
+                                          custom_field=jnp.array(n_objects), color=jnp.zeros((n_objects, 3))))
 
 
-def config_attribute_as_array(agent_configs, attr):
-    dtype = type(getattr(agent_configs[0], attr))
-    return jnp.array([f32(getattr(config, attr)) for config in agent_configs], dtype=dtype)
+def config_attribute_as_array(configs, attr):
+    dtype = type(getattr(configs[0], attr))
+    return jnp.array([f32(getattr(config, attr)) for config in configs], dtype=dtype)
 
 
 def rec_set_dataclass(var, nested_field, row_idx, column_idx, value):
@@ -96,16 +131,52 @@ def rec_set_dataclass(var, nested_field, row_idx, column_idx, value):
         return {nested_field[0]: next_var.set(**d)}
 
 
+def set_state_from_config_dict(config_dict, state=None):
+    n_entities_dict = {etype: len(config) for etype, config in config_dict.items()}
+    state = state or get_default_state(n_entities_dict)
+    e_idx = jnp.zeros(sum(n_entities_dict.values()), dtype=int)
+    for e_type, configs in config_dict.items():
+        params = configs[0].to_dict().keys()
+        for p in params:
+            state_field_info = configs_to_state_dict[e_type][p]
+            nve_idx = [c.idx for c in configs] if state_field_info.nested_field[0] == 'nve_state' else range(len(configs))
+            change = rec_set_dataclass(state, state_field_info.nested_field, jnp.array(nve_idx), state_field_info.column_idx,
+                                       jnp.array([state_field_info.config_to_state(getattr(c, p)) for c in configs]))
+            state = state.set(**change)
+        e_idx.at[getattr(state, f'{e_type.name.lower()}_state').nve_idx].set(jnp.array(range(n_entities_dict[e_type])))
+    change = rec_set_dataclass(state, ('nve_state', 'entity_idx'), jnp.array(range(sum(n_entities_dict.values()))), None, e_idx)
+    state.set(**change)
+    return state
+
+
 def set_state_from_agent_configs(agent_configs, state=None, params=None):
     state = state or get_default_state(len(agent_configs))
-    agent_idx = [a.idx for a in agent_configs]
     params = params or agent_configs[0].to_dict().keys()
     for p in params:
         state_field_info = agent_configs_to_state_dict[p]
+        agent_idx = [a.idx for a in agent_configs] if state_field_info.nested_field[0] == 'nve_state' else range(len(agent_configs))
         change = rec_set_dataclass(state, state_field_info.nested_field, jnp.array(agent_idx), state_field_info.column_idx,
                                    jnp.array([state_field_info.config_to_state(getattr(c, p)) for c in agent_configs]))
         state = state.set(**change)
     return state
+
+
+def set_configs_from_state(state, config_dict):
+    for e_type in [EntityType.AGENT, EntityType.OBJECT]:
+        for param, state_field_info in configs_to_state_dict[e_type].items():
+            value = state
+            for f in state_field_info.nested_field:
+                value = getattr(value, f)
+            for config in config_dict[e_type]:
+                t = type(getattr(config, param))
+                # value = np.array(value).astype(t)
+                row_idx = config.idx if state_field_info.nested_field[0] == 'nve_state' else state.nve_state.entity_idx[config.idx]
+                if state_field_info.column_idx is None:
+                    value_to_set = value[row_idx]
+                else:
+                    value_to_set = value[row_idx, state_field_info.column_idx]
+                value_to_set = state_field_info.state_to_config(value_to_set, t)
+                config.param.update(**{param: value_to_set})
 
 
 def set_agent_configs_from_state(state, agent_configs, first_nested_fields=['position', 'prox', 'motor', 'behavior',
@@ -130,9 +201,13 @@ def set_agent_configs_from_state(state, agent_configs, first_nested_fields=['pos
                     config.param.update(**{param: value_to_set})
 
 
-def agent_configs_to_array_dict(agent_configs, fields=None):
-    fields = fields or state_fields
-    state = set_state_from_agent_configs(agent_configs)
+def configs_to_array_dict(config_dict, fields=None):
+    state = set_state_from_config_dict(config_dict)
+    if fields is None:
+        fields = []
+        for e_type, configs in config_dict.items():
+            fields.extend(state_fields_dict[e_type])
+    set_state_from_agent_configs(con)
     return {f: getattr(state, f) for f in fields}
 
 
@@ -162,3 +237,10 @@ def get_init_state_kwargs(agent_configs):
                                                                                  'entity_type'
                                                                             ])
     return state_kwargs
+
+# def configs_to_state(agent_configs, object_configs):
+#     n_agents = len(agent_configs)
+#     n_objects = len(object_configs)
+#     position = jnp.zeros((n_agents + n_objects, 2))
+#     position.at[:n_agents, 0].set(jnp.array())
+#     return State(nve_state=NVEState(position=RigidBody(center=)))

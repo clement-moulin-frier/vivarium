@@ -1,6 +1,7 @@
 import param
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.simulator import config
+from vivarium.simulator.sim_computation import EntityType
 from vivarium import utils
 import time
 import threading
@@ -8,74 +9,96 @@ from contextlib import contextmanager
 import numpy as np
 import jax_md
 from jax_md.rigid_body import RigidBody
-from vivarium.simulator.sim_computation import NVEState
+from vivarium.simulator.sim_computation import AgentState
 import math
 
 
 param.Dynamic.time_dependent = True
 
 
+class Selected(param.Parameterized):
+    selection = param.ListSelector([0], objects=[0])
+
+    def selection_nve_idx(self, nve_idx):
+        return nve_idx[np.array(self.selection)].tolist()
+
 class SimulatorController(param.Parameterized):
 
     client = param.Parameter(SimulatorGRPCClient())
     simulation_config = param.ClassSelector(config.SimulatorConfig, config.SimulatorConfig())
-    agent_config = param.ClassSelector(config.AgentConfig, config.AgentConfig())
-    selected_agents = param.ListSelector([0], objects=[0])
+    entity_configs = param.Dict({EntityType.AGENT: config.AgentConfig(), EntityType.OBJECT: config.ObjectConfig()})
+    selected_entities = param.Dict({EntityType.AGENT: Selected(), EntityType.OBJECT: Selected()})
     refresh_change_period = param.Number(1)
     change_time = param.Integer(0)
 
     def __init__(self, **params):
         super().__init__(**params)
-        self.state = None
-        self._agent_config_watcher = self.watch_agent_config()
+        self.state = self.client.state
+        self._entity_config_watchers = self.watch_entity_configs()
+        self.update_entity_list()
         self.pull_all_data()
-        self.update_agent_list()
-        # self.param.selected_agents.objects = range(self.simulation_config.n_agents)
         self.simulation_config.param.watch(self.push_simulation_config, self.simulation_config.export_fields, onlychanged=True) #, queued=True)
-        self.param.watch(self.pull_agent_config, ['selected_agents'], onlychanged=True)
-        self.simulation_config.param.watch(self.update_agent_list, ['n_agents'], onlychanged=True)
+        for etype, selected in self.selected_entities.items():
+            selected.param.watch(self.pull_entity_configs, ['selection'], onlychanged=True, precedence=1)
+        self.simulation_config.param.watch(self.update_entity_list, ['n_agents', 'n_objects'], onlychanged=True)
         self.client.name = self.name
         threading.Thread(target=self._start_timer).start()
 
-    def watch_agent_config(self):
-        # return self.agent_config.param.watch(self.push_agent_config, self.agent_config.export_fields, onlychanged=True) #, queued=True)
-        return self.agent_config.param.watch(self.push_state, self.agent_config.export_fields, onlychanged=True) #, queued=True)
+    def watch_entity_configs(self):
+        watchers = {etype: config.param.watch(self.push_state, config.export_fields, onlychanged=True)
+                    for etype, config in self.entity_configs.items()}
+        return watchers
 
     @contextmanager
-    def dont_push_agent_config(self):
-        self.agent_config.param.unwatch(self._agent_config_watcher)
+    def dont_push_entity_configs(self):
+        for etype, config in self.entity_configs.items():
+            config.param.unwatch(self._entity_config_watchers[etype])
         try:
-            yield self.agent_config
+            yield None  #self.agent_config
         finally:
-            self._agent_config_watcher = self.watch_agent_config()
+            self._entity_config_watchers = self.watch_entity_configs()
 
     def push_simulation_config(self, *events):
         print('push_simulation_config', self.simulation_config)
         d = {e.name: e.new for e in events}
         self.client.set_simulation_config(d)
 
-    def push_agent_config(self, *events):
-        print('push_agent_config', self.agent_config)
-        d = {e.name: e.new for e in events}
-        self.client.set_agent_config(self.selected_agents, d)
-
     def push_state(self, *events):
         print('push_state')
+        etype = config.config_to_etype[type(events[0].obj)]
         d = {e.name: e.new for e in events}
+        selected_entities = self.selected_entities[etype]
+        print('selected_entities in push_state', selected_entities.selection)
         for param, value in d.items():
-            state_field_info = utils.agent_configs_to_state_dict[param]
-            arr = np.tile(np.array(state_field_info.config_to_state(value)), (len(self.selected_agents), 1))
+            state_field_info = utils.configs_to_state_dict[etype][param]
+            arr = np.tile(np.array(state_field_info.config_to_state(value)), (len(selected_entities.selection), 1))
+            row_idx = selected_entities.selection if state_field_info.nested_field[0] != 'nve_state' else selected_entities.selection_nve_idx(getattr(self.state, f'{etype.name.lower()}_state').nve_idx)    # self.selected_nve_idx(self.state)[etype]
             self.client.set_state(state_field_info.nested_field,
-                                  np.array(self.selected_agents),
+                                  np.array(row_idx),
                                   state_field_info.column_idx,
                                   arr)
 
-    def update_agent_list(self, *events):
-        self.param.selected_agents.objects = range(self.simulation_config.n_agents)
+    def update_entity_list(self, *events):
+        state = self.state
+        for etype, selected in self.selected_entities.items():
+            selected.param.selection.objects = state.entity_idx(etype).tolist()
 
     def pull_all_data(self):
-        self.pull_agent_config()
+        self.pull_entity_configs()
         self.pull_simulation_config()
+
+
+    def pull_entity_configs(self, *events):
+        state = self.state
+        config_dict = {etype: [config] for etype, config in self.entity_configs.items()}
+
+        with self.dont_push_entity_configs():
+            for etype, selected in self.selected_entities.items():
+                config_dict[etype][0].idx = selected.selection_nve_idx(getattr(self.state, f'{etype.name.lower()}_state').nve_idx)[0]  # selected[0]  # selected[0] if len(selected) > 0 else 0
+
+            utils.set_configs_from_state(state, config_dict)
+        return state
+
 
     def pull_simulation_config(self):
         sim_config_dict = self.client.get_sim_config().to_dict()
@@ -115,8 +138,9 @@ class SimulatorController(param.Parameterized):
     def stop(self):
         self.client.stop()
 
-    def get_state(self):
-        return self.client.get_state_arrays()
+    def update_state(self):
+        self.state = self.client.get_state()
+        return self.state
 
     def get_nve_state(self):
         self.state = self.client.get_nve_state()
@@ -175,11 +199,11 @@ class Agent:
         print('motors', total_motor / total_weights)
         return total_motor / total_weights
 
-class AgentList:
 
+class AgentList:
     def __init__(self, state):
         self.state = state
-        n_agents = state.position.center.shape[0]
+        n_agents = len(state.idx)
         self.agents = [Agent(ag, self.agent_state(ag)) for ag in range(n_agents)]
 
     def __getitem__(self, item):
@@ -195,7 +219,7 @@ class AgentList:
             ag.state = self.agent_state(ag.idx)
 
     def agent_state(self, item):
-        state_fields = [f.name for f in jax_md.dataclasses.fields(NVEState)]
+        state_fields = [f.name for f in jax_md.dataclasses.fields(AgentState)]
         state_kwargs = {}
         for field in state_fields:
             state_array = getattr(self.state, field)
@@ -205,7 +229,7 @@ class AgentList:
                 state_kwargs[field] = state_array[item]
             else:
                 TypeError(f'state_kwargs has unknown field {type(state_kwargs)}')
-        agent_state = NVEState(**state_kwargs)
+        agent_state = AgentState(**state_kwargs)
         return agent_state  # Agent(item, agent_state)
 
 
@@ -213,12 +237,13 @@ class NotebookController(SimulatorController):
 
     def __init__(self, **params):
         super().__init__(**params)
-        self.agent_list = AgentList(self.client.get_nve_state())
+        self.agent_list = AgentList(self.client.get_agent_state())
         self.agent_list.subscribe(self)
         self.from_stream = True
+
     @property
     def agents(self):
-        state = self.client.state if self.from_stream else self.client.get_nve_state()
+        state = self.client.state.agent_state if self.from_stream else self.client.get_agent_state()
         self.agent_list.update(state)
         return self.agent_list
         # return AgentList(self.client.get_nve_state())
@@ -234,11 +259,10 @@ class NotebookController(SimulatorController):
         t = 0
         while t < n_steps:
             state = self.client.step()
-            all_motor = np.zeros_like(state.motor)
+            all_motor = np.zeros_like(state.agent_state.motor)
             for ag in self.agents.agents:
                 all_motor[ag.idx, :] = ag.motors_from_behaviors()
-            print('all_motor', all_motor)
-            self.client.set_state(('motor',), np.arange(all_motor.shape[0]), np.arange(all_motor.shape[1]), all_motor)
+            self.client.set_state(('agent_state', 'motor',), np.arange(all_motor.shape[0]), np.arange(all_motor.shape[1]), all_motor)
             t += 1
 
 

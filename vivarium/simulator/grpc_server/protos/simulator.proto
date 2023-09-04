@@ -30,6 +30,7 @@ service SimulatorServer {
   rpc GetSimulationConfigSerialized(google.protobuf.Empty) returns (SimulationConfigSerialized) {}
   rpc GetRecordedChanges(Name) returns (SerializedDict) {}
 
+  rpc GetAllConfigSerialized(google.protobuf.Empty) returns (AllConfigSerialized) {}
   rpc GetAgentConfigMessage(google.protobuf.Empty) returns (AgentConfig) {}
   rpc GetAgentConfigSerialized(AgentIdx) returns (AgentConfigSerialized) {}
   rpc GetAgentConfigsSerialized(google.protobuf.Empty) returns (AgentConfigsSerialized) {}
@@ -45,7 +46,7 @@ service SimulatorServer {
 
   rpc AgentStep(Motor) returns (Prox) {}
 
-  rpc Step(google.protobuf.Empty) returns (NVEState) {}
+  rpc Step(google.protobuf.Empty) returns (State) {}
 
   rpc SetSimulationConfigSerialized(SimulationConfigSerialized) returns (google.protobuf.Empty) {}
   rpc SetSimulationConfig(SerializedDictSenderName) returns (google.protobuf.Empty) {}
@@ -54,9 +55,11 @@ service SimulatorServer {
 
   rpc SetMotors(MotorInfo) returns (google.protobuf.Empty) {}
 
-  rpc SetState(StateChange) returns (google.protobuf.Empty) {}
-
+  rpc GetState(google.protobuf.Empty) returns (State) {}
   rpc GetNVEState(google.protobuf.Empty) returns (NVEState) {}
+  rpc GetAgentState(google.protobuf.Empty) returns (AgentState) {}
+  rpc GetObjectState(google.protobuf.Empty) returns (ObjectState) {}
+  rpc SetState(StateChange) returns (google.protobuf.Empty) {}
 
   rpc AddAgents(AddAgentInput) returns (AgentIdx) {}
   rpc RemoveAgents(AgentIdx) returns (google.protobuf.Empty) {}
@@ -150,6 +153,12 @@ message AgentConfigs {
   repeated AgentConfig agent_configs = 1;
 }
 
+message AllConfigSerialized {
+  string simulation_config = 1;
+  string agent_configs = 2;
+  string object_configs = 3;
+}
+
 message AgentConfigSerialized {
   string serialized = 1;
 }
@@ -172,18 +181,35 @@ message NVEState {
   RigidBody momentum = 2;
   RigidBody force = 3;
   RigidBody mass = 4;
-  NDArray prox = 5;
-  NDArray motor = 6;
-  NDArray behavior = 7;
-  NDArray wheel_diameter = 8;
-  NDArray base_length = 9;
-  NDArray speed_mul = 10;
-  NDArray theta_mul = 11;
-  NDArray proxs_dist_max = 12;
-  NDArray proxs_cos_min = 13;
-  NDArray color = 14;
-  NDArray entity_type = 15;
-  NDArray idx = 16;
+  NDArray diameter = 5;
+  NDArray entity_type = 6;
+  NDArray entity_idx = 7;
+  NDArray friction = 8;
+}
+
+message AgentState {
+  NDArray nve_idx = 1;
+  NDArray prox = 2;
+  NDArray motor = 3;
+  NDArray behavior = 4;
+  NDArray wheel_diameter = 5;
+  NDArray speed_mul = 6;
+  NDArray theta_mul = 7;
+  NDArray proxs_dist_max = 8;
+  NDArray proxs_cos_min = 9;
+  NDArray color = 10;
+}
+
+message ObjectState {
+  NDArray nve_idx = 1;
+  NDArray custom_field = 2;
+  NDArray color = 3;
+}
+
+message State {
+  NVEState nve_state = 1;
+  AgentState agent_state = 2;
+  ObjectState object_state = 3;
 }
 
 message MotorInfo {
