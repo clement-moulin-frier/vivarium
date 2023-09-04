@@ -98,8 +98,6 @@ p.add_tools(hover)
 p.x_range = Range1d(0, simulator.simulation_config.box_size)
 p.y_range = Range1d(0, simulator.simulation_config.box_size)
 
-button = Button(name="Start" if simulator.is_started() else "Stop")
-
 # n_new_agents = pn.widgets.IntInput(name='Add new agents', value=0, step=1, start=0, end=1000)
 # add_agent_button = pn.widgets.Button(name='Add agents')
 #
@@ -117,17 +115,19 @@ button = Button(name="Start" if simulator.is_started() else "Stop")
 #
 # remove_agent_button.on_click(remove_agents)
 
+button = pn.widgets.Button(name="Stop" if simulator.is_started() else "Start")
 
 def callback(event):
+    print('button cb', simulator.is_started())
     if simulator.is_started():
-        button.name = "Stop"
         simulator.stop()
-    else:
         button.name = "Start"
+    else:
         simulator.start()
+        button.name = "Stop"
 
 
-button.on_event(ButtonClick, callback)
+button.on_click(callback)
 
 draw_tool = PointDrawTool(renderers=[entity_managers[etype].plot(p) for etype in entity_types])
 p.add_tools(draw_tool)
