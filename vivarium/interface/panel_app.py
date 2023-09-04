@@ -68,7 +68,7 @@ class ObjectManager(EntityManager):
         pos = state.position(self.etype).center
         x, y = pos[:, 0], pos[:, 1]
         thetas = state.position(self.etype).orientation
-        d = state.diameter(self.etype) / 2.
+        d = state.diameter(self.etype)
         colors = state.object_state.color  # state.agent_state.color  # ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
 
         return dict(x=x, y=y, width=d, height=d, angle=thetas, fill_color=colors)
