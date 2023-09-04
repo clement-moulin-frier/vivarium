@@ -68,15 +68,14 @@ class ObjectManager(EntityManager):
         pos = state.position(self.etype).center
         x, y = pos[:, 0], pos[:, 1]
         thetas = state.position(self.etype).orientation
-        radii = state.diameter(self.etype) / 2.
-        colors = ['red'] * len(pos)  # state.agent_state.color  # ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
+        d = state.diameter(self.etype) / 2.
+        colors = state.object_state.color  # state.agent_state.color  # ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
 
-        return dict(x=x, y=y, r=radii, fc=colors)
+        return dict(x=x, y=y, width=d, height=d, angle=thetas, fill_color=colors)
 
     def plot(self, figure):
-        return figure.circle('x', 'y', radius='r',
-                             fill_color='fc', fill_alpha=0.6, line_color=None,
-                             hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=self.cds)
+        return figure.rect('x', 'y', 'width', 'height', 'fill_color', fill_alpha=0.6, line_color=None,
+                           hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=self.cds)
 
 
 pn.extension()
