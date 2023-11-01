@@ -100,8 +100,8 @@ def get_verlet_force_fn(displacement, map_dim):
         cur_rot_vel = state.nve_state.momentum.orientation[agent_idx] / state.nve_state.mass.orientation[agent_idx]
         fwd_delta = fwd - cur_fwd_vel
         rot_delta = rot - cur_rot_vel
-        fwd_force = f32(1e-1) * n * jnp.tile(fwd_delta, (map_dim, 1)).T
-        rot_force = f32(1e-2) * rot_delta
+        fwd_force = f32(1e-1) * n * jnp.tile(fwd_delta, (map_dim, 1)).T * jnp.tile(state.agent_state.speed_mul, (map_dim, 1)).T
+        rot_force = f32(1e-2) * rot_delta * state.agent_state.theta_mul
 
         return rigid_body.RigidBody(center=jnp.zeros_like(state.nve_state.position.center).at[agent_idx].set(fwd_force),
                                     orientation=jnp.zeros_like(state.nve_state.position.orientation).at[agent_idx].set(rot_force))
