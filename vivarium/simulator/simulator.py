@@ -166,7 +166,7 @@ class Simulator:
             # If the neighbor list can't fit in the allocation, rebuild it but bigger.
             if neighbors.did_buffer_overflow:
                 print('REBUILDING')
-                neighbors = self.allocate_neighbors(new_state.position.center)
+                neighbors = self.allocate_neighbors(new_state.nve_state.position.center)
                 # new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_lax_loops, self.update_fn, (self.state, neighbors))
                 for i in range(0, self.num_steps_lax):
                     new_state, neighbors = self.update_fn(i, (self.state, neighbors))
@@ -233,7 +233,7 @@ class Simulator:
                                                    format=partition.Sparse)
 
     def allocate_neighbors(self, position=None):
-        position = position or self.state.nve_state.position.center
+        position = self.state.nve_state.position.center if position is None else position
         self.neighbors = self.neighbor_fn.allocate(position)
         mask = self.state.nve_state.entity_type[self.neighbors.idx[0]] == EntityType.AGENT.value
         self.agent_neighs_idx = self.neighbors.idx[:, mask]
