@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from vivarium.simulator.sim_computation import dynamics_rigid, EntityType
 from vivarium.simulator.config import AgentConfig, ObjectConfig, SimulatorConfig
 from vivarium import utils
+import vivarium.simulator.behaviors as behaviors
 
 import time
 import threading
@@ -24,7 +25,7 @@ class EngineConfig(param.Parameterized):
     agent_configs = param.List(None)
     object_configs = param.List(None)
 
-    def __init__(self, **params):
+    def __init__(self, behavior_bank, dynamics_fn, **params):
         super().__init__(**params)
         self.agent_configs = self.agent_configs or [AgentConfig(idx=i, x_position=np.random.rand() * self.simulation_config.box_size,
                                                                 y_position=np.random.rand() * self.simulation_config.box_size,
@@ -40,7 +41,7 @@ class EngineConfig(param.Parameterized):
         self.simulation_config.param.watch(self.init_state, ['box_size', 'n_agents'], onlychanged=True, precedence=1)
         self._neighbor_fn_watcher = self.simulation_config.param.watch(self.update_neighbor_fn, ['box_size', 'neighbor_radius'], onlychanged=True, precedence=2)
         self.simulation_config.param.watch(self.allocate_neighbors, ['n_agents'], onlychanged=True, precedence=2)
-        self.simulation_config.param.watch(self.update_function_update, ['box_size', 'behavior_bank', 'dynamics_fn'], onlychanged=True, precedence=2)
+        self.simulation_config.param.watch(self.update_function_update, ['box_size'], onlychanged=True, precedence=2)
         self._function_update_watcher = self.simulation_config.param.watch(self.update_function_update,
                                            ['dt', 'map_dim', 'to_jit'],
                                            onlychanged=True)
@@ -51,7 +52,7 @@ class EngineConfig(param.Parameterized):
                                    self.simulation_config.dt,  self.simulation_config.freq,
                                    self.simulation_config.use_fori_loop, self.simulation_config.num_steps_lax,
                                    self.simulation_config.neighbor_radius, self.simulation_config.to_jit,
-                                   self.simulation_config.behavior_bank, self.simulation_config.dynamics_fn,
+                                   behavior_bank, dynamics_fn,
                                    utils.set_state_from_config_dict({EntityType.AGENT: self.agent_configs,
                                                                      EntityType.OBJECT: self.object_configs}))
 
@@ -178,8 +179,8 @@ class Simulator:
         self.is_started = False
         print('Run stops')
 
-    def set_motors(self, agent_idx, motor_idx, value):
-        self.state = self.state.set(motor=self.state.motor.at[agent_idx, motor_idx].set(value))
+    # def set_motors(self, agent_idx, motor_idx, value):
+    #     self.state = self.state.set(motor=self.state.motor.at[agent_idx, motor_idx].set(value))
 
     def set_state(self, nested_field, row_idx, col_idx, value):
         change = utils.rec_set_dataclass(self.state, nested_field, row_idx, col_idx, value)
@@ -241,9 +242,10 @@ class Simulator:
 
 if __name__ == "__main__":
 
-    simulation_config = SimulatorConfig(to_jit=True, dynamics_fn=dynamics_rigid)
+    simulation_config = SimulatorConfig(to_jit=True)
 
-    engine_config = EngineConfig(simulation_config=simulation_config)
+    engine_config = EngineConfig(dynamics_fn=dynamics_rigid, behavior_bank=behaviors.behavior_bank,
+                                 simulation_config=simulation_config)
 
     engine_config.simulator.run()
 

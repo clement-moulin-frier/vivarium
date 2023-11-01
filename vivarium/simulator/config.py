@@ -95,10 +95,6 @@ class SimulatorConfig(Config):
     neighbor_radius = param.Number(100., bounds=(0, None))
     to_jit = param.Boolean(True)
     use_fori_loop = param.Boolean(False)
-    dynamics_fn = param.Parameter()
-    behavior_bank = param.List(behaviors.behavior_bank)
 
     def __init__(self, **params):
         super().__init__(**params)
-        self.export_fields_exclude = ['dynamics_fn', 'behavior_bank']
-

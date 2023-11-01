@@ -17,6 +17,8 @@ from contextlib import contextmanager
 from vivarium.simulator import config
 from vivarium.simulator.simulator import EngineConfig
 from vivarium.simulator.sim_computation import dynamics_rigid
+import vivarium.simulator.behaviors as behaviors
+
 
 import dill
 
@@ -311,9 +313,10 @@ def serve(engine_config):
 
 
 if __name__ == '__main__':
-    simulation_config = config.SimulatorConfig(to_jit=True, dynamics_fn=dynamics_rigid)
+    simulation_config = config.SimulatorConfig(to_jit=True)
 
-    engine_config = EngineConfig(simulation_config=simulation_config)
+    engine_config = EngineConfig(dynamics_fn=dynamics_rigid, behavior_bank=behaviors.behavior_bank,
+                                 simulation_config=simulation_config)
 
     #engine_config.param.agent_configs.objects = [engine_config.param.agent_config.objects[0]]
 
