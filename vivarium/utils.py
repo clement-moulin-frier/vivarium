@@ -105,8 +105,7 @@ def get_default_state(n_entities_dict):
                                         proxs_dist_max=jnp.zeros(n_agents),
                                         proxs_cos_min=jnp.zeros(n_agents),
                                         color=jnp.zeros((n_agents, 3))),
-                 object_state=ObjectState(nve_idx=jnp.zeros(n_objects, dtype=int),
-                                          custom_field=jnp.array(n_objects), color=jnp.zeros((n_objects, 3))))
+                 object_state=ObjectState(nve_idx=jnp.zeros(n_objects, dtype=int), color=jnp.zeros((n_objects, 3))))
 
 
 def config_attribute_as_array(configs, attr):

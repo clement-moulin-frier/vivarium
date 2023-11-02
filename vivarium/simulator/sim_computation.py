@@ -7,6 +7,8 @@ from jax_md.dataclasses import dataclass
 
 from functools import partial
 from enum import Enum
+from itertools import compress
+
 
 f32 = util.f32
 
@@ -43,7 +45,6 @@ class AgentState:
 @dataclass
 class ObjectState:
     nve_idx: util.Array  # idx in NVEState
-    custom_field: util.Array
     color: util.Array
 
 @dataclass
@@ -51,6 +52,14 @@ class State:
     nve_state: NVEState
     agent_state: AgentState
     object_state: ObjectState
+
+    def field(self, etype):
+        name = etype.name.lower()
+        return getattr(self, f'{name}_state')
+
+    def nve_idx(self, e_type):
+        cond = self.e_cond(e_type)
+        return compress(range(len(cond)), cond)  # https://stackoverflow.com/questions/21448225/getting-indices-of-true-values-in-a-boolean-list
 
     def e_idx(self, e_type):
         return self.nve_state.entity_idx[self.nve_state.entity_type == e_type.value]

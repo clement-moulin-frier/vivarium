@@ -161,7 +161,6 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def GetObjectState(self, request, context):
         object_state = self.engine_config.simulator.state.object_state
         return simulator_pb2.ObjectState(nve_idx=ndarray_to_proto(object_state.nve_idx),
-                                         custom_field=ndarray_to_proto(object_state.custom_field),
                                          color=ndarray_to_proto(object_state.color)
                                          )
 

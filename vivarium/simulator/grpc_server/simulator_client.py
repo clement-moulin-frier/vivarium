@@ -56,7 +56,6 @@ def proto_to_agent_state(agent_state):
 
 def proto_to_object_state(object_state):
     return ObjectState(nve_idx=proto_to_ndarray(object_state.nve_idx).astype(int),
-                       custom_field=proto_to_ndarray(object_state.custom_field).astype(float),
                        color=proto_to_ndarray(object_state.color).astype(float),
                        )
 
