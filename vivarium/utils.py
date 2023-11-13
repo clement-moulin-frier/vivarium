@@ -8,8 +8,10 @@ from jax_md.rigid_body import RigidBody
 
 import dataclasses
 import typing
+from collections import namedtuple, defaultdict
 
-from vivarium.simulator.config import AgentConfig, ObjectConfig, etype_to_config
+
+from vivarium.simulator.config import AgentConfig, ObjectConfig, etype_to_config, config_to_etype
 from vivarium.simulator.sim_computation import State, NVEState, AgentState, ObjectState, EntityType
 from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
 
@@ -28,6 +30,7 @@ object_common_fields = [f for f in object_config_fields if f in object_state_fie
 
 state_fields_dict = {EntityType.AGENT: agent_state_fields,
                      EntityType.OBJECT: object_state_fields}
+
 
 @dataclasses.dataclass
 class StateFieldInfo:
@@ -108,6 +111,64 @@ def get_default_state(n_entities_dict):
                  object_state=ObjectState(nve_idx=jnp.zeros(n_objects, dtype=int), color=jnp.zeros((n_objects, 3))))
 
 
+NVETuple = namedtuple('NVETuple', ['idx', 'col', 'val'])
+ValueTuple = namedtuple('ValueData', ['nve_idx', 'col_idx', 'row_map', 'col_map', 'val'])
+StateChangeTuple = namedtuple('StateChange', ['nested_field', 'nve_idx', 'column_idx', 'value'])
+
+
+def events_to_nve_data(events):
+    nve_data = defaultdict(list)
+    for e in events:
+        config = e.obj
+        param = e.name
+        etype = config_to_etype[config.param.cls]
+        idx = config.idx
+        state_field_info = configs_to_state_dict[etype][param]
+        nested_field = state_field_info.nested_field
+        val = state_field_info.config_to_state(e.new)
+        if state_field_info.column_idx is None:
+            nve_data[nested_field].append(NVETuple(idx, None, val))
+        else:
+            if len(state_field_info.column_idx) == 1:
+                val = [val]
+            for c, v in zip(state_field_info.column_idx, val):
+                nve_data[nested_field].append(NVETuple(idx, c, v))
+    return nve_data
+
+def nve_data_to_state_changes(nve_data):
+    value_data = dict()
+    for nf, nve_tuples in nve_data.items():
+        nve_idx = sorted(list(set([t.idx for t in nve_tuples])))
+        row_map = {idx: i for i, idx in enumerate(nve_idx)}
+        if nve_tuples[0].col is None:
+            val = np.zeros(len(nve_idx))
+            col_map = None
+            col_idx = None
+        else:
+            col_idx = sorted(list(set([t.col for t in nve_tuples])))
+            col_map = {idx: i for i, idx in enumerate(col_idx)}
+            val = np.zeros((len(nve_idx), len(col_idx)))
+        value_data[nf] = ValueTuple(nve_idx, col_idx, row_map, col_map, val)
+
+    state_changes = []
+    for nf, value_tuple in value_data.items():
+        for nve_tuple in nve_data[nf]:
+            row = value_tuple.row_map[nve_tuple.idx]
+            if nve_tuple.col is None:
+                value_tuple.val[row] = nve_tuple.val
+            else:
+                col = value_tuple.col_map[nve_tuple.col]
+                value_tuple.val[row, col] = nve_tuple.val
+        state_changes.append(StateChangeTuple(nf, value_data[nf].nve_idx,
+                                              value_data[nf].col_idx, value_tuple.val))
+
+    return state_changes
+
+
+def events_to_state_changes(events):
+
+    nve_data = events_to_nve_data(events)
+    return nve_data_to_state_changes(nve_data)
 
 
 def rec_set_dataclass(var, nested_field, row_idx, column_idx, value):
@@ -139,7 +200,7 @@ def set_state_from_config_dict(config_dict, state=None):
             change = rec_set_dataclass(state, state_field_info.nested_field, jnp.array(nve_idx), state_field_info.column_idx,
                                        jnp.array([state_field_info.config_to_state(getattr(c, p)) for c in configs]))
             state = state.set(**change)
-        e_idx.at[getattr(state, f'{e_type.name.lower()}_state').nve_idx].set(jnp.array(range(n_entities_dict[e_type])))
+        e_idx.at[state.field(e_type).nve_idx].set(jnp.array(range(n_entities_dict[e_type])))
     change = rec_set_dataclass(state, ('nve_state', 'entity_idx'), jnp.array(range(sum(n_entities_dict.values()))), None, e_idx)
     state.set(**change)
     return state
@@ -170,9 +231,7 @@ def set_configs_from_state(state, config_dict=None):
                 value = getattr(value, f)
             for config in config_dict[e_type]:
                 t = type(getattr(config, param))
-                # value = np.array(value).astype(t)
-                  # TODO: use state.row_idx(.)
-                row_idx = config.idx if state_field_info.nested_field[0] == 'nve_state' else state.nve_state.entity_idx[config.idx]
+                row_idx = state.row_idx(state_field_info.nested_field[0], config.idx)
                 if state_field_info.column_idx is None:
                     value_to_set = value[row_idx]
                 else:
@@ -195,7 +254,6 @@ def set_agent_configs_from_state(state, agent_configs, first_nested_fields=['pos
                     value = getattr(value, f)
                 for config in agent_configs:
                     t = type(getattr(config, param))
-                    # value = np.array(value).astype(t)
                     if state_field_info.column_idx is None:
                         value_to_set = value[config.idx]
                     else:
@@ -212,34 +270,6 @@ def configs_to_array_dict(config_dict, fields=None):
             fields.extend(state_fields_dict[e_type])
     set_state_from_agent_configs(con)
     return {f: getattr(state, f) for f in fields}
-
-
-# def generate_positions_orientations(key, n_agents, box_size):
-#     key, subkey = jax.random.split(key)
-#     positions = box_size * jax.random.uniform(subkey, (n_agents, 2))
-#     key, subkey = jax.random.split(key)
-#     orientations = jax.random.uniform(subkey, (n_agents,), maxval=2 * np.pi)
-#     return key, positions, orientations
-
-def get_init_state_kwargs(agent_configs):
-    # key, subkey = jax.random.split(key)
-    # key, positions, orientations = generate_positions_orientations(key=key,
-    #                                                           n_agents=len(agent_configs),
-    #                                                           box_size=box_size)
-    #
-    # rigid_body = self.agent_configs_as_array_dict(fields=['x_position', 'y_position', 'orientation'])['position']
-    state_kwargs = agent_configs_to_array_dict(agent_configs, fields=['idx', 'position', 'mass',
-                                                                                 'prox', 'motor', 'behavior',
-                                                                                 'wheel_diameter',
-                                                                                 'base_length',
-                                                                                 'speed_mul',
-                                                                                 'theta_mul',
-                                                                                 'proxs_dist_max',
-                                                                                 'proxs_cos_min',
-                                                                                 'color',
-                                                                                 'entity_type'
-                                                                            ])
-    return state_kwargs
 
 
 ######## LEGACY code ######

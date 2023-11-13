@@ -269,7 +269,6 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
         return Empty()
 
-
     def AddAgents(self, request, context):
         with self._lock:
             d = json.loads(request.serialized_config)
@@ -301,6 +300,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
                 self.engine_config.simulation_config.n_agents -= len(request.idx)
         self._change_time += 1
         return Empty()
+
 
 def serve(engine_config):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

@@ -13,21 +13,6 @@ mass_center = float(mass.center[0])
 mass_orientation = float(mass.orientation[0])
 
 class Config(Parameterized):
-    # export_fields_include = param.List(None, allow_None=True)
-    # export_fields_exclude = param.List(None, allow_None=True)
-    # export_fields = param.List(None, allow_None=True)
-    #
-    #
-    # @param.depends('export_fields_include', 'export_fields_exclude', watch=True, on_init=True)
-    # def _update_fields(self):
-    #     if self.export_fields_include is None:
-    #         d = self.param.values()
-    #         del d['name']
-    #         self.export_fields_include = list(d.keys())
-    #     if self.export_fields_exclude is None:
-    #         self.export_fields_exclude = []
-    #     self.export_fields_exclude += ['export_fields_include', 'export_fields_exclude', 'export_fields']
-    #     self.export_fields = [f for f in self.export_fields_include if f not in self.export_fields_exclude]
 
     def to_dict(self, params=None):
         d = self.param.values()

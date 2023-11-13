@@ -14,7 +14,6 @@ from numproto.numproto import ndarray_to_proto, proto_to_ndarray
 
 import dill
 import threading
-from contextlib import contextmanager
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 

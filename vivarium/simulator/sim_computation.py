@@ -90,7 +90,6 @@ def switch_fn(fn_list):
     return switch
 
 
-
 def get_verlet_force_fn(displacement, map_dim):
     coll_force_fn = quantity.force(partial(total_collision_energy, displacement=displacement,
                                            epsilon=10., alpha=12))

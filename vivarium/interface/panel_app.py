@@ -6,8 +6,7 @@ from vivarium.simulator.sim_computation import EntityType
 import panel as pn
 
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, Button, PointDrawTool, HoverTool, Range1d
-from bokeh.events import ButtonClick
+from bokeh.models import ColumnDataSource, PointDrawTool, HoverTool, Range1d
 
 
 def normal(array):
@@ -21,7 +20,6 @@ class EntityManager:
     def __init__(self, config, selected, etype, state):
         self.config = config
         self.selected = selected
-        # self.config = self.config_list[self.selected.selection[0]]
         self.etype = etype
         self.cds = ColumnDataSource(data=self.get_cds_data(state))
         selected.param.watch(self.update_selected_plot, ['selection'], onlychanged=True, precedence=0)
@@ -34,9 +32,6 @@ class EntityManager:
 
     def update_selected_plot(self, event):
         self.cds.selected.indices = event.new
-        # d = self.config_list[self.selected.selection[0]].param.values()
-        # del d['name']
-        # self.config.param.update(**d)
 
     def update_selected_simulator(self):
         if len(self.cds.selected.indices) > 0 and self.cds.selected.indices != self.selected.selection:
@@ -72,7 +67,7 @@ class ObjectManager(EntityManager):
         x, y = pos[:, 0], pos[:, 1]
         thetas = state.position(self.etype).orientation
         d = state.diameter(self.etype)
-        colors = state.object_state.color  # state.agent_state.color  # ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
+        colors = state.object_state.color
 
         return dict(x=x, y=y, width=d, height=d, angle=thetas, fill_color=colors)
 
@@ -121,7 +116,6 @@ p.y_range = Range1d(0, simulator.simulation_config.box_size)
 button = pn.widgets.Button(name="Stop" if simulator.is_started() else "Start")
 
 def callback(event):
-    print('button cb', simulator.is_started())
     if simulator.is_started():
         simulator.stop()
         button.name = "Start"
@@ -139,19 +133,15 @@ p.toolbar.active_tap = draw_tool
 
 # https://panel.holoviz.org/how_to/param/custom.html
 sim_panel = pn.Param(simulator.param)
-                  #    ,
-                  # widgets={'left_motor': pn.widgets.FloatSlider,  # {'widget_type': pn.widgets.FloatSlider, 'orientation': 'vertical'},
-                  #          'right_motor': pn.widgets.FloatSlider,  # {'widget_type': pn.widgets.FloatSlider, 'orientation': 'vertical'}
-                  #          })
 
 row = pn.Row(pn.Column(button, p, sim_panel),
-             *[pn.Column(simulator.selected_entities[etype], simulator.selected_configs[etype]) for etype in EntityType])  # , pn.Column(simulator.param.selected_agents, simulator.agent_config), pn.Column(button, simulator.simulation_config))
+             *[pn.Column(simulator.selected_entities[etype], simulator.selected_configs[etype])
+               for etype in EntityType])
 
 row.servable()
 
 
 def update_plot():
-    # print('update_plot')
     for em in entity_managers.values():
         em.update_selected_simulator()
     state = simulator.update_state()
