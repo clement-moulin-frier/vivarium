@@ -57,15 +57,21 @@ class State:
         name = etype.name.lower()
         return getattr(self, f'{name}_state')
 
-    def nve_idx(self, e_type):
-        cond = self.e_cond(e_type)
+    def nve_idx(self, etype):
+        cond = self.e_cond(etype)
         return compress(range(len(cond)), cond)  # https://stackoverflow.com/questions/21448225/getting-indices-of-true-values-in-a-boolean-list
 
-    def e_idx(self, e_type):
-        return self.nve_state.entity_idx[self.nve_state.entity_type == e_type.value]
+    def nve_idx(self, etype, entity_idx):
+        return self.field(etype).nve_idx[entity_idx]
 
-    def e_cond(self, e_type):
-        return self.nve_state.entity_type == e_type.value
+    def e_idx(self, etype):
+        return self.nve_state.entity_idx[self.nve_state.entity_type == etype.value]
+
+    def e_cond(self, etype):
+        return self.nve_state.entity_type == etype.value
+
+    def row_idx(self, field, nve_idx):
+        return nve_idx if field == 'nve_state' else self.nve_state.entity_idx[nve_idx]  # self.field(etype).nve_idx[entity_idx]
 
     def __getattr__(self, name):
         def wrapper(e_type):
@@ -109,8 +115,8 @@ def get_verlet_force_fn(displacement, map_dim):
         cur_rot_vel = state.nve_state.momentum.orientation[agent_idx] / state.nve_state.mass.orientation[agent_idx]
         fwd_delta = fwd - cur_fwd_vel
         rot_delta = rot - cur_rot_vel
-        fwd_force = f32(1e-1) * n * jnp.tile(fwd_delta, (map_dim, 1)).T * jnp.tile(state.agent_state.speed_mul, (map_dim, 1)).T
-        rot_force = f32(1e-2) * rot_delta * state.agent_state.theta_mul
+        fwd_force = n * jnp.tile(fwd_delta, (map_dim, 1)).T * jnp.tile(state.agent_state.speed_mul, (map_dim, 1)).T
+        rot_force = rot_delta * state.agent_state.theta_mul
 
         return rigid_body.RigidBody(center=jnp.zeros_like(state.nve_state.position.center).at[agent_idx].set(fwd_force),
                                     orientation=jnp.zeros_like(state.nve_state.position.orientation).at[agent_idx].set(rot_force))

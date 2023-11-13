@@ -182,7 +182,8 @@ class Simulator:
     # def set_motors(self, agent_idx, motor_idx, value):
     #     self.state = self.state.set(motor=self.state.motor.at[agent_idx, motor_idx].set(value))
 
-    def set_state(self, nested_field, row_idx, col_idx, value):
+    def set_state(self, nested_field, nve_idx, col_idx, value):
+        row_idx = self.state.row_idx(nested_field[0], nve_idx)
         change = utils.rec_set_dataclass(self.state, nested_field, row_idx, col_idx, value)
         self.state = self.state.set(**change)
 

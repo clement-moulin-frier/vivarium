@@ -9,7 +9,7 @@ from jax_md.rigid_body import RigidBody
 import dataclasses
 import typing
 
-from vivarium.simulator.config import AgentConfig, ObjectConfig
+from vivarium.simulator.config import AgentConfig, ObjectConfig, etype_to_config
 from vivarium.simulator.sim_computation import State, NVEState, AgentState, ObjectState, EntityType
 from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
 
@@ -108,9 +108,6 @@ def get_default_state(n_entities_dict):
                  object_state=ObjectState(nve_idx=jnp.zeros(n_objects, dtype=int), color=jnp.zeros((n_objects, 3))))
 
 
-def config_attribute_as_array(configs, attr):
-    dtype = type(getattr(configs[0], attr))
-    return jnp.array([f32(getattr(config, attr)) for config in configs], dtype=dtype)
 
 
 def rec_set_dataclass(var, nested_field, row_idx, column_idx, value):
@@ -135,7 +132,7 @@ def set_state_from_config_dict(config_dict, state=None):
     state = state or get_default_state(n_entities_dict)
     e_idx = jnp.zeros(sum(n_entities_dict.values()), dtype=int)
     for e_type, configs in config_dict.items():
-        params = configs[0].to_dict().keys()
+        params = configs[0].param_names()
         for p in params:
             state_field_info = configs_to_state_dict[e_type][p]
             nve_idx = [c.idx for c in configs] if state_field_info.nested_field[0] == 'nve_state' else range(len(configs))
@@ -150,7 +147,7 @@ def set_state_from_config_dict(config_dict, state=None):
 
 def set_state_from_agent_configs(agent_configs, state=None, params=None):
     state = state or get_default_state(len(agent_configs))
-    params = params or agent_configs[0].to_dict().keys()
+    params = params or agent_configs[0].param_names()
     for p in params:
         state_field_info = agent_configs_to_state_dict[p]
         agent_idx = [a.idx for a in agent_configs] if state_field_info.nested_field[0] == 'nve_state' else range(len(agent_configs))
@@ -160,8 +157,13 @@ def set_state_from_agent_configs(agent_configs, state=None, params=None):
     return state
 
 
-def set_configs_from_state(state, config_dict):
-    for e_type in [EntityType.AGENT, EntityType.OBJECT]:
+def set_configs_from_state(state, config_dict=None):
+    if config_dict is None:
+        config_dict = {etype: [] for etype in list(EntityType)}
+        for idx, etype_int in enumerate(state.nve_state.entity_type):
+            etype = EntityType(etype_int)
+            config_dict[etype].append(etype_to_config[etype](idx=idx))
+    for e_type in list(EntityType):  # [EntityType.AGENT, EntityType.OBJECT]:
         for param, state_field_info in configs_to_state_dict[e_type].items():
             value = state
             for f in state_field_info.nested_field:
@@ -169,6 +171,7 @@ def set_configs_from_state(state, config_dict):
             for config in config_dict[e_type]:
                 t = type(getattr(config, param))
                 # value = np.array(value).astype(t)
+                  # TODO: use state.row_idx(.)
                 row_idx = config.idx if state_field_info.nested_field[0] == 'nve_state' else state.nve_state.entity_idx[config.idx]
                 if state_field_info.column_idx is None:
                     value_to_set = value[row_idx]
@@ -176,6 +179,7 @@ def set_configs_from_state(state, config_dict):
                     value_to_set = value[row_idx, state_field_info.column_idx]
                 value_to_set = state_field_info.state_to_config(value_to_set, t)
                 config.param.update(**{param: value_to_set})
+    return config_dict
 
 
 def set_agent_configs_from_state(state, agent_configs, first_nested_fields=['position', 'prox', 'motor', 'behavior',
@@ -237,9 +241,9 @@ def get_init_state_kwargs(agent_configs):
                                                                             ])
     return state_kwargs
 
-# def configs_to_state(agent_configs, object_configs):
-#     n_agents = len(agent_configs)
-#     n_objects = len(object_configs)
-#     position = jnp.zeros((n_agents + n_objects, 2))
-#     position.at[:n_agents, 0].set(jnp.array())
-#     return State(nve_state=NVEState(position=RigidBody(center=)))
+
+######## LEGACY code ######
+
+def config_attribute_as_array(configs, attr):
+    dtype = type(getattr(configs[0], attr))
+    return jnp.array([f32(getattr(config, attr)) for config in configs], dtype=dtype)

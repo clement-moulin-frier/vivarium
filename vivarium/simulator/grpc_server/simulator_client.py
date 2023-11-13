@@ -14,6 +14,7 @@ from numproto.numproto import ndarray_to_proto, proto_to_ndarray
 
 import dill
 import threading
+from contextlib import contextmanager
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
@@ -119,13 +120,13 @@ class SimulatorGRPCClient(SimulatorClient):
         motor_info = simulator_pb2.MotorInfo(agent_idx=agent_idx, motor_idx=motor_idx, value=value)
         self.stub.SetMotors(motor_info)
 
-    def set_state(self, nested_field, row_idx, column_idx, value):
-        state_change = simulator_pb2.StateChange(nested_field=nested_field, row_idx=row_idx, col_idx=column_idx,
+    def set_state(self, nested_field, nve_idx, column_idx, value):
+        state_change = simulator_pb2.StateChange(nested_field=nested_field, nve_idx=nve_idx, col_idx=column_idx,
                                                  value=ndarray_to_proto(value))
         self.stub.SetState(state_change)
 
     def set_simulation_config_serialized(self, simulation_config):
-        serialized = simulation_config.param.serialize_parameters(subset=simulation_config.export_fields)
+        serialized = simulation_config.param.serialize_parameters(subset=simulation_config.param_names())
         self.stub.SetSimulationConfigSerialized(simulator_pb2.SimulationConfigSerialized(serialized=serialized))
 
     def get_state(self):
@@ -191,7 +192,7 @@ class SimulatorGRPCClient(SimulatorClient):
     #         behavior_iterator.prox = prox.prox
 
     def add_agents(self, n_agents, agent_config):
-        d = agent_config.param.serialize_parameters(subset=agent_config.export_fields)
+        d = agent_config.param.serialize_parameters(subset=agent_config.param_names())
         # config = simulator_pb2.AgentConfig(**agent_config.to_dict())
         input = simulator_pb2.AddAgentInput(n_agents=n_agents,
                                             serialized_config=d)

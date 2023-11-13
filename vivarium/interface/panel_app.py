@@ -1,6 +1,6 @@
 import numpy as np
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
-from vivarium.simulator.simulator_controller import SimulatorController
+from vivarium.simulator.simulator_controller import PanelController
 from vivarium.simulator.sim_computation import EntityType
 
 import panel as pn
@@ -21,6 +21,7 @@ class EntityManager:
     def __init__(self, config, selected, etype, state):
         self.config = config
         self.selected = selected
+        # self.config = self.config_list[self.selected.selection[0]]
         self.etype = etype
         self.cds = ColumnDataSource(data=self.get_cds_data(state))
         selected.param.watch(self.update_selected_plot, ['selection'], onlychanged=True, precedence=0)
@@ -33,6 +34,9 @@ class EntityManager:
 
     def update_selected_plot(self, event):
         self.cds.selected.indices = event.new
+        # d = self.config_list[self.selected.selection[0]].param.values()
+        # del d['name']
+        # self.config.param.update(**d)
 
     def update_selected_simulator(self):
         if len(self.cds.selected.indices) > 0 and self.cds.selected.indices != self.selected.selection:
@@ -56,12 +60,11 @@ class AgentManager(EntityManager):
         orientation_lines_y = [[yy, yy + r * n[1]] for yy, n, r in zip(y, normals, radii)]
 
         return dict(x=x, y=y, ox=orientation_lines_x, oy=orientation_lines_y, r=radii, fc=colors)
-    
+
     def plot(self, figure):
         figure.multi_line('ox', 'oy', source=self.cds, color='black', line_width=1)
-        return figure.circle('x', 'y', radius='r',
-                     fill_color='fc', fill_alpha=0.6, line_color=None,
-                     hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=self.cds)
+        return figure.circle('x', 'y', radius='r', fill_color='fc', fill_alpha=0.6, line_color=None,
+                             hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=self.cds)
 
 class ObjectManager(EntityManager):
     def get_cds_data(self, state):
@@ -74,20 +77,20 @@ class ObjectManager(EntityManager):
         return dict(x=x, y=y, width=d, height=d, angle=thetas, fill_color=colors)
 
     def plot(self, figure):
-        return figure.rect('x', 'y', 'width', 'height', 'fill_color', fill_alpha=0.6, line_color=None,
+        return figure.rect(x='x', y='y', width='width', height='height', angle='angle', fill_color='fill_color', fill_alpha=0.6, line_color=None,
                            hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=self.cds)
 
 
 pn.extension()
 
-simulator = SimulatorController(client=SimulatorGRPCClient())
+simulator = PanelController(client=SimulatorGRPCClient())
 state = simulator.state
 
 entity_types = [EntityType.AGENT, EntityType.OBJECT]
 
 entity_manager_classes = {EntityType.AGENT: AgentManager, EntityType.OBJECT: ObjectManager}
 
-entity_managers = {etype: manager_class(config=simulator.entity_configs[etype], selected=simulator.selected_entities[etype], etype=etype, state=state) for etype, manager_class in entity_manager_classes.items()}
+entity_managers = {etype: manager_class(config=simulator.selected_configs[etype], selected=simulator.selected_entities[etype], etype=etype, state=state) for etype, manager_class in entity_manager_classes.items()}
 
 TOOLS = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
 
@@ -142,13 +145,13 @@ sim_panel = pn.Param(simulator.param)
                   #          })
 
 row = pn.Row(pn.Column(button, p, sim_panel),
-             *[pn.Column(simulator.selected_entities[etype], simulator.entity_configs[etype]) for etype in EntityType])  # , pn.Column(simulator.param.selected_agents, simulator.agent_config), pn.Column(button, simulator.simulation_config))
+             *[pn.Column(simulator.selected_entities[etype], simulator.selected_configs[etype]) for etype in EntityType])  # , pn.Column(simulator.param.selected_agents, simulator.agent_config), pn.Column(button, simulator.simulation_config))
 
 row.servable()
 
 
 def update_plot():
-    print('update_plot')
+    # print('update_plot')
     for em in entity_managers.values():
         em.update_selected_simulator()
     state = simulator.update_state()

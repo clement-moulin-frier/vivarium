@@ -235,7 +235,7 @@ message Behavior {
 }
 
 message StateChange {
-  repeated int32 row_idx= 1;
+  repeated int32 nve_idx= 1;
   repeated int32 col_idx= 2;
   repeated string nested_field = 3;
   NDArray value = 4;

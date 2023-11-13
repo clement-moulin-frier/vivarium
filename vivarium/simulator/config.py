@@ -13,31 +13,35 @@ mass_center = float(mass.center[0])
 mass_orientation = float(mass.orientation[0])
 
 class Config(Parameterized):
-    export_fields_include = param.List(None, allow_None=True)
-    export_fields_exclude = param.List(None, allow_None=True)
-    export_fields = param.List(None, allow_None=True)
+    # export_fields_include = param.List(None, allow_None=True)
+    # export_fields_exclude = param.List(None, allow_None=True)
+    # export_fields = param.List(None, allow_None=True)
+    #
+    #
+    # @param.depends('export_fields_include', 'export_fields_exclude', watch=True, on_init=True)
+    # def _update_fields(self):
+    #     if self.export_fields_include is None:
+    #         d = self.param.values()
+    #         del d['name']
+    #         self.export_fields_include = list(d.keys())
+    #     if self.export_fields_exclude is None:
+    #         self.export_fields_exclude = []
+    #     self.export_fields_exclude += ['export_fields_include', 'export_fields_exclude', 'export_fields']
+    #     self.export_fields = [f for f in self.export_fields_include if f not in self.export_fields_exclude]
 
-
-    @param.depends('export_fields_include', 'export_fields_exclude', watch=True, on_init=True)
-    def _update_fields(self):
-        if self.export_fields_include is None:
-            d = self.param.values()
-            del d['name']
-            self.export_fields_include = list(d.keys())
-        if self.export_fields_exclude is None:
-            self.export_fields_exclude = []
-        self.export_fields_exclude += ['export_fields_include', 'export_fields_exclude', 'export_fields']
-        self.export_fields = [f for f in self.export_fields_include if f not in self.export_fields_exclude]
-
-    def to_dict(self, fields=None):
+    def to_dict(self, params=None):
         d = self.param.values()
-        if fields is None:
-            return {f: d[f] for f in self.export_fields}
+        del d['name']
+        if params is not None:
+            return {p: d[p] for p in params}
         else:
-            return {f: d[f] for f in fields}
+            return d
+
+    def param_names(self):
+        return list(self.to_dict().keys())
 
     def json(self):
-        return self.param.serialize_parameters(subset=self.export_fields)
+        return self.param.serialize_parameters(subset=self.param_names())
 
 
 class AgentConfig(Config):
@@ -82,6 +86,7 @@ class ObjectConfig(Config):
 
 
 config_to_etype = {AgentConfig: EntityType.AGENT, ObjectConfig: EntityType.OBJECT}
+etype_to_config = {etype: config_class for config_class, etype in config_to_etype.items()}
 
 
 class SimulatorConfig(Config):

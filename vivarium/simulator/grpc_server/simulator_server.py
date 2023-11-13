@@ -61,7 +61,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
     def GetSimulationConfigSerialized(self, request, context):
         config = self.engine_config.simulation_config
-        serialized = config.param.serialize_parameters(subset=config.export_fields)
+        serialized = config.param.serialize_parameters(subset=config.param_names())
         return simulator_pb2.SimulationConfigSerialized(serialized=serialized)
 
     def GetRecordedChanges(self, request, context):
@@ -88,12 +88,12 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def GetAgentConfigSerialized(self, request, context):
         config = self.engine_config.agent_configs[request.idx[0]]
         print('GetAgentConfigSerialized', config.to_dict())
-        serialized = config.param.serialize_parameters(subset=config.export_fields)
+        serialized = config.param.serialize_parameters(subset=config.param_names())
         return simulator_pb2.AgentConfigSerialized(serialized=serialized)
 
     def GetAgentConfigsSerialized(self, request, context):
         self.engine_config.update_agent_configs_from_state()
-        serialized = [config.param.serialize_parameters(subset=config.export_fields) for config in self.simulator.agent_configs]
+        serialized = [config.param.serialize_parameters(subset=config.param_names()) for config in self.simulator.agent_configs]
         # self._change_time += 1
         return simulator_pb2.AgentConfigsSerialized(serialized=serialized)
 
@@ -211,10 +211,10 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def SetState(self, request, context):
 
         with self._lock:
-            row_idx = np.array(request.row_idx)
+            nve_idx = np.array(request.nve_idx)
             col_idx = np.array(request.col_idx)
             # with self.engine_config.simulator.pause():
-            self.engine_config.simulator.set_state(request.nested_field, row_idx, col_idx,
+            self.engine_config.simulator.set_state(request.nested_field, nve_idx, col_idx,
                                                    proto_to_ndarray(request.value))
         return Empty()
 
@@ -283,7 +283,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
                 new_configs.append(config.AgentConfig(**d))
 
             for c in new_configs:
-                c.param.watch(self.engine_config.update_state, list(c.to_dict().keys()), onlychanged=True)
+                c.param.watch(self.engine_config.update_state, list(c.param_names()), onlychanged=True)
 
             with self.engine_config.simulator.pause():
                 self.engine_config.agent_configs += new_configs
