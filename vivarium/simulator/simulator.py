@@ -135,7 +135,6 @@ class Simulator:
         for s in self._subscribers:
             s.notify(*args, **kwargs)
 
-
     def run(self, threaded=False, num_loops=math.inf):
         if self.is_started:
             raise Exception("Simulator is already started")
