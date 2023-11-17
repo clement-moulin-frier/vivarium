@@ -54,9 +54,9 @@ class SimulatorController(param.Parameterized):
             self._event_list.extend(events)
             return
         print('push_state', len(events))
-        print(utils.events_to_state_changes(events))
+        # print(utils.events_to_state_changes(events))
 
-        state_changes = utils.events_to_state_changes(events)
+        state_changes = utils.events_to_state_changes(events, self.state)
         for sc in state_changes:
             self.client.set_state(**sc._asdict())
 
@@ -312,19 +312,18 @@ class NotebookController(SimulatorController):
 
 if __name__ == "__main__":
 
-    # controller = SimulatorController()
-    # controller.get_nve_state()
-    # controller.selected_agents = [1]
-    # print('idx = ', controller.agent_config.idx, 'y = ', controller.agent_config.y_position)
 
     # controller = SimulatorController()
     # controller.entity_configs[EntityType.AGENT][2].x_position = 1.
     # print(controller.client.get_state())
 
-    controller = SimulatorController()
-    controller.selected_entities[EntityType.OBJECT].selection = [1]
-    controller.selected_configs[EntityType.OBJECT].color = 'black'
-    print(controller.update_state().object_state)
+    controller = NotebookController()
+    controller.agents[0].color = 'black'
+
+    # controller = SimulatorController()
+    # controller.selected_entities[EntityType.OBJECT].selection = [1]
+    # controller.selected_configs[EntityType.OBJECT].color = 'black'
+    # print(controller.update_state().object_state)
 
     #controller.selected_entities[EntityType.AGENT].selection = [1]
     print('Done')

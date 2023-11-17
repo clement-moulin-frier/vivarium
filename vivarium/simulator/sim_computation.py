@@ -53,9 +53,18 @@ class State:
     agent_state: AgentState
     object_state: ObjectState
 
-    def field(self, etype):
-        name = etype.name.lower()
-        return getattr(self, f'{name}_state')
+    def field(self, etype_or_nested_fields):
+        if isinstance(etype_or_nested_fields, EntityType):
+            name = etype_or_nested_fields.name.lower()
+            nested_fields = (f'{name}_state', )
+        else:
+            nested_fields = etype_or_nested_fields
+
+        res = self
+        for f in nested_fields:
+            res = getattr(res, f)
+
+        return res
 
     def nve_idx(self, etype):
         cond = self.e_cond(etype)

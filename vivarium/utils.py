@@ -135,19 +135,20 @@ def events_to_nve_data(events):
                 nve_data[nested_field].append(NVETuple(idx, c, v))
     return nve_data
 
-def nve_data_to_state_changes(nve_data):
+
+def nve_data_to_state_changes(nve_data, state):
     value_data = dict()
     for nf, nve_tuples in nve_data.items():
         nve_idx = sorted(list(set([t.idx for t in nve_tuples])))
         row_map = {idx: i for i, idx in enumerate(nve_idx)}
         if nve_tuples[0].col is None:
-            val = np.zeros(len(nve_idx))
+            val = state.field(nf)[nve_idx]
             col_map = None
             col_idx = None
         else:
             col_idx = sorted(list(set([t.col for t in nve_tuples])))
             col_map = {idx: i for i, idx in enumerate(col_idx)}
-            val = np.zeros((len(nve_idx), len(col_idx)))
+            val = state.field(nf)[np.ix_(state.row_idx(nf[0], nve_idx), col_idx)]  # np.zeros((len(nve_idx), len(col_idx)))
         value_data[nf] = ValueTuple(nve_idx, col_idx, row_map, col_map, val)
 
     state_changes = []
@@ -165,10 +166,10 @@ def nve_data_to_state_changes(nve_data):
     return state_changes
 
 
-def events_to_state_changes(events):
+def events_to_state_changes(events, state):
 
     nve_data = events_to_nve_data(events)
-    return nve_data_to_state_changes(nve_data)
+    return nve_data_to_state_changes(nve_data, state)
 
 
 def rec_set_dataclass(var, nested_field, row_idx, column_idx, value):

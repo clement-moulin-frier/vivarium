@@ -5,7 +5,6 @@ import jax
 import numpy as np
 
 from jax_md import space, partition
-from jax_md.util import f32
 
 from contextlib import contextmanager
 
@@ -78,7 +77,6 @@ class EngineConfig(param.Parameterized):
         self.simulator.update_neighbor_fn(**kwargs)
         self.allocate_neighbors()
 
-    # @param.depends('update_neighbor_fn', watch=True, on_init=False)
     def allocate_neighbors(self, *events):
         print('allocate_neighbors')
         # if self.simulator is not None:
