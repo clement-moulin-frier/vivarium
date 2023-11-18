@@ -1,6 +1,6 @@
 import numpy as np
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
-from vivarium.controllers.simulator_controller import PanelController
+from vivarium.controllers.panel_controller import PanelController
 from vivarium.simulator.sim_computation import EntityType
 
 import panel as pn

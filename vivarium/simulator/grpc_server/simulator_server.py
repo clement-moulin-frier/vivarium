@@ -21,7 +21,7 @@ import vivarium.simulator.behaviors as behaviors
 from vivarium.simulator.grpc_server import converters
 
 
-import dill
+# import dill
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
