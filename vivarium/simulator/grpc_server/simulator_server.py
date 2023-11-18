@@ -14,7 +14,7 @@ from concurrent import futures
 from threading import Lock
 from contextlib import contextmanager
 
-from vivarium.simulator import config
+from vivarium.controllers import config
 from vivarium.simulator.simulator import EngineConfig
 from vivarium.simulator.sim_computation import dynamics_rigid
 import vivarium.simulator.behaviors as behaviors

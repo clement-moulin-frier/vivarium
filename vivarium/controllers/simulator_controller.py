@@ -1,13 +1,12 @@
 import param
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
-from vivarium.simulator.config import config_to_etype, SimulatorConfig, AgentConfig, ObjectConfig
+from vivarium.controllers.config import config_to_etype, SimulatorConfig, AgentConfig, ObjectConfig
 from vivarium.simulator.sim_computation import EntityType
-from vivarium import utils
+from vivarium.controllers import converters
 import time
 import threading
 from contextlib import contextmanager
 import numpy as np
-from vivarium.utils import set_configs_from_state
 import math
 
 param.Dynamic.time_dependent = True
@@ -31,7 +30,7 @@ class SimulatorController(param.Parameterized):
     def __init__(self, start_timer=True, **params):
         super().__init__(**params)
         self.state = self.client.state
-        configs_dict = set_configs_from_state(self.state)
+        configs_dict = converters.set_configs_from_state(self.state)
         for etype, configs in configs_dict.items():
             self.entity_configs[etype] = configs
         self._entity_config_watchers = self.watch_entity_configs()
@@ -54,9 +53,9 @@ class SimulatorController(param.Parameterized):
             self._event_list.extend(events)
             return
         print('push_state', len(events))
-        # print(utils.events_to_state_changes(events))
+        # print(converters.events_to_state_changes(events))
 
-        state_changes = utils.events_to_state_changes(events, self.state)
+        state_changes = converters.events_to_state_changes(events, self.state)
         for sc in state_changes:
             self.client.set_state(**sc._asdict())
 
@@ -93,7 +92,7 @@ class SimulatorController(param.Parameterized):
     def pull_entity_configs(self, *events):
         state = self.state
         with self.dont_push_entity_configs():
-            utils.set_configs_from_state(state, self.entity_configs)
+            converters.set_configs_from_state(state, self.entity_configs)
         return state
 
     def pull_simulation_config(self):
@@ -178,7 +177,7 @@ class PanelController(SimulatorController):
         with self.dont_push_selected_configs():
             for etype, selected in self.selected_entities.items():
                 config_dict[etype][0].idx = state.nve_idx(etype, selected.selection[0])
-            utils.set_configs_from_state(state, config_dict)
+            converters.set_configs_from_state(state, config_dict)
         return state
 
     def pull_all_data(self):

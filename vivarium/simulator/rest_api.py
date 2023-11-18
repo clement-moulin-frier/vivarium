@@ -4,7 +4,6 @@ import requests
 import os
 from urllib.parse import urljoin
 import numpy as np
-from vivarium.simulator.config import PopulationConfig
 import json
 
 def serialize_state(s):

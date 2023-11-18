@@ -1,6 +1,5 @@
 import param
 from param import Parameterized
-import numpy as np
 
 import vivarium.simulator.behaviors as behaviors
 from vivarium.simulator.sim_computation import EntityType
@@ -11,6 +10,7 @@ from jax_md.rigid_body import monomer
 mass = monomer.mass()
 mass_center = float(mass.center[0])
 mass_orientation = float(mass.orientation[0])
+
 
 class Config(Parameterized):
 

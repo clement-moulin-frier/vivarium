@@ -1,10 +1,6 @@
 import numpy as np
 
-from vivarium.simulator.rest_api import SimulatorRestClient
-import vivarium.simulator.config as config
-
 import panel as pn
-import param
 
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, Button, PointDrawTool, HoverTool, Range1d
@@ -109,7 +105,7 @@ class Application:
         self.cds.data['oy'] = orientation_lines_y
 
 if __name__ == "__main__":
-from vivarium.simulator import config
+    from vivarium.controllers import config
 from vivarium.simulator.simulator import Simulator
 
     agent_config = config.AgentConfig()

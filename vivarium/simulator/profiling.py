@@ -2,8 +2,7 @@ import cProfile
 import pstats
 from pstats import SortKey
 
-
-from vivarium.simulator import config
+from vivarium.controllers import config
 from vivarium.simulator.simulator import EngineConfig, Simulator
 from vivarium.simulator.sim_computation import dynamics_rigid
 

@@ -1,4 +1,3 @@
-import jax.numpy as jnp
 from jax import jit
 from jax import lax
 import jax
@@ -9,8 +8,8 @@ from jax_md import space, partition
 from contextlib import contextmanager
 
 from vivarium.simulator.sim_computation import dynamics_rigid, EntityType
-from vivarium.simulator.config import AgentConfig, ObjectConfig, SimulatorConfig
-from vivarium import utils
+from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig
+from vivarium.controllers import converters
 import vivarium.simulator.behaviors as behaviors
 
 import time
@@ -52,7 +51,7 @@ class EngineConfig(param.Parameterized):
                                    self.simulation_config.use_fori_loop, self.simulation_config.num_steps_lax,
                                    self.simulation_config.neighbor_radius, self.simulation_config.to_jit,
                                    behavior_bank, dynamics_fn,
-                                   utils.set_state_from_config_dict({EntityType.AGENT: self.agent_configs,
+                                   converters.set_state_from_config_dict({EntityType.AGENT: self.agent_configs,
                                                                      EntityType.OBJECT: self.object_configs}))
 
     def update_sim_parameters(self, event):
@@ -84,13 +83,13 @@ class EngineConfig(param.Parameterized):
 
     def init_state(self, *events):
         print('init_state')
-        state = utils.set_state_from_config_dict({EntityType.AGENT: self.agent_configs,
+        state = converters.set_state_from_config_dict({EntityType.AGENT: self.agent_configs,
                                                   EntityType.OBJECT: self.object_configs})
         self.simulator.init_state(state)
 
     def update_state(self, *events):
         print('update_state')
-        self.simulator.state = utils.set_state_from_agent_configs([e.obj for e in events], self.simulator.state,
+        self.simulator.state = converters.set_state_from_agent_configs([e.obj for e in events], self.simulator.state,
                                                                       params=[e.name for e in events])
 
     def update_function_update(self, *events):
@@ -181,7 +180,7 @@ class Simulator:
 
     def set_state(self, nested_field, nve_idx, col_idx, value):
         row_idx = self.state.row_idx(nested_field[0], nve_idx)
-        change = utils.rec_set_dataclass(self.state, nested_field, row_idx, col_idx, value)
+        change = converters.rec_set_dataclass(self.state, nested_field, row_idx, col_idx, value)
         self.state = self.state.set(**change)
 
     def stop(self, blocking=True):

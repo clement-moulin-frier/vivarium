@@ -1,4 +1,3 @@
-import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -10,8 +9,7 @@ import dataclasses
 import typing
 from collections import namedtuple, defaultdict
 
-
-from vivarium.simulator.config import AgentConfig, ObjectConfig, etype_to_config, config_to_etype
+from vivarium.controllers.config import AgentConfig, ObjectConfig, etype_to_config, config_to_etype
 from vivarium.simulator.sim_computation import State, NVEState, AgentState, ObjectState, EntityType
 from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
 
