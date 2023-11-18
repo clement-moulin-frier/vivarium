@@ -18,11 +18,13 @@ from vivarium.simulator import config
 from vivarium.simulator.simulator import EngineConfig
 from vivarium.simulator.sim_computation import dynamics_rigid
 import vivarium.simulator.behaviors as behaviors
+from vivarium.simulator.grpc_server import converters
 
 
 import dill
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
+
 
 @contextmanager
 def nonblocking(lock):
@@ -32,6 +34,7 @@ def nonblocking(lock):
     finally:
         if locked:
             lock.release()
+
 
 class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def __init__(self, engine_config):
@@ -123,46 +126,20 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
                                          entity_type=state.entity_type)
 
     def GetState(self, request, context):
-
-        return simulator_pb2.State(nve_state=self.GetNVEState(None, None),
-                                   agent_state=self.GetAgentState(None, None),
-                                   object_state=self.GetObjectState(None, None))
+        state = self.engine_config.simulator.state
+        return converters.state_to_proto(state)
 
     def GetNVEState(self, request, context):
         nve_state = self.engine_config.simulator.state.nve_state
-        return simulator_pb2.NVEState(position=simulator_pb2.RigidBody(center=ndarray_to_proto(nve_state.position.center),
-                                                                       orientation=ndarray_to_proto(nve_state.position.orientation)),
-                                      momentum=simulator_pb2.RigidBody(center=ndarray_to_proto(nve_state.momentum.center),
-                                                                       orientation=ndarray_to_proto(nve_state.momentum.orientation)),
-                                      force=simulator_pb2.RigidBody(center=ndarray_to_proto(nve_state.force.center),
-                                                                    orientation=ndarray_to_proto(nve_state.force.orientation)),
-                                      mass=simulator_pb2.RigidBody(center=ndarray_to_proto(nve_state.mass.center),
-                                                                   orientation=ndarray_to_proto(nve_state.mass.orientation)),
-                                      entity_type=ndarray_to_proto(nve_state.entity_type),
-                                      entity_idx=ndarray_to_proto(nve_state.entity_idx),
-                                      diameter=ndarray_to_proto(nve_state.diameter),
-                                      friction=ndarray_to_proto(nve_state.friction)
-                                      )
+        return converters.nve_state_to_proto(nve_state)
 
     def GetAgentState(self, request, context):
         agent_state = self.engine_config.simulator.state.agent_state
-        return simulator_pb2.AgentState(nve_idx=ndarray_to_proto(agent_state.nve_idx),
-                                        prox=ndarray_to_proto(agent_state.prox),
-                                        motor=ndarray_to_proto(agent_state.motor),
-                                        behavior=ndarray_to_proto(agent_state.behavior),
-                                        wheel_diameter=ndarray_to_proto(agent_state.wheel_diameter),
-                                        speed_mul=ndarray_to_proto(agent_state.speed_mul),
-                                        theta_mul=ndarray_to_proto(agent_state.theta_mul),
-                                        proxs_dist_max=ndarray_to_proto(agent_state.proxs_dist_max),
-                                        proxs_cos_min=ndarray_to_proto(agent_state.proxs_cos_min),
-                                        color=ndarray_to_proto(agent_state.color),
-                                        )
+        return converters.agent_state_to_proto(agent_state)
 
     def GetObjectState(self, request, context):
         object_state = self.engine_config.simulator.state.object_state
-        return simulator_pb2.ObjectState(nve_idx=ndarray_to_proto(object_state.nve_idx),
-                                         color=ndarray_to_proto(object_state.color)
-                                         )
+        return converters.object_state_to_proto(object_state)
 
     def Start(self, request, context):
         self.engine_config.simulator.run(threaded=True)
