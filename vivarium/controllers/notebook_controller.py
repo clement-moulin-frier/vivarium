@@ -125,7 +125,34 @@ class NotebookController(SimulatorController):
 
 if __name__ == "__main__":
 
-    controller = NotebookController()
-    controller.agents[0].color = 'black'
+    from vivarium.controllers.config import SimulatorConfig
+    from vivarium.simulator.simulator import EngineConfig
+    from vivarium.simulator.sim_computation import dynamics_rigid
+    from vivarium.simulator import behaviors
+
+    simulation_config = SimulatorConfig(to_jit=True)
+
+    engine_config = EngineConfig(dynamics_fn=dynamics_rigid, behavior_bank=behaviors.behavior_bank,
+                                 simulation_config=simulation_config)
+
+    controller = NotebookController(client=engine_config.simulator)
+    c = controller.entity_configs[EntityType.AGENT][0]
+    with controller.batch_set_state():
+        for etype in list(EntityType):
+            for c in controller.entity_configs[etype]:
+                for p in c.param_names():
+                    if p != 'idx':
+                        c.param.trigger(p)
+
+    from random import random
+    from math import pi
+
+    objs = [controller.objects[0], controller.objects[1]]
+    with controller.batch_set_state():
+        for obj in objs:
+            obj.x_position = random() * controller.simulation_config.box_size
+            obj.y_position = random() * controller.simulation_config.box_size
+            obj.color = 'grey'
+            obj.orientation = random() * 2. * pi
 
     print('Done')

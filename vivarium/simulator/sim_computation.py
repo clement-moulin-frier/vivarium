@@ -80,7 +80,7 @@ class State:
         return self.nve_state.entity_type == etype.value
 
     def row_idx(self, field, nve_idx):
-        return nve_idx if field == 'nve_state' else self.nve_state.entity_idx[nve_idx]  # self.field(etype).nve_idx[entity_idx]
+        return nve_idx if field == 'nve_state' else self.nve_state.entity_idx[jnp.array(nve_idx)]
 
     def __getattr__(self, name):
         def wrapper(e_type):

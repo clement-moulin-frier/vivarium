@@ -42,23 +42,23 @@ identity_s_to_c = lambda x, typ: typ(x)
 identity_c_to_s = lambda x: x
 behavior_s_to_c = lambda x, typ: reversed_behavior_name_map[int(x)]
 behavior_c_to_s = lambda x: behavior_name_map[x]
-color_s_to_c = lambda x, typ: mcolors.to_hex(x)  # Warning : temporary (below as well)
+color_s_to_c = lambda x, typ: mcolors.to_hex(np.array(x))  # Warning : temporary (below as well)
 color_c_to_s = lambda x: mcolors.to_rgb(x)
 mass_center_s_to_c = lambda x, typ: typ(x)
 mass_center_c_to_s = lambda x: [x]
 
 
-agent_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'position', 'center'), np.array([0]), identity_s_to_c, identity_c_to_s),
-                               'y_position': StateFieldInfo(('nve_state', 'position', 'center'), np.array([1]), identity_s_to_c, identity_c_to_s),
+agent_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
+                               'y_position': StateFieldInfo(('nve_state', 'position', 'center'), 1, identity_s_to_c, identity_c_to_s),
                                'orientation': StateFieldInfo(('nve_state', 'position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
                                'mass_center': StateFieldInfo(('nve_state', 'mass', 'center'), np.array([0]), mass_center_s_to_c, mass_center_c_to_s),
                                'mass_orientation': StateFieldInfo(('nve_state', 'mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
                                'diameter': StateFieldInfo(('nve_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
                                'friction': StateFieldInfo(('nve_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
-                               'left_motor': StateFieldInfo(('agent_state', 'motor',), np.array([0]), identity_s_to_c, identity_c_to_s),
-                               'right_motor': StateFieldInfo(('agent_state', 'motor',), np.array([1]), identity_s_to_c, identity_c_to_s),
-                               'left_prox': StateFieldInfo(('agent_state', 'prox',), np.array([0]), identity_s_to_c, identity_c_to_s),
-                               'right_prox': StateFieldInfo(('agent_state', 'prox',), np.array([1]), identity_s_to_c, identity_c_to_s),
+                               'left_motor': StateFieldInfo(('agent_state', 'motor',), 0, identity_s_to_c, identity_c_to_s),
+                               'right_motor': StateFieldInfo(('agent_state', 'motor',), 1, identity_s_to_c, identity_c_to_s),
+                               'left_prox': StateFieldInfo(('agent_state', 'prox',), 0, identity_s_to_c, identity_c_to_s),
+                               'right_prox': StateFieldInfo(('agent_state', 'prox',), 1, identity_s_to_c, identity_c_to_s),
                                'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
                                'color': StateFieldInfo(('agent_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
                                'idx': StateFieldInfo(('agent_state', 'nve_idx',), None, identity_s_to_c, identity_c_to_s)
@@ -66,8 +66,8 @@ agent_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'posit
 
 agent_configs_to_state_dict.update({f: StateFieldInfo(('agent_state', f,), None, identity_s_to_c, identity_c_to_s) for f in agent_common_fields if f not in agent_configs_to_state_dict})
 
-object_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'position', 'center'), np.array([0]), identity_s_to_c, identity_c_to_s),
-                                'y_position': StateFieldInfo(('nve_state', 'position', 'center'), np.array([1]), identity_s_to_c, identity_c_to_s),
+object_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
+                                'y_position': StateFieldInfo(('nve_state', 'position', 'center'), 1, identity_s_to_c, identity_c_to_s),
                                 'orientation': StateFieldInfo(('nve_state', 'position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
                                 'mass_center': StateFieldInfo(('nve_state', 'mass', 'center'), np.array([0]), mass_center_s_to_c, mass_center_c_to_s),
                                 'mass_orientation': StateFieldInfo(('nve_state', 'mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
@@ -114,39 +114,41 @@ ValueTuple = namedtuple('ValueData', ['nve_idx', 'col_idx', 'row_map', 'col_map'
 StateChangeTuple = namedtuple('StateChange', ['nested_field', 'nve_idx', 'column_idx', 'value'])
 
 
-def events_to_nve_data(events):
+def events_to_nve_data(events, state):
     nve_data = defaultdict(list)
     for e in events:
         config = e.obj
         param = e.name
         etype = config_to_etype[config.param.cls]
-        idx = config.idx
         state_field_info = configs_to_state_dict[etype][param]
         nested_field = state_field_info.nested_field
+        idx = config.idx
         val = state_field_info.config_to_state(e.new)
+
         if state_field_info.column_idx is None:
             nve_data[nested_field].append(NVETuple(idx, None, val))
+        elif isinstance(state_field_info.column_idx, int):
+            nve_data[nested_field].append(NVETuple(idx, state_field_info.column_idx, val))
         else:
-            if len(state_field_info.column_idx) == 1:
-                val = [val]
             for c, v in zip(state_field_info.column_idx, val):
                 nve_data[nested_field].append(NVETuple(idx, c, v))
+
     return nve_data
 
 
 def nve_data_to_state_changes(nve_data, state):
     value_data = dict()
     for nf, nve_tuples in nve_data.items():
-        nve_idx = sorted(list(set([t.idx for t in nve_tuples])))
+        nve_idx = sorted(list(set([int(t.idx) for t in nve_tuples])))
         row_map = {idx: i for i, idx in enumerate(nve_idx)}
         if nve_tuples[0].col is None:
-            val = state.field(nf)[nve_idx]
+            val = np.array(state.field(nf)[np.array(nve_idx)])
             col_map = None
             col_idx = None
         else:
             col_idx = sorted(list(set([t.col for t in nve_tuples])))
             col_map = {idx: i for i, idx in enumerate(col_idx)}
-            val = state.field(nf)[np.ix_(state.row_idx(nf[0], nve_idx), col_idx)]  # np.zeros((len(nve_idx), len(col_idx)))
+            val = np.array(state.field(nf)[np.ix_(state.row_idx(nf[0], nve_idx), col_idx)])
         value_data[nf] = ValueTuple(nve_idx, col_idx, row_map, col_map, val)
 
     state_changes = []
@@ -166,13 +168,16 @@ def nve_data_to_state_changes(nve_data, state):
 
 def events_to_state_changes(events, state):
 
-    nve_data = events_to_nve_data(events)
+    nve_data = events_to_nve_data(events, state)
     return nve_data_to_state_changes(nve_data, state)
 
 
 def rec_set_dataclass(var, nested_field, row_idx, column_idx, value):
 
     assert len(nested_field) > 0
+
+    if isinstance(column_idx, int):
+        column_idx = np.array([column_idx])
 
     if len(nested_field) == 1:
         field = nested_field[0]

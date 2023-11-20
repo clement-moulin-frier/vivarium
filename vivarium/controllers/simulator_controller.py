@@ -13,14 +13,14 @@ param.Dynamic.time_dependent = True
 
 class SimulatorController(param.Parameterized):
 
-    client = param.Parameter(SimulatorGRPCClient())
     simulation_config = param.ClassSelector(SimulatorConfig, SimulatorConfig())
     entity_configs = param.Dict({EntityType.AGENT: [], EntityType.OBJECT: []})
     refresh_change_period = param.Number(1)
     change_time = param.Integer(0)
 
-    def __init__(self, start_timer=True, **params):
+    def __init__(self, start_timer=True, client=None, **params):
         super().__init__(**params)
+        self.client = client or SimulatorGRPCClient()
         self.state = self.client.state
         configs_dict = converters.set_configs_from_state(self.state)
         for etype, configs in configs_dict.items():
