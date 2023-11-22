@@ -6,9 +6,7 @@
   - python 3.9 (?)
   - jax-md
   - For the web interface
-    - panel > 1.x
-      - 18/05/23
-        - Had to install it with `conda install -c conda-forge panel` (but v1.x was just released, just follow the doc now)
+    - panel
     - param
     - [grpc](https://grpc.io/docs/languages/python/quickstart/)
   - To control the server from a notebook
