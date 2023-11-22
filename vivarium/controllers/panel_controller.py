@@ -53,7 +53,7 @@ class PanelController(SimulatorController):
         config_dict = {etype: [config] for etype, config in self.selected_configs.items()}
         with self.dont_push_selected_configs():
             for etype, selected in self.selected_entities.items():
-                config_dict[etype][0].idx = state.nve_idx(etype, selected.selection[0])
+                config_dict[etype][0].idx = int(state.nve_idx(etype, selected.selection[0]))
             converters.set_configs_from_state(state, config_dict)
         return state
 

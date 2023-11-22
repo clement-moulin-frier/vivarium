@@ -146,7 +146,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return Empty()
 
     def IsStarted(self, request, context):
-        return simulator_pb2.IsStartedState(is_started=self.engine_config.simulator.is_started)
+        return simulator_pb2.IsStartedState(is_started=self.engine_config.simulator.is_started())
 
     def Stop(self, request, context):
         self.engine_config.simulator.stop()
@@ -188,15 +188,15 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def SetState(self, request, context):
 
         with self._lock:
-            nve_idx = np.array(request.nve_idx)
-            col_idx = np.array(request.col_idx)
+            nve_idx = request.nve_idx
+            col_idx = request.col_idx
             # with self.engine_config.simulator.pause():
             self.engine_config.simulator.set_state(request.nested_field, nve_idx, col_idx,
                                                    proto_to_ndarray(request.value))
         return Empty()
 
     def SensoryMotorStream(self, request_iterator, context):
-        assert not self.engine_config.simulator.is_started
+        assert not self.engine_config.simulator.is_started()
         for motor in request_iterator:
             print('motor', motor.motor)
             self.engine_config.simulator.set_state(('motor',), np.array([motor.agent_idx]), np.arange(2),
@@ -208,7 +208,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
                                      prox=prox)
 
     def NVEStateStream(self, request, context):
-        assert not self.engine_config.simulator.is_started
+        assert not self.engine_config.simulator.is_started()
         self._stream_started = True
         t = 0
         while self._stream_started:
@@ -221,7 +221,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         self._stream_started = False
 
     def AgentStep(self, request, context):
-        assert not self.engine_config.simulator.is_started
+        assert not self.engine_config.simulator.is_started()
         self.engine_config.simulator.set_state(('motor',), np.array([request.agent_idx]), np.arange(2),
                                                np.array([request.motor]))
         self.engine_config.simulator.run(threaded=False, num_loops=1)
@@ -230,12 +230,12 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
                                   prox=prox)
 
     def Step(self, request, context):
-        assert not self.engine_config.simulator.is_started
+        assert not self.engine_config.simulator.is_started()
         self.engine_config.simulator.run(threaded=False, num_loops=1)
-        return self.GetState(None, None)
+        return converters.state_to_proto(self.engine_config.simulator.state)
 
     def StartBehavior(self, request, context):
-        assert not self.engine_config.simulator.is_started
+        assert not self.engine_config.simulator.is_started()
         behavior_function = dill.loads(request.function)
         for t in range(100):
             prox = self.engine_config.simulator.state.prox[request.agent_idx].tolist()

@@ -1,6 +1,7 @@
 from jax import jit
 from jax import lax
 import jax
+import jax.numpy as jnp
 import numpy as np
 
 from jax_md import space, partition
@@ -108,12 +109,19 @@ class Simulator:
 
         self.behavior_bank = behavior_bank
 
+        # TODO: remove? (added for get_sim_config())
+        self.box_size = box_size
+        self.map_dim = map_dim
+        self.dt = dt
+        self.neighbor_radius = neighbor_radius
+        self.to_jit = to_jit
+
         self.freq = freq
         self.use_fori_loop = use_fori_loop
         self.num_steps_lax = num_steps_lax
         self.dynamics_fn = dynamics_fn
 
-        self.is_started = False
+        self._is_started = False
         self._to_stop = False
         self.key = jax.random.PRNGKey(0)
 
@@ -133,7 +141,7 @@ class Simulator:
             s.notify(*args, **kwargs)
 
     def run(self, threaded=False, num_loops=math.inf):
-        if self.is_started:
+        if self._is_started:
             raise Exception("Simulator is already started")
         if threaded:
             threading.Thread(target=self._run).start()
@@ -141,7 +149,7 @@ class Simulator:
             return self._run(num_loops)
 
     def _run(self, num_loops=math.inf):
-        self.is_started = True
+        self._is_started = True
         print('Run starts')
         loop_count = 0
         while loop_count < num_loops:
@@ -172,24 +180,36 @@ class Simulator:
             # print(self.state)
             loop_count += 1
             self.notify_subscribers(simulation_time=loop_count)
-        self.is_started = False
+        self._is_started = False
         print('Run stops')
 
     # def set_motors(self, agent_idx, motor_idx, value):
     #     self.state = self.state.set(motor=self.state.motor.at[agent_idx, motor_idx].set(value))
 
-    def set_state(self, nested_field, nve_idx, col_idx, value):
-        row_idx = self.state.row_idx(nested_field[0], nve_idx)
+    def set_state(self, nested_field, nve_idx, column_idx, value):
+        row_idx = self.state.row_idx(nested_field[0], jnp.array(nve_idx))
+        col_idx = None if column_idx is None else jnp.array(column_idx)
         change = converters.rec_set_dataclass(self.state, nested_field, row_idx, col_idx, value)
         self.state = self.state.set(**change)
+
+    def start(self):
+        self.run(threaded=True)
 
     def stop(self, blocking=True):
         self._to_stop = True
         if blocking:
-            while self.is_started:
+            while self._is_started:
                 time.sleep(0.01)
                 print('still started')
             print('now stopped')
+
+    def is_started(self):
+        return self._is_started
+
+    def step(self):
+        assert not self._is_started
+        self.run(threaded=False, num_loops=1)
+        return self.state
 
     @contextmanager
     def pause(self):
@@ -235,6 +255,23 @@ class Simulator:
         mask = self.state.nve_state.entity_type[self.neighbors.idx[0]] == EntityType.AGENT.value
         self.agent_neighs_idx = self.neighbors.idx[:, mask]
         return self.neighbors
+
+    # TODO: remove once Simulator will decoupled from Param configs
+    def get_sim_config(self):
+        return SimulatorConfig(box_size=self.box_size, map_dim=self.map_dim,
+                               n_agents=self.state.agent_state.nve_idx.shape[0], n_objects=self.state.object_state.nve_idx.shape[0],
+                               num_steps_lax=self.num_steps_lax, dt=self.dt, freq=self.freq,
+                               neighbor_radius=self.neighbor_radius, to_jit=self.to_jit,
+                               use_fori_loop=self.use_fori_loop)
+    def set_simulation_config(self, d):
+        for k, v in d.items():
+            setattr(self, k, v)
+
+    def get_change_time(self):
+        return 0
+
+    def get_state(self):
+        return self.state
 
 
 if __name__ == "__main__":
