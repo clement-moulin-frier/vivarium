@@ -1,15 +1,28 @@
 from jax_md.rigid_body import RigidBody
 
 from vivarium.simulator.grpc_server.numproto.numproto import proto_to_ndarray, ndarray_to_proto
-from vivarium.simulator.sim_computation import State, NVEState, AgentState, ObjectState
+from vivarium.simulator.sim_computation import State, SimulatorState, NVEState, AgentState, ObjectState
 import simulator_pb2
 
 
 def proto_to_state(state):
-    return State(nve_state=proto_to_nve_state(state.nve_state),
+    return State(simulator_state=proto_to_simulator_state(state.simulator_state),
+                 nve_state=proto_to_nve_state(state.nve_state),
                  agent_state=proto_to_agent_state(state.agent_state),
                  object_state=proto_to_object_state(state.object_state))
 
+def proto_to_simulator_state(simulator_state):
+    return SimulatorState(idx=proto_to_ndarray(simulator_state.idx),
+                          box_size=proto_to_ndarray(simulator_state.box_size),
+                          n_agents=proto_to_ndarray(simulator_state.n_agents),
+                          n_objects=proto_to_ndarray(simulator_state.n_objects),
+                          num_steps_lax=proto_to_ndarray(simulator_state.num_steps_lax),
+                          dt=proto_to_ndarray(simulator_state.dt),
+                          freq=proto_to_ndarray(simulator_state.freq),
+                          neighbor_radius=proto_to_ndarray(simulator_state.neighbor_radius),
+                          to_jit=proto_to_ndarray(simulator_state.to_jit),
+                          use_fori_loop=proto_to_ndarray(simulator_state.use_fori_loop)
+                          )
 
 def proto_to_nve_state(nve_state):
     return NVEState(position=RigidBody(center=proto_to_ndarray(nve_state.position.center).astype(float),
@@ -48,10 +61,25 @@ def proto_to_object_state(object_state):
 
 
 def state_to_proto(state):
-    return simulator_pb2.State(nve_state=nve_state_to_proto(state.nve_state),
+    return simulator_pb2.State(simulator_state=simulator_state_to_proto(state.simulator_state),
+                               nve_state=nve_state_to_proto(state.nve_state),
                                agent_state=agent_state_to_proto(state.agent_state),
                                object_state=object_state_to_proto(state.object_state))
 
+
+def simulator_state_to_proto(simulator_state):
+    return simulator_pb2.SimulatorState(
+        idx=ndarray_to_proto(simulator_state.idx),
+        box_size=ndarray_to_proto(simulator_state.box_size),
+        n_agents=ndarray_to_proto(simulator_state.n_agents),
+        n_objects=ndarray_to_proto(simulator_state.n_objects),
+        num_steps_lax=ndarray_to_proto(simulator_state.num_steps_lax),
+        dt=ndarray_to_proto(simulator_state.dt),
+        freq=ndarray_to_proto(simulator_state.freq),
+        neighbor_radius=ndarray_to_proto(simulator_state.neighbor_radius),
+        to_jit=ndarray_to_proto(simulator_state.to_jit),
+        use_fori_loop=ndarray_to_proto(simulator_state.use_fori_loop)
+    )
 
 def nve_state_to_proto(nve_state):
     return simulator_pb2.NVEState(position=simulator_pb2.RigidBody(center=ndarray_to_proto(nve_state.position.center),

@@ -93,8 +93,8 @@ p = figure(tools=TOOLS)
 p.axis.major_label_text_font_size = "24px"
 hover = HoverTool(tooltips=None, mode="vline")
 p.add_tools(hover)
-p.x_range = Range1d(0, simulator.simulation_config.box_size)
-p.y_range = Range1d(0, simulator.simulation_config.box_size)
+p.x_range = Range1d(0, simulator.simulator_config.box_size)
+p.y_range = Range1d(0, simulator.simulator_config.box_size)
 
 # n_new_agents = pn.widgets.IntInput(name='Add new agents', value=0, step=1, start=0, end=1000)
 # add_agent_button = pn.widgets.Button(name='Add agents')
@@ -134,7 +134,7 @@ p.toolbar.active_tap = draw_tool
 # https://panel.holoviz.org/how_to/param/custom.html
 sim_panel = pn.Param(simulator.param)
 
-row = pn.Row(pn.Column(button, p, sim_panel),
+row = pn.Row(pn.Column(button, p, simulator.simulator_config),
              *[pn.Column(simulator.selected_entities[etype], simulator.selected_configs[etype])
                for etype in EntityType])
 
@@ -145,7 +145,7 @@ def update_plot():
     for em in entity_managers.values():
         em.update_selected_simulator()
     state = simulator.update_state()
-    simulator.pull_entity_configs()
+    simulator.pull_configs()
     for em in entity_managers.values():
         em.update_cds(state)
 

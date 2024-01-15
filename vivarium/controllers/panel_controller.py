@@ -1,7 +1,7 @@
 from vivarium.controllers import converters
-from vivarium.controllers.config import AgentConfig, ObjectConfig, config_to_etype
+from vivarium.controllers.config import AgentConfig, ObjectConfig, config_to_stype
 from vivarium.controllers.simulator_controller import SimulatorController
-from vivarium.simulator.sim_computation import EntityType
+from vivarium.simulator.sim_computation import EntityType, StateType
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 
 import param
@@ -26,7 +26,10 @@ class PanelController(SimulatorController):
         self.update_entity_list()
         for etype, selected in self.selected_entities.items():
             selected.param.watch(self.pull_selected_configs, ['selection'], onlychanged=True, precedence=1)
-        self.simulation_config.param.watch(self.update_entity_list, ['n_agents', 'n_objects'], onlychanged=True)
+
+    @property
+    def simulator_config(self):
+        return self.configs[StateType.SIMULATOR][0]
 
     def watch_selected_configs(self):
         watchers = {etype: config.param.watch(self.push_selected_to_state, config.param_names(), onlychanged=True)
@@ -50,24 +53,25 @@ class PanelController(SimulatorController):
 
     def pull_selected_configs(self, *events):
         state = self.state
-        config_dict = {etype: [config] for etype, config in self.selected_configs.items()}
+        config_dict = {etype.to_state_type(): [config] for etype, config in self.selected_configs.items()}
         with self.dont_push_selected_configs():
+            # Todo: check if for loop below is still required
             for etype, selected in self.selected_entities.items():
-                config_dict[etype][0].idx = int(state.nve_idx(etype, selected.selection[0]))
+                config_dict[etype.to_state_type()][0].idx = int(state.nve_idx(etype.to_state_type(), selected.selection[0]))
             converters.set_configs_from_state(state, config_dict)
         return state
 
     def pull_all_data(self):
         self.pull_selected_configs()
-        self.pull_simulation_config()
+        self.pull_configs({StateType.SIMULATOR: self.configs[StateType.SIMULATOR]})
 
     def push_selected_to_state(self, *events):
         print('push_selected_to_state', len(events))
         for e in events:
-            etype = config_to_etype[type(e.obj)]
-            selected_entities = self.selected_entities[etype].selection
+            stype = config_to_stype[type(e.obj)]
+            selected_entities = self.selected_entities[stype.to_entity_type()].selection
             for idx in selected_entities:
-                setattr(self.entity_configs[etype][idx], e.name, e.new)
+                setattr(self.configs[stype][idx], e.name, e.new)
 
 
 if __name__ == '__main__':

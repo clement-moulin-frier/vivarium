@@ -12,10 +12,28 @@ from itertools import compress
 
 f32 = util.f32
 
+SPACE_NDIMS = 2
 
 class EntityType(Enum):
     AGENT = 0
     OBJECT = 1
+
+    def to_state_type(self):
+        return StateType(self.value)
+
+class StateType(Enum):
+    AGENT = 0
+    OBJECT = 1
+    SIMULATOR = 2
+
+    def is_entity(self):
+        return self != StateType.SIMULATOR
+
+    def to_entity_type(self):
+        assert self.is_entity()
+        return EntityType(self.value)
+
+
 
 @dataclass
 class NVEState(simulate.NVEState):
@@ -48,17 +66,42 @@ class ObjectState:
     color: util.Array
 
 @dataclass
+class SimulatorState:
+    idx: util.Array
+    box_size: util.Array
+    n_agents: util.Array
+    n_objects: util.Array
+    num_steps_lax: util.Array
+    dt: util.Array
+    freq: util.Array
+    neighbor_radius: util.Array
+    to_jit: util.Array
+    use_fori_loop: util.Array
+
+    @staticmethod
+    def get_type(attr):
+        if attr in ['idx', 'n_agents', 'n_objects', 'num_steps_lax']:
+            return int
+        elif attr in ['box_size', 'dt', 'freq', 'neighbor_radius']:
+            return float
+        elif attr in ['to_jit', 'use_fori_loop']:
+            return bool
+        else:
+            raise ValueError()
+
+@dataclass
 class State:
+    simulator_state: SimulatorState
     nve_state: NVEState
     agent_state: AgentState
     object_state: ObjectState
 
-    def field(self, etype_or_nested_fields):
-        if isinstance(etype_or_nested_fields, EntityType):
-            name = etype_or_nested_fields.name.lower()
+    def field(self, stype_or_nested_fields):
+        if isinstance(stype_or_nested_fields, StateType):
+            name = stype_or_nested_fields.name.lower()
             nested_fields = (f'{name}_state', )
         else:
-            nested_fields = etype_or_nested_fields
+            nested_fields = stype_or_nested_fields
 
         res = self
         for f in nested_fields:
@@ -99,7 +142,7 @@ def switch_fn(fn_list):
     return switch
 
 
-def get_verlet_force_fn(displacement, map_dim):
+def get_verlet_force_fn(displacement):
     coll_force_fn = quantity.force(partial(total_collision_energy, displacement=displacement,
                                            epsilon=10., alpha=12))
 
@@ -108,7 +151,7 @@ def get_verlet_force_fn(displacement, map_dim):
 
     def friction_force(nve_state):
         cur_vel = nve_state.momentum.center / nve_state.mass.center
-        return - jnp.tile(nve_state.friction, (map_dim, 1)).T * cur_vel
+        return - jnp.tile(nve_state.friction, (SPACE_NDIMS, 1)).T * cur_vel
 
     def motor_force(state):
         agent_idx = state.agent_state.nve_idx
@@ -123,7 +166,7 @@ def get_verlet_force_fn(displacement, map_dim):
         cur_rot_vel = state.nve_state.momentum.orientation[agent_idx] / state.nve_state.mass.orientation[agent_idx]
         fwd_delta = fwd - cur_fwd_vel
         rot_delta = rot - cur_rot_vel
-        fwd_force = n * jnp.tile(fwd_delta, (map_dim, 1)).T * jnp.tile(state.agent_state.speed_mul, (map_dim, 1)).T
+        fwd_force = n * jnp.tile(fwd_delta, (SPACE_NDIMS, 1)).T * jnp.tile(state.agent_state.speed_mul, (SPACE_NDIMS, 1)).T
         rot_force = rot_delta * state.agent_state.theta_mul
 
         return rigid_body.RigidBody(center=jnp.zeros_like(state.nve_state.position.center).at[agent_idx].set(fwd_force),
@@ -137,8 +180,8 @@ def get_verlet_force_fn(displacement, map_dim):
     return force_fn
 
 
-def dynamics_rigid(displacement, shift, map_dim, dt, behavior_bank, force_fn=None, **sim_kwargs):
-    force_fn = force_fn or get_verlet_force_fn(displacement, map_dim)
+def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
+    force_fn = force_fn or get_verlet_force_fn(displacement)
     multi_switch = jax.vmap(switch_fn(behavior_bank), (0, 0, 0))
 
     # shape = rigid_body.monomer
@@ -153,8 +196,8 @@ def dynamics_rigid(displacement, shift, map_dim, dt, behavior_bank, force_fn=Non
 
     def physics_fn(state, force, shift_fn, dt, neighbor):
         """Apply a single step of velocity Verlet integration to a state."""
-        dt = f32(dt)
-        dt_2 = f32(dt / 2)
+        # dt = f32(dt)
+        dt_2 = dt / 2.  # f32(dt / 2)
         # state = sensorimotor(state, neighbor)  # now in step_fn
         nve_state = simulate.momentum_step(state.nve_state, dt_2)
         nve_state = simulate.position_step(nve_state, shift_fn, dt, neighbor=neighbor)
@@ -183,7 +226,7 @@ def dynamics_rigid(displacement, shift, map_dim, dt, behavior_bank, force_fn=Non
         state = state.set(agent_state=compute_prox(state, agent_neighs_idx))
         state = state.set(agent_state=sensorimotor(state.agent_state))
         force = force_fn(state, neighbor)
-        state = physics_fn(state, force, shift, dt, neighbor=neighbor)
+        state = physics_fn(state, force, shift, state.simulator_state.dt[0], neighbor=neighbor)
         return state
 
     return init_fn, step_fn

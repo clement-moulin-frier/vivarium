@@ -2,7 +2,7 @@ import param
 from param import Parameterized
 
 import vivarium.simulator.behaviors as behaviors
-from vivarium.simulator.sim_computation import EntityType
+from vivarium.simulator.sim_computation import StateType
 
 from jax_md.rigid_body import monomer
 
@@ -70,13 +70,9 @@ class ObjectConfig(Config):
         super().__init__(**params)
 
 
-config_to_etype = {AgentConfig: EntityType.AGENT, ObjectConfig: EntityType.OBJECT}
-etype_to_config = {etype: config_class for config_class, etype in config_to_etype.items()}
-
-
 class SimulatorConfig(Config):
+    idx = param.Integer(0, constant=True)
     box_size = param.Number(100., bounds=(0, None))
-    map_dim = param.Integer(2, bounds=(1, None))
     n_agents = param.Integer(10)
     n_objects = param.Integer(2)
     num_steps_lax = param.Integer(4)
@@ -88,3 +84,7 @@ class SimulatorConfig(Config):
 
     def __init__(self, **params):
         super().__init__(**params)
+
+
+config_to_stype = {SimulatorConfig: StateType.SIMULATOR, AgentConfig: StateType.AGENT, ObjectConfig: StateType.OBJECT}
+stype_to_config = {stype: config_class for config_class, stype in config_to_stype.items()}

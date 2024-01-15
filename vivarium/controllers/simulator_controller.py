@@ -1,8 +1,8 @@
 import param
 
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
-from vivarium.controllers.config import config_to_etype, SimulatorConfig, AgentConfig, ObjectConfig
-from vivarium.simulator.sim_computation import EntityType
+from vivarium.controllers.config import SimulatorConfig
+from vivarium.simulator.sim_computation import StateType
 from vivarium.controllers import converters
 import time
 import threading
@@ -13,8 +13,7 @@ param.Dynamic.time_dependent = True
 
 class SimulatorController(param.Parameterized):
 
-    simulation_config = param.ClassSelector(SimulatorConfig, SimulatorConfig())
-    entity_configs = param.Dict({EntityType.AGENT: [], EntityType.OBJECT: []})
+    configs = param.Dict({StateType.SIMULATOR: SimulatorConfig(), StateType.AGENT: [], StateType.OBJECT: []})
     refresh_change_period = param.Number(1)
     change_time = param.Integer(0)
 
@@ -23,21 +22,19 @@ class SimulatorController(param.Parameterized):
         self.client = client or SimulatorGRPCClient()
         self.state = self.client.state
         configs_dict = converters.set_configs_from_state(self.state)
-        for etype, configs in configs_dict.items():
-            self.entity_configs[etype] = configs
-        self._entity_config_watchers = self.watch_entity_configs()
+        for stype, configs in configs_dict.items():
+            self.configs[stype] = configs
+        self._config_watchers = self.watch_configs()
         self.pull_all_data()
-        self.simulation_config.param.watch(self.push_simulation_config, self.simulation_config.param_names(),
-                                           onlychanged=True)
         self.client.name = self.name
         self._in_batch = False
         if start_timer:
             threading.Thread(target=self._start_timer).start()
 
-    def watch_entity_configs(self):
+    def watch_configs(self):
         watchers = {etype: [config.param.watch(self.push_state, config.param_names(), onlychanged=True)
                             for config in configs]
-                    for etype, configs in self.entity_configs.items()}
+                    for etype, configs in self.configs.items()}
         return watchers
 
     def push_state(self, *events):
@@ -53,13 +50,13 @@ class SimulatorController(param.Parameterized):
 
     @contextmanager
     def dont_push_entity_configs(self):
-        for etype, configs in self.entity_configs.items():
+        for etype, configs in self.configs.items():
             for i, config in enumerate(configs):
-                config.param.unwatch(self._entity_config_watchers[etype][i])
+                config.param.unwatch(self._config_watchers[etype][i])
         try:
             yield None
         finally:
-            self._entity_config_watchers = self.watch_entity_configs()
+            self._config_watchers = self.watch_configs()
 
     @contextmanager
     def batch_set_state(self):
@@ -72,24 +69,15 @@ class SimulatorController(param.Parameterized):
             self.push_state(*self._event_list)
             self._event_list = None
 
-    def push_simulation_config(self, *events):
-        print('push_simulation_config', self.simulation_config)
-        d = {e.name: e.new for e in events}
-        self.client.set_simulation_config(d)
-
     def pull_all_data(self):
-        self.pull_entity_configs()
-        self.pull_simulation_config()
+        self.pull_configs()
 
-    def pull_entity_configs(self, *events):
+    def pull_configs(self, configs=None):
+        configs = configs or self.configs
         state = self.state
         with self.dont_push_entity_configs():
-            converters.set_configs_from_state(state, self.entity_configs)
+            converters.set_configs_from_state(state, configs)
         return state
-
-    def pull_simulation_config(self):
-        sim_config_dict = self.client.get_sim_config().to_dict()
-        self.simulation_config.param.update(**sim_config_dict)
 
     def _start_timer(self):
         while True:
@@ -134,7 +122,7 @@ class SimulatorController(param.Parameterized):
 if __name__ == "__main__":
 
     controller = SimulatorController()
-    controller.entity_configs[EntityType.AGENT][2].x_position = 1.
+    controller.configs[StateType.AGENT][2].x_position = 1.
     print(controller.client.get_state())
 
     print('Done')

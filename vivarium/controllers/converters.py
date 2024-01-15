@@ -9,8 +9,8 @@ import dataclasses
 import typing
 from collections import namedtuple, defaultdict
 
-from vivarium.controllers.config import AgentConfig, ObjectConfig, etype_to_config, config_to_etype
-from vivarium.simulator.sim_computation import State, NVEState, AgentState, ObjectState, EntityType
+from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig, stype_to_config, config_to_stype
+from vivarium.simulator.sim_computation import State, SimulatorState, NVEState, AgentState, ObjectState, EntityType, StateType
 from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
 
 import matplotlib.colors as mcolors
@@ -25,9 +25,15 @@ object_config_fields = ObjectConfig.param.objects().keys()
 object_state_fields = [f.name for f in jax_md.dataclasses.fields(ObjectState)]
 
 object_common_fields = [f for f in object_config_fields if f in object_state_fields]
+#
+simulator_config_fields = SimulatorConfig.param.objects().keys()
+simulator_state_fields = [f.name for f in jax_md.dataclasses.fields(SimulatorState)]
 
-state_fields_dict = {EntityType.AGENT: agent_state_fields,
-                     EntityType.OBJECT: object_state_fields}
+simulator_common_fields = [f for f in simulator_config_fields if f in simulator_state_fields]
+#
+state_fields_dict = {StateType.AGENT: agent_state_fields,
+                     StateType.OBJECT: object_state_fields,
+                     StateType.SIMULATOR: simulator_state_fields}
 
 
 @dataclasses.dataclass
@@ -80,14 +86,24 @@ object_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'posi
 
 object_configs_to_state_dict.update({f: StateFieldInfo(('object_state', f,), None, identity_s_to_c, identity_c_to_s) for f in object_common_fields if f not in object_configs_to_state_dict})
 
-configs_to_state_dict = {EntityType.AGENT: agent_configs_to_state_dict,
-                         EntityType.OBJECT: object_configs_to_state_dict}
+simulator_configs_to_state_dict = {}
+simulator_configs_to_state_dict.update({f: StateFieldInfo(('simulator_state', f,), None, identity_s_to_c, identity_c_to_s) for f in simulator_common_fields if f not in simulator_configs_to_state_dict})
+
+configs_to_state_dict = {StateType.AGENT: agent_configs_to_state_dict,
+                         StateType.OBJECT: object_configs_to_state_dict,
+                         StateType.SIMULATOR: simulator_configs_to_state_dict
+                         }
 
 
 def get_default_state(n_entities_dict):
-    n_agents = n_entities_dict[EntityType.AGENT]
-    n_objects = n_entities_dict[EntityType.OBJECT]
-    return State(nve_state=NVEState(position=RigidBody(center=jnp.zeros((n_agents + n_objects, 2)), orientation=jnp.zeros(n_agents + n_objects)),
+    n_agents = n_entities_dict[StateType.AGENT]
+    n_objects = n_entities_dict[StateType.OBJECT]
+    return State(simulator_state=SimulatorState(idx=jnp.array([0]), box_size=jnp.array([100.]),
+                                                n_agents=jnp.array([n_agents]), n_objects=jnp.array([n_objects]),
+                                                num_steps_lax=jnp.array([1]), dt=jnp.array([1.]), freq=jnp.array([1.]),
+                                                neighbor_radius=jnp.array([1.]),
+                                                to_jit= jnp.array([1]), use_fori_loop=jnp.array([0])),
+                 nve_state=NVEState(position=RigidBody(center=jnp.zeros((n_agents + n_objects, 2)), orientation=jnp.zeros(n_agents + n_objects)),
                                     momentum=None,
                                     force=RigidBody(center=jnp.zeros((n_agents + n_objects, 2)), orientation=jnp.zeros(n_agents + n_objects)),
                                     mass=RigidBody(center=jnp.zeros((n_agents + n_objects, 1)), orientation=jnp.zeros(n_agents + n_objects)),
@@ -119,7 +135,7 @@ def events_to_nve_data(events, state):
     for e in events:
         config = e.obj
         param = e.name
-        etype = config_to_etype[config.param.cls]
+        etype = config_to_stype[config.param.cls]
         state_field_info = configs_to_state_dict[etype][param]
         nested_field = state_field_info.nested_field
         idx = config.idx
@@ -193,20 +209,24 @@ def rec_set_dataclass(var, nested_field, row_idx, column_idx, value):
 
 
 def set_state_from_config_dict(config_dict, state=None):
-    n_entities_dict = {etype: len(config) for etype, config in config_dict.items()}
+    n_entities_dict = {stype: len(config) for stype, config in config_dict.items() if stype != StateType.SIMULATOR}
     state = state or get_default_state(n_entities_dict)
     e_idx = jnp.zeros(sum(n_entities_dict.values()), dtype=int)
-    for e_type, configs in config_dict.items():
+    for stype, configs in config_dict.items():
         params = configs[0].param_names()
         for p in params:
-            state_field_info = configs_to_state_dict[e_type][p]
+            state_field_info = configs_to_state_dict[stype][p]
             nve_idx = [c.idx for c in configs] if state_field_info.nested_field[0] == 'nve_state' else range(len(configs))
             change = rec_set_dataclass(state, state_field_info.nested_field, jnp.array(nve_idx), state_field_info.column_idx,
                                        jnp.array([state_field_info.config_to_state(getattr(c, p)) for c in configs]))
             state = state.set(**change)
-        e_idx.at[state.field(e_type).nve_idx].set(jnp.array(range(n_entities_dict[e_type])))
+        if stype.is_entity():
+            e_idx.at[state.field(stype).nve_idx].set(jnp.array(range(n_entities_dict[stype])))
+
+    # TODO: something weird with the to lines below, the second one will have no effect (would need state = state.set(.)), but if we fix it we get only zeros in nve_state.entitiy_idx. As it is it seems to get correct values though
     change = rec_set_dataclass(state, ('nve_state', 'entity_idx'), jnp.array(range(sum(n_entities_dict.values()))), None, e_idx)
     state.set(**change)
+
     return state
 
 
@@ -224,16 +244,17 @@ def set_state_from_agent_configs(agent_configs, state=None, params=None):
 
 def set_configs_from_state(state, config_dict=None):
     if config_dict is None:
-        config_dict = {etype: [] for etype in list(EntityType)}
-        for idx, etype_int in enumerate(state.nve_state.entity_type):
-            etype = EntityType(etype_int)
-            config_dict[etype].append(etype_to_config[etype](idx=idx))
-    for e_type in list(EntityType):  # [EntityType.AGENT, EntityType.OBJECT]:
-        for param, state_field_info in configs_to_state_dict[e_type].items():
+        config_dict = {stype: [] for stype in list(StateType)}
+        for idx, stype_int in enumerate(state.nve_state.entity_type):
+            stype = StateType(stype_int)
+            config_dict[stype].append(stype_to_config[stype](idx=idx))
+        config_dict[StateType.SIMULATOR].append(SimulatorConfig())
+    for stype in config_dict.keys():
+        for param, state_field_info in configs_to_state_dict[stype].items():
             value = state
             for f in state_field_info.nested_field:
                 value = getattr(value, f)
-            for config in config_dict[e_type]:
+            for config in config_dict[stype]:
                 t = type(getattr(config, param))
                 row_idx = state.row_idx(state_field_info.nested_field[0], config.idx)
                 if state_field_info.column_idx is None:

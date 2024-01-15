@@ -34,56 +34,10 @@ class SimulatorGRPCClient(SimulatorClient):
     def get_change_time(self):
         return self.stub.GetChangeTime(Empty()).time
 
-    def get_sim_config(self):
-        serialized = self.stub.GetSimulationConfigSerialized(Empty()).serialized
-        return SimulatorConfig(**SimulatorConfig.param.deserialize_parameters(serialized))
-
-    def get_recorded_changes(self):
-        changes = self.stub.GetRecordedChanges(simulator_pb2.Name(name=self.name))
-        d = json.loads(changes.serialized_dict)
-        if changes.has_entity_behaviors:
-            d['entity_behaviors'] = proto_to_ndarray(changes.entity_behaviors)
-        return d
-
-    def get_agent_config(self, idx):
-        print('get_agent_config')
-        serialized = self.stub.GetAgentConfigSerialized(simulator_pb2.AgentIdx(idx=idx)).serialized
-        return AgentConfig(**AgentConfig.param.deserialize_parameters(serialized))
-
-    def get_agent_configs(self):
-        serialized = self.stub.GetAgentConfigsSerialized(Empty()).serialized
-        return [AgentConfig(**AgentConfig.param.deserialize_parameters(s)) for s in serialized]
-
-    def set_simulation_config(self, simulation_config_dict):
-        print('set_simulation_config', simulation_config_dict)
-        serial_dict = json.dumps(simulation_config_dict)
-        serial_dict = simulator_pb2.SerializedDict(serialized=serial_dict)
-        name = simulator_pb2.Name(name=self.name)
-        dict_sender_name = simulator_pb2.SerializedDictSenderName(name=name, dict=serial_dict)
-        self.stub.SetSimulationConfig(dict_sender_name)
-
-    def set_agent_config(self, selected_agents, agent_config_dict):
-        print('set_agent_config', agent_config_dict)
-        serial_dict = json.dumps(agent_config_dict)
-        serial_dict = simulator_pb2.SerializedDict(serialized=serial_dict)
-        name = simulator_pb2.Name(name=self.name)
-        idx = simulator_pb2.AgentIdx(idx=selected_agents)
-        dict_idx_sender_name = simulator_pb2.SerializedDictIdxSenderName(name=name, dict=serial_dict, idx=idx)
-        self.stub.SetAgentConfig(dict_idx_sender_name)
-
-    def set_motors(self, selected_agents, motor_idx, value):
-        agent_idx = simulator_pb2.AgentIdx(idx=selected_agents)
-        motor_info = simulator_pb2.MotorInfo(agent_idx=agent_idx, motor_idx=motor_idx, value=value)
-        self.stub.SetMotors(motor_info)
-
     def set_state(self, nested_field, nve_idx, column_idx, value):
         state_change = simulator_pb2.StateChange(nested_field=nested_field, nve_idx=nve_idx, col_idx=column_idx,
                                                  value=ndarray_to_proto(value))
         self.stub.SetState(state_change)
-
-    def set_simulation_config_serialized(self, simulation_config):
-        serialized = simulation_config.param.serialize_parameters(subset=simulation_config.param_names())
-        self.stub.SetSimulationConfigSerialized(simulator_pb2.SimulationConfigSerialized(serialized=serialized))
 
     def get_state(self):
         state = self.stub.GetState(Empty())
@@ -101,62 +55,9 @@ class SimulatorGRPCClient(SimulatorClient):
         object_state = self.stub.GetObjectState(Empty())
         return proto_to_object_state(object_state)
 
-    def start_behavior(self, agent_idx, behavior_fn):
-        behavior = simulator_pb2.Behavior(agent_idx=agent_idx,
-                                          function=dill.dumps(behavior_fn))
-        self.stub.StartBehavior(behavior)
-
-    def agent_step(self, agent_idx, motor):
-        prox = self.stub.AgentStep(simulator_pb2.Motor(agent_idx=agent_idx, motor=motor))
-        return prox.prox
-
     def step(self):
         self.state = proto_to_state(self.stub.Step(Empty()))
         return self.state
 
-    def _start_streaming(self):
-        self.streaming_started = True
-        for state in self.stub.NVEStateStream(Empty()):
-            if not self.streaming_started:
-                print('Stop streaming')
-                break
-            self.state = state_proto_to_nve_state(state)
-    def start_streaming(self):
-        print('Start streaming')
-        threading.Thread(target=self._start_streaming).start()
-
-    def stop_streaming(self):
-        self.stub.StopNVEStream()
-
-
-    # def start_behavior(self, agent_idx, behavior_fn):
-    #     class BehaviorIterator:
-    #         def __init__(self, behavior_fn, init_prox):
-    #             self.behavior_fn = behavior_fn
-    #             self.prox = init_prox
-    #         def __iter__(self):
-    #             motor = simulator_pb2.Motor(agent_idx=agent_idx, motor=self.behavior_fn(self.prox))
-    #             return motor
-    #
-    #         def __next__(self):
-    #             motor = simulator_pb2.Motor(agent_idx=agent_idx, motor=self.behavior_fn(self.prox))
-    #             return motor
-    #
-    #     behavior_iterator = BehaviorIterator(behavior_fn, self.get_nve_state().prox[agent_idx])
-    #
-    #     for prox in self.stub.SensoryMotorStream(behavior_iterator):
-    #         behavior_iterator.prox = prox.prox
-
-    def add_agents(self, n_agents, agent_config):
-        d = agent_config.param.serialize_parameters(subset=agent_config.param_names())
-        # config = simulator_pb2.AgentConfig(**agent_config.to_dict())
-        input = simulator_pb2.AddAgentInput(n_agents=n_agents,
-                                            serialized_config=d)
-        return self.stub.AddAgents(input)
-
-    def remove_agents(self, agent_idx):
-        self.stub.RemoveAgents(simulator_pb2.AgentIdx(idx=agent_idx))
-
     def is_started(self):
         return self.stub.IsStarted(Empty()).is_started
-

@@ -4,11 +4,11 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from jax_md import space, partition
+from jax_md import space, partition, dataclasses
 
 from contextlib import contextmanager
 
-from vivarium.simulator.sim_computation import dynamics_rigid, EntityType
+from vivarium.simulator.sim_computation import dynamics_rigid, EntityType, StateType, SimulatorState
 from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig
 from vivarium.controllers import converters
 import vivarium.simulator.behaviors as behaviors
@@ -16,119 +16,27 @@ import vivarium.simulator.behaviors as behaviors
 import time
 import threading
 import math
-import param
-
-
-class EngineConfig(param.Parameterized):
-    simulation_config = param.ClassSelector(SimulatorConfig, instantiate=False)
-    agent_configs = param.List(None)
-    object_configs = param.List(None)
-
-    def __init__(self, behavior_bank, dynamics_fn, **params):
-        super().__init__(**params)
-        self.agent_configs = self.agent_configs or [AgentConfig(idx=i, x_position=np.random.rand() * self.simulation_config.box_size,
-                                                                y_position=np.random.rand() * self.simulation_config.box_size,
-                                                                orientation=np.random.rand() * 2. * np.pi)
-                                                    for i in range(self.simulation_config.n_agents)]
-        self.object_configs = self.object_configs or [ObjectConfig(idx=self.simulation_config.n_agents + i,
-                                                                   x_position=np.random.rand() * self.simulation_config.box_size,
-                                                                   y_position=np.random.rand() * self.simulation_config.box_size,
-                                                                   orientation=np.random.rand() * 2. * np.pi)
-                                                      for i in range(self.simulation_config.n_objects)]
-        self.simulation_config.param.watch(self.update_sim_parameters, ['num_steps_lax', 'freq', 'use_fori_loop'], onlychanged=True)
-        self.simulation_config.param.watch(self.update_space, ['box_size'], onlychanged=True, precedence=0)
-        self.simulation_config.param.watch(self.init_state, ['box_size', 'n_agents'], onlychanged=True, precedence=1)
-        self._neighbor_fn_watcher = self.simulation_config.param.watch(self.update_neighbor_fn, ['box_size', 'neighbor_radius'], onlychanged=True, precedence=2)
-        self.simulation_config.param.watch(self.allocate_neighbors, ['n_agents'], onlychanged=True, precedence=2)
-        self.simulation_config.param.watch(self.update_function_update, ['box_size'], onlychanged=True, precedence=2)
-        self._function_update_watcher = self.simulation_config.param.watch(self.update_function_update,
-                                           ['dt', 'map_dim', 'to_jit'],
-                                           onlychanged=True)
-        for config in self.agent_configs:
-            config.param.watch(self.update_state, list(config.to_dict().keys()), onlychanged=True)
-
-        self.simulator = Simulator(self.simulation_config.box_size, self.simulation_config.map_dim,
-                                   self.simulation_config.dt,  self.simulation_config.freq,
-                                   self.simulation_config.use_fori_loop, self.simulation_config.num_steps_lax,
-                                   self.simulation_config.neighbor_radius, self.simulation_config.to_jit,
-                                   behavior_bank, dynamics_fn,
-                                   converters.set_state_from_config_dict({EntityType.AGENT: self.agent_configs,
-                                                                     EntityType.OBJECT: self.object_configs}))
-
-    def update_sim_parameters(self, event):
-        setattr(self.simulator, event.name, event.new)
-
-    def update_space(self, event):
-        print('update_space', event.name)
-        assert event.name == 'box_size'
-        for config in self.agent_configs:
-            for pos in ['x_position', 'y_position']:
-                if getattr(config, pos) >= self.simulation_config.box_size:
-                    setattr(config, pos, getattr(config, pos) % self.simulation_config.box_size)
-
-        self.simulator.update_space(box_size=event.new)
-
-
-    def update_neighbor_fn(self, *events):
-        print('_update_neighbor_fn', [e.name for e in events])
-        kwargs = {name: getattr(self.simulation_config, name) for name in self._neighbor_fn_watcher.parameter_names}
-        events_kwargs = {e.name: e.new for e in events}
-        kwargs.update(events_kwargs)
-        self.simulator.update_neighbor_fn(**kwargs)
-        self.allocate_neighbors()
-
-    def allocate_neighbors(self, *events):
-        print('allocate_neighbors')
-        # if self.simulator is not None:
-        self.simulator.allocate_neighbors()
-
-    def init_state(self, *events):
-        print('init_state')
-        state = converters.set_state_from_config_dict({EntityType.AGENT: self.agent_configs,
-                                                  EntityType.OBJECT: self.object_configs})
-        self.simulator.init_state(state)
-
-    def update_state(self, *events):
-        print('update_state')
-        self.simulator.state = converters.set_state_from_agent_configs([e.obj for e in events], self.simulator.state,
-                                                                      params=[e.name for e in events])
-
-    def update_function_update(self, *events):
-        print("_update_function_update", [e.name for e in events])
-        kwargs = {name: getattr(self.simulation_config, name) for name in self._function_update_watcher.parameter_names}
-        events_kwargs = {e.name: e.new for e in events}
-        kwargs.update(events_kwargs)
-
-        self.simulator.update_function_update(**kwargs)
 
 
 class Simulator:
-    def __init__(self, box_size, map_dim, dt, freq, use_fori_loop, num_steps_lax, neighbor_radius, to_jit,
-                 behavior_bank, dynamics_fn,
-                 state):
+    def __init__(self, state, behavior_bank, dynamics_fn):
 
+        self.state = state
         self.behavior_bank = behavior_bank
-
-        # TODO: remove? (added for get_sim_config())
-        self.box_size = box_size
-        self.map_dim = map_dim
-        self.dt = dt
-        self.neighbor_radius = neighbor_radius
-        self.to_jit = to_jit
-
-        self.freq = freq
-        self.use_fori_loop = use_fori_loop
-        self.num_steps_lax = num_steps_lax
         self.dynamics_fn = dynamics_fn
+
+        all_attrs = [f.name for f in dataclasses.fields(SimulatorState)]
+        for attr in all_attrs:
+            self.update_attr(attr, SimulatorState.get_type(attr))
 
         self._is_started = False
         self._to_stop = False
         self.key = jax.random.PRNGKey(0)
 
-        self.update_space(box_size)
-        self.update_function_update(map_dim, dt, to_jit)
+        self.update_space(self.box_size)
+        self.update_function_update()
         self.init_state(state)
-        self.update_neighbor_fn(box_size, neighbor_radius)
+        self.update_neighbor_fn(self.box_size, self.neighbor_radius)
         self.allocate_neighbors()
 
         self._subscribers = []
@@ -153,14 +61,14 @@ class Simulator:
         print('Run starts')
         loop_count = 0
         while loop_count < num_loops:
-            if self.freq is not None:
-                time.sleep(1. / self.freq)
             if self._to_stop:
                 self._to_stop = False
                 break
+            if float(self.freq) > 0.:
+                time.sleep(1. / float(self.freq))
             new_state = self.state
             neighbors = self.neighbors
-            if self.use_fori_loop:
+            if self.state.simulator_state.use_fori_loop:
                 new_state, neighbors = lax.fori_loop(0, self.num_steps_lax, self.update_fn,
                                                     (new_state, neighbors))
             else:
@@ -183,14 +91,26 @@ class Simulator:
         self._is_started = False
         print('Run stops')
 
-    # def set_motors(self, agent_idx, motor_idx, value):
-    #     self.state = self.state.set(motor=self.state.motor.at[agent_idx, motor_idx].set(value))
-
     def set_state(self, nested_field, nve_idx, column_idx, value):
+        print('set_state', nested_field, nve_idx, column_idx, value)
         row_idx = self.state.row_idx(nested_field[0], jnp.array(nve_idx))
         col_idx = None if column_idx is None else jnp.array(column_idx)
         change = converters.rec_set_dataclass(self.state, nested_field, row_idx, col_idx, value)
         self.state = self.state.set(**change)
+
+        if nested_field[0] == 'simulator_state':
+            self.update_attr(nested_field[1], SimulatorState.get_type(nested_field[1]))
+
+        if nested_field == ('simulator_state', 'box_size'):
+            self.update_space(self.box_size)
+
+        if nested_field == ('simulator_state', 'box_size') or nested_field == ('simulator_state', 'neighbor_radius'):
+            self.update_neighbor_fn(box_size=self.box_size,
+                                    neighbor_radius=self.neighbor_radius)
+
+        if nested_field == ('simulator_state', 'box_size') or nested_field == ('simulator_state', 'dt') or \
+                nested_field == ('simulator_state', 'to_jit'):
+            self.update_function_update()
 
     def start(self):
         self.run(threaded=True)
@@ -219,29 +139,35 @@ class Simulator:
         finally:
             self.run(threaded=True)
 
+    def update_attr(self, attr, type_):
+        print('update_attr')
+        setattr(self, attr, type_(getattr(self.state.simulator_state, attr)[0]))
+
     def update_space(self, box_size):
+        print('update_space')
         self.displacement, self.shift = space.periodic(box_size)
 
-    def update_function_update(self, map_dim, dt, to_jit, **kwargs):
-        self.init_fn, self.step_fn = self.dynamics_fn(self.displacement, self.shift,
-                                                      map_dim, dt,
-                                                      self.behavior_bank)
+    def update_function_update(self):
+        print('update_function_update')
+        self.init_fn, self.step_fn = self.dynamics_fn(self.displacement, self.shift, self.behavior_bank)
+
         def update_fn(_, state_and_neighbors):
             state, neighs = state_and_neighbors
             neighs = neighs.update(state.nve_state.position.center)
             return (self.step_fn(state=state, neighbor=neighs, agent_neighs_idx=self.agent_neighs_idx),
                     neighs)
 
-        if to_jit:
+        if self.to_jit:
             self.update_fn = jit(update_fn)
         else:
             self.update_fn = update_fn
 
     def init_state(self, state):
+        print('init_state')
         self.state = self.init_fn(state, self.key)
 
     def update_neighbor_fn(self, box_size, neighbor_radius):
-
+        print('update_neighbor_fn')
         self.neighbor_fn = partition.neighbor_list(self.displacement, box_size,
                                                    r_cutoff=neighbor_radius,
                                                    dr_threshold=10.,
@@ -250,22 +176,12 @@ class Simulator:
                                                    format=partition.Sparse)
 
     def allocate_neighbors(self, position=None):
+        print('allocate_neighbors')
         position = self.state.nve_state.position.center if position is None else position
         self.neighbors = self.neighbor_fn.allocate(position)
         mask = self.state.nve_state.entity_type[self.neighbors.idx[0]] == EntityType.AGENT.value
         self.agent_neighs_idx = self.neighbors.idx[:, mask]
         return self.neighbors
-
-    # TODO: remove once Simulator will decoupled from Param configs
-    def get_sim_config(self):
-        return SimulatorConfig(box_size=self.box_size, map_dim=self.map_dim,
-                               n_agents=self.state.agent_state.nve_idx.shape[0], n_objects=self.state.object_state.nve_idx.shape[0],
-                               num_steps_lax=self.num_steps_lax, dt=self.dt, freq=self.freq,
-                               neighbor_radius=self.neighbor_radius, to_jit=self.to_jit,
-                               use_fori_loop=self.use_fori_loop)
-    def set_simulation_config(self, d):
-        for k, v in d.items():
-            setattr(self, k, v)
 
     def get_change_time(self):
         return 0
@@ -276,11 +192,27 @@ class Simulator:
 
 if __name__ == "__main__":
 
-    simulation_config = SimulatorConfig(to_jit=True)
+    simulator_config = SimulatorConfig(to_jit=True)
 
-    engine_config = EngineConfig(dynamics_fn=dynamics_rigid, behavior_bank=behaviors.behavior_bank,
-                                 simulation_config=simulation_config)
+    agent_configs = [AgentConfig(idx=i,
+                                 x_position=np.random.rand() * simulator_config.box_size,
+                                 y_position=np.random.rand() * simulator_config.box_size,
+                                 orientation=np.random.rand() * 2. * np.pi)
+                     for i in range(simulator_config.n_agents)]
 
-    engine_config.simulator.run()
+    object_configs = [ObjectConfig(idx=simulator_config.n_agents + i,
+                                   x_position=np.random.rand() * simulator_config.box_size,
+                                   y_position=np.random.rand() * simulator_config.box_size,
+                                   orientation=np.random.rand() * 2. * np.pi)
+                      for i in range(simulator_config.n_objects)]
+
+    state = converters.set_state_from_config_dict({StateType.AGENT: agent_configs,
+                                                   StateType.OBJECT: object_configs,
+                                                   StateType.SIMULATOR: [simulator_config]
+                                                   })
+
+    simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
+
+    simulator.run(threaded=False, num_loops=10)
 
 

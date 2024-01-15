@@ -4,7 +4,7 @@ import threading
 import numpy as np
 
 from vivarium.controllers.simulator_controller import SimulatorController
-from vivarium.simulator.sim_computation import EntityType
+from vivarium.simulator.sim_computation import StateType, EntityType
 
 
 class Entity:
@@ -90,10 +90,10 @@ class NotebookController(SimulatorController):
         super().__init__(start_timer=False, **params)
         self.all_entities = []
         for etype in list(EntityType):
-            setattr(self, f'{etype.name.lower()}s', [etype_to_class[etype](c) for c in self.entity_configs[etype]])
+            setattr(self, f'{etype.name.lower()}s', [etype_to_class[etype](c) for c in self.configs[etype.to_state_type()]])
             self.all_entities.extend(getattr(self, f'{etype.name.lower()}s'))
         self.from_stream = True
-        self.simulation_config.freq = None
+        self.configs[StateType.SIMULATOR][0].freq = -1
         self._is_running = False
 
     def run(self, threaded=False, num_steps=math.inf):
@@ -114,7 +114,7 @@ class NotebookController(SimulatorController):
                 for ag in self.agents:
                     ag.behave()
             self.state = self.client.step()
-            self.pull_entity_configs()
+            self.pull_configs()
 
             t += 1
         self._is_running = False
@@ -125,21 +125,11 @@ class NotebookController(SimulatorController):
 
 if __name__ == "__main__":
 
-    from vivarium.controllers.config import SimulatorConfig
-    from vivarium.simulator.simulator import EngineConfig
-    from vivarium.simulator.sim_computation import dynamics_rigid
-    from vivarium.simulator import behaviors
-
-    simulation_config = SimulatorConfig(to_jit=True)
-
-    engine_config = EngineConfig(dynamics_fn=dynamics_rigid, behavior_bank=behaviors.behavior_bank,
-                                 simulation_config=simulation_config)
-
-    controller = NotebookController(client=engine_config.simulator)
-    c = controller.entity_configs[EntityType.AGENT][0]
+    controller = NotebookController()
+    c = controller.configs[StateType.AGENT][0]
     with controller.batch_set_state():
-        for etype in list(EntityType):
-            for c in controller.entity_configs[etype]:
+        for stype in list(StateType):
+            for c in controller.configs[stype]:
                 for p in c.param_names():
                     if p != 'idx':
                         c.param.trigger(p)
@@ -150,8 +140,8 @@ if __name__ == "__main__":
     objs = [controller.objects[0], controller.objects[1]]
     with controller.batch_set_state():
         for obj in objs:
-            obj.x_position = random() * controller.simulation_config.box_size
-            obj.y_position = random() * controller.simulation_config.box_size
+            obj.x_position = random() * controller.configs[StateType.SIMULATOR][0].box_size
+            obj.y_position = random() * controller.configs[StateType.SIMULATOR][0].box_size
             obj.color = 'grey'
             obj.orientation = random() * 2. * pi
 
