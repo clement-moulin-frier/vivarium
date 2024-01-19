@@ -27,10 +27,6 @@ class PanelController(SimulatorController):
         for etype, selected in self.selected_entities.items():
             selected.param.watch(self.pull_selected_configs, ['selection'], onlychanged=True, precedence=1)
 
-    @property
-    def simulator_config(self):
-        return self.configs[StateType.SIMULATOR][0]
-
     def watch_selected_configs(self):
         watchers = {etype: config.param.watch(self.push_selected_to_state, config.param_names(), onlychanged=True)
                     for etype, config in self.selected_configs.items()}

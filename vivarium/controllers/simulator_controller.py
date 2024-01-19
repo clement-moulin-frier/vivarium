@@ -37,6 +37,10 @@ class SimulatorController(param.Parameterized):
                     for etype, configs in self.configs.items()}
         return watchers
 
+    @property
+    def simulator_config(self):
+        return self.configs[StateType.SIMULATOR][0]
+
     def push_state(self, *events):
         if self._in_batch:
             self._event_list.extend(events)
