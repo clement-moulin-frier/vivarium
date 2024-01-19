@@ -230,18 +230,6 @@ def set_state_from_config_dict(config_dict, state=None):
     return state
 
 
-def set_state_from_agent_configs(agent_configs, state=None, params=None):
-    state = state or get_default_state(len(agent_configs))
-    params = params or agent_configs[0].param_names()
-    for p in params:
-        state_field_info = agent_configs_to_state_dict[p]
-        agent_idx = [a.idx for a in agent_configs] if state_field_info.nested_field[0] == 'nve_state' else range(len(agent_configs))
-        change = rec_set_dataclass(state, state_field_info.nested_field, jnp.array(agent_idx), state_field_info.column_idx,
-                                   jnp.array([state_field_info.config_to_state(getattr(c, p)) for c in agent_configs]))
-        state = state.set(**change)
-    return state
-
-
 def set_configs_from_state(state, config_dict=None):
     if config_dict is None:
         config_dict = {stype: [] for stype in list(StateType)}
@@ -264,41 +252,3 @@ def set_configs_from_state(state, config_dict=None):
                 value_to_set = state_field_info.state_to_config(value_to_set, t)
                 config.param.update(**{param: value_to_set})
     return config_dict
-
-
-def set_agent_configs_from_state(state, agent_configs, first_nested_fields=['position', 'prox', 'motor', 'behavior',
-                                                                               'wheel_diameter', 'base_length',
-                                                                               'speed_mul', 'theta_mul',
-                                                                               'proxs_dist_max', 'proxs_cos_min',
-                                                                               'entity_type']):
-    for field in first_nested_fields:
-        for param, state_field_info in agent_configs_to_state_dict.items():
-            if field == state_field_info.nested_field[0]:
-                value = state
-                for f in state_field_info.nested_field:
-                    value = getattr(value, f)
-                for config in agent_configs:
-                    t = type(getattr(config, param))
-                    if state_field_info.column_idx is None:
-                        value_to_set = value[config.idx]
-                    else:
-                        value_to_set = value[config.idx, state_field_info.column_idx]
-                    value_to_set = state_field_info.state_to_config(value_to_set, t)
-                    config.param.update(**{param: value_to_set})
-
-
-def configs_to_array_dict(config_dict, fields=None):
-    state = set_state_from_config_dict(config_dict)
-    if fields is None:
-        fields = []
-        for e_type, configs in config_dict.items():
-            fields.extend(state_fields_dict[e_type])
-    set_state_from_agent_configs(con)
-    return {f: getattr(state, f) for f in fields}
-
-
-######## LEGACY code ######
-
-def config_attribute_as_array(configs, attr):
-    dtype = type(getattr(configs[0], attr))
-    return jnp.array([f32(getattr(config, attr)) for config in configs], dtype=dtype)
