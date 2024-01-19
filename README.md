@@ -22,7 +22,7 @@
   - And launch the web interface from another terminal:
     - `panel serve vivarium/interface/panel_app.py --autoreload`
     - Once this command will have completed, it will output a URL looking like `http://localhost:5006/panel_app`, that you can open in your browser.
-  - You will find explanations of the web interface and how to control the simulator programmatically in the Jupyter Notebook `vivarium/notebooks/notebook_controller.ipynb`
+  - You will find explanations of the web interface and how to control the simulator programmatically in the Jupyter Notebook `vivarium/notebooks/quickstart_tutorial.ipynb`
 
 - grpc compilation command line (normally only needed if modifying the .proto file for communication between server and controllers, e.g. the web interface):
 ```
