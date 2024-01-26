@@ -4,15 +4,11 @@ import grpc
 from vivarium.simulator.grpc_server import simulator_pb2_grpc
 import vivarium.simulator.grpc_server.simulator_pb2 as simulator_pb2
 
-from vivarium.controllers.config import SimulatorConfig, AgentConfig
 from vivarium.simulator.grpc_server.converters import proto_to_state, proto_to_nve_state, proto_to_agent_state, \
     proto_to_object_state
 from vivarium.simulator.grpc_server.simulator_client_abc import SimulatorClient
 
-from numproto.numproto import ndarray_to_proto, proto_to_ndarray
-
-# import dill
-import threading
+from numproto.numproto import ndarray_to_proto
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
