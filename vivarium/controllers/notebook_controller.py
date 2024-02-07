@@ -10,7 +10,6 @@ from vivarium.simulator.sim_computation import StateType, EntityType
 class Entity:
     def __init__(self, config):
         self.config = config
-        self.subscribers = []
         self._routines = {}
 
     def __getattr__(self, item):
@@ -24,9 +23,6 @@ class Entity:
             return setattr(self.config, item, val)
         else:
             return super().__setattr__(item, val)
-
-    def subscribe(self, obj):
-        self.subscribers.append(obj)
 
     def attach_routine(self, routine_fn, name=None):
         self._routines[name or routine_fn.__name__] = routine_fn
@@ -87,7 +83,7 @@ etype_to_class = {EntityType.AGENT: Agent, EntityType.OBJECT: Object}
 class NotebookController(SimulatorController):
 
     def __init__(self, **params):
-        super().__init__(start_timer=False, **params)
+        super().__init__(**params)
         self.all_entities = []
         for etype in list(EntityType):
             setattr(self, f'{etype.name.lower()}s', [etype_to_class[etype](c) for c in self.configs[etype.to_state_type()]])

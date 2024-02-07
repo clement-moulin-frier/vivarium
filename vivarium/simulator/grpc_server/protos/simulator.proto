@@ -40,12 +40,6 @@ service SimulatorServer {
 
   rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 
-  rpc GetChangeTime(google.protobuf.Empty) returns (Time) {}
-
-}
-
-message Time {
-  int32 time = 1;
 }
 
 message AgentIdx {

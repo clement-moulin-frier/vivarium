@@ -39,15 +39,6 @@ class Simulator:
         self.update_neighbor_fn(self.box_size, self.neighbor_radius)
         self.allocate_neighbors()
 
-        self._subscribers = []
-
-    def subscribe(self, obj):
-        self._subscribers.append(obj)
-
-    def notify_subscribers(self, *args, **kwargs):
-        for s in self._subscribers:
-            s.notify(*args, **kwargs)
-
     def run(self, threaded=False, num_loops=math.inf):
         if self._is_started:
             raise Exception("Simulator is already started")
@@ -87,7 +78,6 @@ class Simulator:
             self.neighbors = neighbors
             # print(self.state)
             loop_count += 1
-            self.notify_subscribers(simulation_time=loop_count)
         self._is_started = False
         print('Run stops')
 
