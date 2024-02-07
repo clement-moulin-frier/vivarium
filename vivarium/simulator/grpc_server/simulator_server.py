@@ -40,19 +40,6 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         self._change_time = 0
         self._simulation_time = 0
         self._lock = Lock()
-        self.simulator.subscribe(self)
-
-    def notify(self, simulation_time):
-        self._simulation_time = simulation_time
-
-    def _record_change(self, name, **kwargs):
-        for k in self.recorded_change_dict.keys():
-            if k != name:
-                self.recorded_change_dict[k].update(kwargs)
-        self._change_time += 1
-
-    def GetChangeTime(self, request, context):
-        return simulator_pb2.Time(time=self._change_time)
 
     def GetState(self, request, context):
         state = self.simulator.state

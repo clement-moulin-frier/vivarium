@@ -6,12 +6,6 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
-class Time(_message.Message):
-    __slots__ = ["time"]
-    TIME_FIELD_NUMBER: _ClassVar[int]
-    time: int
-    def __init__(self, time: _Optional[int] = ...) -> None: ...
-
 class AgentIdx(_message.Message):
     __slots__ = ["idx"]
     IDX_FIELD_NUMBER: _ClassVar[int]
