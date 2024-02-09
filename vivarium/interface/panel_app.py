@@ -91,35 +91,40 @@ TOOLS = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
 
 p = figure(tools=TOOLS)
 p.axis.major_label_text_font_size = "24px"
-hover = HoverTool(tooltips=None, mode="vline")
+hover = HoverTool(tooltips=None)
 p.add_tools(hover)
 p.x_range = Range1d(0, simulator.simulator_config.box_size)
 p.y_range = Range1d(0, simulator.simulator_config.box_size)
 
-button = pn.widgets.Button(name="Stop" if simulator.is_started() else "Start")
+toggle = pn.widgets.Toggle(name="Stop" if simulator.is_started() else "Start")
 
 def callback(event):
     if simulator.is_started():
         simulator.stop()
-        button.name = "Start"
+        toggle.name = "Start"
     else:
         simulator.start()
-        button.name = "Stop"
+        toggle.name = "Stop"
 
-
-button.on_click(callback)
+toggle.param.watch(callback, "value")
 
 draw_tool = PointDrawTool(renderers=[entity_managers[etype].plot(p) for etype in entity_types])
 p.add_tools(draw_tool)
-p.toolbar.active_tap = draw_tool
+# p.toolbar.active_tap = draw_tool
 
 
 # https://panel.holoviz.org/how_to/param/custom.html
 sim_panel = pn.Param(simulator.param)
 
-row = pn.Row(pn.Column(button, p, simulator.simulator_config),
-             *[pn.Column(simulator.selected_entities[etype], simulator.selected_configs[etype])
-               for etype in EntityType])
+EntityToggle = pn.widgets.ToggleGroup(name="EntityToggle", options=[t for t in entity_types])
+
+# TODO add callback to set columns visibility
+# EntityToggle.param.watch()
+
+entity_columns = [pn.Column(simulator.selected_entities[etype], simulator.selected_configs[etype]) for etype in EntityType]
+
+row = pn.Row(pn.Column(toggle, p, simulator.simulator_config),
+             *entity_columns, EntityToggle)
 
 row.servable()
 
@@ -134,5 +139,3 @@ def update_plot():
 
 
 pcb_plot = pn.state.add_periodic_callback(update_plot, 10)
-
-
