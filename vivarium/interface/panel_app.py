@@ -116,15 +116,29 @@ p.add_tools(draw_tool)
 # https://panel.holoviz.org/how_to/param/custom.html
 sim_panel = pn.Param(simulator.param)
 
-EntityToggle = pn.widgets.ToggleGroup(name="EntityToggle", options=[t for t in entity_types])
+# Selector for entity attributes
+entity_columns = [pn.Column(simulator.selected_entities[etype], simulator.selected_configs[etype], visible=False) for etype in EntityType]
 
-# TODO add callback to set columns visibility
-# EntityToggle.param.watch()
+entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=[t.name for t in entity_types])
 
-entity_columns = [pn.Column(simulator.selected_entities[etype], simulator.selected_configs[etype]) for etype in EntityType]
+def toggle_callback(event):
+    for i, t in enumerate(entity_types):
+        entity_columns[i].visible = (t.name in event.new)
 
-row = pn.Row(pn.Column(toggle, p, simulator.simulator_config),
-             *entity_columns, EntityToggle)
+entity_toggle.param.watch(toggle_callback, "value")
+
+# Switch for simulator settings
+settings_pane = pn.panel(simulator.simulator_config, visible=False)
+
+settings_switch = pn.widgets.Switch(name='Simulator settings')
+
+def settings_callback(event):
+    settings_pane.visible = event.new
+
+settings_switch.param.watch(settings_callback, "value")
+
+row = pn.Row(pn.Column(toggle, p, pn.Row("Show sim settings", settings_switch), settings_pane),
+             pn.Column(pn.Row("### Show attributes",entity_toggle), pn.Row(*entity_columns)))
 
 row.servable()
 
