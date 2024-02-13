@@ -155,3 +155,4 @@ env_vivarium/
 vivarium/.DS_Store
 .DS_Store
 profiler_stats
+.vscode

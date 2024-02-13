@@ -15,7 +15,6 @@ def normal(array):
     normals[:, 1] = np.sin(array)
     return normals
 
-
 class EntityManager:
     def __init__(self, config, selected, etype, state):
         self.config = config
@@ -37,7 +36,7 @@ class EntityManager:
         if len(self.cds.selected.indices) > 0 and self.cds.selected.indices != self.selected.selection:
             self.selected.selection = self.cds.selected.indices
 
-    def plot(self, figure):
+    def plot(self, figure:figure):
         raise NotImplementedError()
 
 
@@ -48,16 +47,54 @@ class AgentManager(EntityManager):
         thetas = state.position(self.etype).orientation
         radii = state.diameter(self.etype) / 2.
         colors = state.agent_state.color  # ["#%02x%02x%02x" % (int(r), int(g), 150) for r, g in zip(50+2*x, 30+2*y)]
+        motors = state.agent_state.motor
+        sensors = state.agent_state.prox
+        max_sensor = state.agent_state.proxs_dist_max
+        angle_min = np.arccos(state.agent_state.proxs_cos_min)
+        
+        # line direction
+        angles = np.array(thetas)
+        normals = normal(angles)
 
-        normals = normal(np.array(thetas))
+        # wheels directions
+        normals_rw = normal(angles+np.pi/2)
+        normals_lw = normal(angles-np.pi/2)
+
+        # sensors directions
+        normals_rs = normal(angles+np.pi/4)
+        normals_ls = normal(angles-np.pi/4)
+
+        r_wheel_x = [xx + r * n[0] for xx, n, r in zip(x, normals_rw, radii)]
+        r_wheel_y = [yy + r * n[1] for yy, n, r in zip(y, normals_rw, radii)]
+        l_wheel_x = [xx + r * n[0] for xx, n, r in zip(x, normals_lw, radii)]
+        l_wheel_y = [yy + r * n[1] for yy, n, r in zip(y, normals_lw, radii)]
+
+        r_sensor_x = [xx + r * n[0] for xx, n, r in zip(x, normals_rs, radii)]
+        r_sensor_y = [yy + r * n[1] for yy, n, r in zip(y, normals_rs, radii)]
+        l_sensor_x = [xx + r * n[0] for xx, n, r in zip(x, normals_ls, radii)]
+        l_sensor_y = [yy + r * n[1] for yy, n, r in zip(y, normals_ls, radii)]
+        max_angle_r = thetas - (np.pi/4) + angle_min
+        max_angle_l = thetas + (np.pi/4) - angle_min
 
         orientation_lines_x = [[xx, xx + r * n[0]] for xx, n, r in zip(x, normals, radii)]
         orientation_lines_y = [[yy, yy + r * n[1]] for yy, n, r in zip(y, normals, radii)]
 
-        return dict(x=x, y=y, ox=orientation_lines_x, oy=orientation_lines_y, r=radii, fc=colors)
+        return dict(x=x, y=y, ox=orientation_lines_x, oy=orientation_lines_y, r=radii, fc=colors, angle=thetas, sr=0.2*radii,
+                    rwx=r_wheel_x, rwy=r_wheel_y, lwx=l_wheel_x, lwy=l_wheel_y, rwi=motors[:,0], lwi=motors[:,1],
+                    rsx=r_sensor_x, rsy=r_sensor_y, lsx=l_sensor_x, lsy=l_sensor_y, rsi=sensors[:,0], lsi=sensors[:,1], mar=max_angle_r, mal=max_angle_l, mr=max_sensor)
 
-    def plot(self, figure):
+    def plot(self, figure:figure):
+        # direction lines
         figure.multi_line('ox', 'oy', source=self.cds, color='black', line_width=1)
+        # wheels
+        figure.rect('rwx', 'rwy', width=3, height=1, angle='angle', fill_color='black', fill_alpha='rwi', source=self.cds, line_color=None)
+        figure.rect('lwx', 'lwy', width=3, height=1, angle='angle', fill_color='black', fill_alpha='lwi', source=self.cds, line_color=None)
+        # sensors
+        figure.circle('rsx', 'rsy', radius='sr', fill_color='red', fill_alpha='rsi', line_color=None, source=self.cds)
+        figure.circle('lsx', 'lsy', radius='sr', fill_color='red', fill_alpha='lsi', line_color=None, source=self.cds)
+        # TODO add real angle
+        # figure.wedge('x', 'y', radius='mr', start_angle='angle', end_angle='mar', color="firebrick", alpha=0.1, direction="anticlock", line_color=None, source=self.cds)
+        # figure.wedge('x', 'y', radius='mr', start_angle='angle', end_angle='mal', color="firebrick", alpha=0.1, direction="clock", line_color=None, source=self.cds)
         return figure.circle('x', 'y', radius='r', fill_color='fc', fill_alpha=0.6, line_color=None,
                              hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=self.cds)
 
@@ -71,7 +108,7 @@ class ObjectManager(EntityManager):
 
         return dict(x=x, y=y, width=d, height=d, angle=thetas, fill_color=colors)
 
-    def plot(self, figure):
+    def plot(self, figure:figure):
         return figure.rect(x='x', y='y', width='width', height='height', angle='angle', fill_color='fill_color', fill_alpha=0.6, line_color=None,
                            hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=self.cds)
 
@@ -96,7 +133,7 @@ p.add_tools(hover)
 p.x_range = Range1d(0, simulator.simulator_config.box_size)
 p.y_range = Range1d(0, simulator.simulator_config.box_size)
 
-toggle = pn.widgets.Toggle(name="Stop" if simulator.is_started() else "Start")
+toggle = pn.widgets.Toggle(**({"name":"Stop", "value":True} if simulator.is_started() else {"name":"Start", "value":False}))
 
 def callback(event):
     if simulator.is_started():
