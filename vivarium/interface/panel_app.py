@@ -8,6 +8,8 @@ import panel as pn
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, PointDrawTool, HoverTool, Range1d
 
+pn.extension()
+
 
 def normal(array):
     normals = np.zeros((array.shape[0], 2))
@@ -73,8 +75,8 @@ class AgentManager(EntityManager):
         r_sensor_y = [yy + r * n[1] for yy, n, r in zip(y, normals_rs, radii)]
         l_sensor_x = [xx + r * n[0] for xx, n, r in zip(x, normals_ls, radii)]
         l_sensor_y = [yy + r * n[1] for yy, n, r in zip(y, normals_ls, radii)]
-        max_angle_r = thetas - (np.pi/4) + angle_min
-        max_angle_l = thetas + (np.pi/4) - angle_min
+        max_angle_r = thetas - angle_min
+        max_angle_l = thetas + angle_min
 
         orientation_lines_x = [[xx, xx + r * n[0]] for xx, n, r in zip(x, normals, radii)]
         orientation_lines_y = [[yy, yy + r * n[1]] for yy, n, r in zip(y, normals, radii)]
@@ -84,19 +86,20 @@ class AgentManager(EntityManager):
                     rsx=r_sensor_x, rsy=r_sensor_y, lsx=l_sensor_x, lsy=l_sensor_y, rsi=sensors[:,0], lsi=sensors[:,1], mar=max_angle_r, mal=max_angle_l, mr=max_sensor)
 
     def plot(self, figure:figure):
-        # direction lines
-        figure.multi_line('ox', 'oy', source=self.cds, color='black', line_width=1)
         # wheels
         figure.rect('rwx', 'rwy', width=3, height=1, angle='angle', fill_color='black', fill_alpha='rwi', source=self.cds, line_color=None)
         figure.rect('lwx', 'lwy', width=3, height=1, angle='angle', fill_color='black', fill_alpha='lwi', source=self.cds, line_color=None)
         # sensors
         figure.circle('rsx', 'rsy', radius='sr', fill_color='red', fill_alpha='rsi', line_color=None, source=self.cds)
         figure.circle('lsx', 'lsy', radius='sr', fill_color='red', fill_alpha='lsi', line_color=None, source=self.cds)
-        # TODO add real angle
-        # figure.wedge('x', 'y', radius='mr', start_angle='angle', end_angle='mar', color="firebrick", alpha=0.1, direction="anticlock", line_color=None, source=self.cds)
-        # figure.wedge('x', 'y', radius='mr', start_angle='angle', end_angle='mal', color="firebrick", alpha=0.1, direction="clock", line_color=None, source=self.cds)
+        figure.wedge('x', 'y', radius='mr', start_angle='angle', end_angle='mar', color="firebrick", alpha=0.1, direction="clock", source=self.cds)
+        figure.wedge('x', 'y', radius='mr', start_angle='angle', end_angle='mal', color="firebrick", alpha=0.1, direction="anticlock", source=self.cds)
+        # direction lines
+        figure.multi_line('ox', 'oy', source=self.cds, color='black', line_width=1)
+        # Agent
         return figure.circle('x', 'y', radius='r', fill_color='fc', fill_alpha=0.6, line_color=None,
-                             hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=self.cds)
+                            hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=self.cds)
+        
 
 class ObjectManager(EntityManager):
     def get_cds_data(self, state):
@@ -112,8 +115,6 @@ class ObjectManager(EntityManager):
         return figure.rect(x='x', y='y', width='width', height='height', angle='angle', fill_color='fill_color', fill_alpha=0.6, line_color=None,
                            hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=self.cds)
 
-
-pn.extension()
 
 simulator = PanelController(client=SimulatorGRPCClient())
 state = simulator.state
@@ -133,17 +134,17 @@ p.add_tools(hover)
 p.x_range = Range1d(0, simulator.simulator_config.box_size)
 p.y_range = Range1d(0, simulator.simulator_config.box_size)
 
-toggle = pn.widgets.Toggle(**({"name":"Stop", "value":True} if simulator.is_started() else {"name":"Start", "value":False}))
+start_toggle = pn.widgets.Toggle(**({"name":"Stop", "value":True} if simulator.is_started() else {"name":"Start", "value":False}))
 
 def callback(event):
     if simulator.is_started():
         simulator.stop()
-        toggle.name = "Start"
+        start_toggle.name = "Start"
     else:
         simulator.start()
-        toggle.name = "Stop"
+        start_toggle.name = "Stop"
 
-toggle.param.watch(callback, "value")
+start_toggle.param.watch(callback, "value")
 
 draw_tool = PointDrawTool(renderers=[entity_managers[etype].plot(p) for etype in entity_types])
 p.add_tools(draw_tool)
@@ -153,8 +154,12 @@ p.add_tools(draw_tool)
 # https://panel.holoviz.org/how_to/param/custom.html
 sim_panel = pn.Param(simulator.param)
 
+# Selector for displays
+display_checks = pn.widgets.CheckBoxGroup(
+    name='Displays checkbox', value=['Entity', 'Wheels', 'Sensors', 'Sensors range'], options=['Entity', 'Wheels', 'Sensors', 'Sensors range'], inline=True)
+
 # Selector for entity attributes
-entity_columns = [pn.Column(simulator.selected_entities[etype], simulator.selected_configs[etype], visible=False) for etype in EntityType]
+entity_columns = [pn.Column(simulator.selected_entities[etype], display_checks, simulator.selected_configs[etype], visible=False) for etype in EntityType]
 
 entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=[t.name for t in entity_types])
 
@@ -174,10 +179,18 @@ def settings_callback(event):
 
 settings_switch.param.watch(settings_callback, "value")
 
-row = pn.Row(pn.Column(toggle, p, pn.Row("Show sim settings", settings_switch), settings_pane),
-             pn.Column(pn.Row("### Show attributes",entity_toggle), pn.Row(*entity_columns)))
 
-row.servable()
+update_slider = pn.widgets.IntSlider(value=10, start=0, end=1000, step=10, name="Update frequency (ms)")
+
+
+app = pn.Row(pn.Column(pn.Row(start_toggle, update_slider),
+                       p,
+                       pn.Row("Show sim settings", settings_switch),
+                       settings_pane),
+             pn.Column(pn.Row("### Show attributes",entity_toggle),
+                       pn.Row(*entity_columns)))
+
+app.servable()
 
 
 def update_plot():
@@ -190,3 +203,12 @@ def update_plot():
 
 
 pcb_plot = pn.state.add_periodic_callback(update_plot, 10)
+
+def update_freq(event):
+    pcb_plot.period = event.new
+    if event.new == 0 and pcb_plot.running:
+        pcb_plot.stop()
+    elif not pcb_plot.running:
+        pcb_plot.start()
+
+update_slider.param.watch(update_freq, "value")
