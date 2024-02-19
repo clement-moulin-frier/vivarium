@@ -53,6 +53,7 @@ class AgentManager(EntityManager):
         sensors = state.agent_state.prox
         max_sensor = state.agent_state.proxs_dist_max
         angle_min = np.arccos(state.agent_state.proxs_cos_min)
+        visible = np.where(state.nve_state.visible & (state.nve_state.entity_type == self.etype.value))[0]
         
         # line direction
         angles = np.array(thetas)
@@ -81,24 +82,27 @@ class AgentManager(EntityManager):
         orientation_lines_x = [[xx, xx + r * n[0]] for xx, n, r in zip(x, normals, radii)]
         orientation_lines_y = [[yy, yy + r * n[1]] for yy, n, r in zip(y, normals, radii)]
 
-        return dict(x=x, y=y, ox=orientation_lines_x, oy=orientation_lines_y, r=radii, fc=colors, angle=thetas, sr=0.2*radii,
+        data = dict(x=x, y=y, ox=orientation_lines_x, oy=orientation_lines_y, r=radii, fc=colors, angle=thetas, sr=0.2*radii,
                     rwx=r_wheel_x, rwy=r_wheel_y, lwx=l_wheel_x, lwy=l_wheel_y, rwi=motors[:,0], lwi=motors[:,1],
                     rsx=r_sensor_x, rsy=r_sensor_y, lsx=l_sensor_x, lsy=l_sensor_y, rsi=sensors[:,0], lsi=sensors[:,1], mar=max_angle_r, mal=max_angle_l, mr=max_sensor)
+        
+        return {k: np.array(v)[visible] for k, v in data.items()}
 
     def plot(self, figure:figure):
+        src = {"source":self.cds}
         # wheels
-        figure.rect('rwx', 'rwy', width=3, height=1, angle='angle', fill_color='black', fill_alpha='rwi', source=self.cds, line_color=None)
-        figure.rect('lwx', 'lwy', width=3, height=1, angle='angle', fill_color='black', fill_alpha='lwi', source=self.cds, line_color=None)
+        figure.rect('rwx', 'rwy', width=3, height=1, angle='angle', fill_color='black', fill_alpha='rwi', line_color=None, **src)
+        figure.rect('lwx', 'lwy', width=3, height=1, angle='angle', fill_color='black', fill_alpha='lwi', line_color=None, **src)
         # sensors
-        figure.circle('rsx', 'rsy', radius='sr', fill_color='red', fill_alpha='rsi', line_color=None, source=self.cds)
-        figure.circle('lsx', 'lsy', radius='sr', fill_color='red', fill_alpha='lsi', line_color=None, source=self.cds)
-        figure.wedge('x', 'y', radius='mr', start_angle='angle', end_angle='mar', color="firebrick", alpha=0.1, direction="clock", source=self.cds)
-        figure.wedge('x', 'y', radius='mr', start_angle='angle', end_angle='mal', color="firebrick", alpha=0.1, direction="anticlock", source=self.cds)
+        figure.circle('rsx', 'rsy', radius='sr', fill_color='red', fill_alpha='rsi', line_color=None, **src)
+        figure.circle('lsx', 'lsy', radius='sr', fill_color='red', fill_alpha='lsi', line_color=None, **src)
+        figure.wedge('x', 'y', radius='mr', start_angle='angle', end_angle='mar', color="firebrick", alpha=0.1, direction="clock", **src)
+        figure.wedge('x', 'y', radius='mr', start_angle='angle', end_angle='mal', color="firebrick", alpha=0.1, direction="anticlock", **src)
         # direction lines
-        figure.multi_line('ox', 'oy', source=self.cds, color='black', line_width=1)
-        # Agent
+        figure.multi_line('ox', 'oy', color='black', line_width=1, **src)
+        # agents
         return figure.circle('x', 'y', radius='r', fill_color='fc', fill_alpha=0.6, line_color=None,
-                            hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=self.cds)
+                            hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, **src)
         
 
 class ObjectManager(EntityManager):
@@ -108,12 +112,15 @@ class ObjectManager(EntityManager):
         thetas = state.position(self.etype).orientation
         d = state.diameter(self.etype)
         colors = state.object_state.color
+        visible = state.nve_state.visible[state.nve_state.entity_type == self.etype.value].astype(bool)
 
-        return dict(x=x, y=y, width=d, height=d, angle=thetas, fill_color=colors)
+        data = dict(x=x, y=y, width=d, height=d, angle=thetas, fill_color=colors, v=visible)
+        return {k: np.array(v)[visible] for k, v in data.items()}
 
     def plot(self, figure:figure):
+        src = {"source":self.cds}
         return figure.rect(x='x', y='y', width='width', height='height', angle='angle', fill_color='fill_color', fill_alpha=0.6, line_color=None,
-                           hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, source=self.cds)
+                           hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None, **src)
 
 
 simulator = PanelController(client=SimulatorGRPCClient())
@@ -154,12 +161,8 @@ p.add_tools(draw_tool)
 # https://panel.holoviz.org/how_to/param/custom.html
 sim_panel = pn.Param(simulator.param)
 
-# Selector for displays
-display_checks = pn.widgets.CheckBoxGroup(
-    name='Displays checkbox', value=['Entity', 'Wheels', 'Sensors', 'Sensors range'], options=['Entity', 'Wheels', 'Sensors', 'Sensors range'], inline=True)
-
 # Selector for entity attributes
-entity_columns = [pn.Column(simulator.selected_entities[etype], display_checks, simulator.selected_configs[etype], visible=False) for etype in EntityType]
+entity_columns = [pn.Column(simulator.selected_entities[etype], simulator.selected_configs[etype], visible=False) for etype in EntityType]
 
 entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=[t.name for t in entity_types])
 
