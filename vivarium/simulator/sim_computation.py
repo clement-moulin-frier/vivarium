@@ -41,6 +41,7 @@ class NVEState(simulate.NVEState):
     entity_idx: util.Array  # idx in XState (e.g. AgentState)
     diameter: util.Array
     friction: util.Array
+    visible: util.Array
 
     @property
     def velocity(self) -> util.Array:
