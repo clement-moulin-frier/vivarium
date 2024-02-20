@@ -1,5 +1,5 @@
 from vivarium.controllers import converters
-from vivarium.controllers.config import AgentConfig, ObjectConfig, config_to_stype
+from vivarium.controllers.config import AgentConfig, ObjectConfig, config_to_stype, Config
 from vivarium.controllers.simulator_controller import SimulatorController
 from vivarium.simulator.sim_computation import EntityType, StateType
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
@@ -7,6 +7,32 @@ from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 import param
 import numpy as np
 from contextlib import contextmanager
+
+
+class PanelConfig(Config):
+    pass
+
+
+class PanelEntityConfig(PanelConfig):
+    visible = param.Boolean(True)
+
+
+class PanelAgentConfig(PanelEntityConfig):
+    visible_wheels = param.Boolean(False)
+    visible_proxs = param.Boolean(False)
+
+
+class PanelObjectConfig(PanelEntityConfig):
+    pass
+
+
+class PanelSimulatorConfig(Config):
+    pass
+
+
+panel_config_to_stype = {PanelSimulatorConfig: StateType.SIMULATOR, PanelAgentConfig: StateType.AGENT,
+                         PanelObjectConfig: StateType.OBJECT}
+stype_to_panel_config = {stype: config_class for config_class, stype in panel_config_to_stype.items()}
 
 
 class Selected(param.Parameterized):
@@ -17,18 +43,26 @@ class Selected(param.Parameterized):
 
 
 class PanelController(SimulatorController):
-    selected_entities = param.Dict({EntityType.AGENT: Selected(), EntityType.OBJECT: Selected()})
-    selected_configs = param.Dict({EntityType.AGENT: AgentConfig(), EntityType.OBJECT: ObjectConfig()})
 
     def __init__(self, **params):
         self._selected_configs_watchers = None
+        self.selected_entities = {EntityType.AGENT: Selected(), EntityType.OBJECT: Selected()}
+        self.selected_configs = {EntityType.AGENT: AgentConfig(), EntityType.OBJECT: ObjectConfig()}
         super().__init__(**params)
+        self.panel_configs = {stype: [stype_to_panel_config[stype]() for _ in range(len(configs))]
+                              for stype, configs in self.configs.items()}
+        self.selected_panel_configs = {EntityType.AGENT: PanelAgentConfig(), EntityType.OBJECT: PanelObjectConfig()}
+        self._selected_panel_configs_watchers = {etype: config.param.watch(self.push_selected_to_config_list,
+                                                                           config.param_names(), onlychanged=True)
+                                                 for etype, config in self.selected_panel_configs.items()}
         self.update_entity_list()
         for etype, selected in self.selected_entities.items():
             selected.param.watch(self.pull_selected_configs, ['selection'], onlychanged=True, precedence=1)
+            selected.param.watch(self.pull_selected_panel_configs, ['selection'], onlychanged=True)
+
 
     def watch_selected_configs(self):
-        watchers = {etype: config.param.watch(self.push_selected_to_state, config.param_names(), onlychanged=True)
+        watchers = {etype: config.param.watch(self.push_selected_to_config_list, config.param_names(), onlychanged=True)
                     for etype, config in self.selected_configs.items()}
         return watchers
 
@@ -57,17 +91,27 @@ class PanelController(SimulatorController):
             converters.set_configs_from_state(state, config_dict)
         return state
 
+    def pull_selected_panel_configs(self, *events):
+        for etype, panel_config in self.selected_panel_configs.items():
+            panel_config.param.update(**self.panel_configs[etype.to_state_type()][self.selected_entities[etype].selection[0]].to_dict())
+
     def pull_all_data(self):
         self.pull_selected_configs()
         self.pull_configs({StateType.SIMULATOR: self.configs[StateType.SIMULATOR]})
 
-    def push_selected_to_state(self, *events):
-        print('push_selected_to_state', len(events))
+    def push_selected_to_config_list(self, *events):
+        print('push_selected_to_config_list', len(events))
         for e in events:
-            stype = config_to_stype[type(e.obj)]
+            if isinstance(e.obj, PanelEntityConfig):
+                stype = panel_config_to_stype[type(e.obj)]
+            else:
+                stype = config_to_stype[type(e.obj)]
             selected_entities = self.selected_entities[stype.to_entity_type()].selection
             for idx in selected_entities:
-                setattr(self.configs[stype][idx], e.name, e.new)
+                if isinstance(e.obj, PanelEntityConfig):
+                    setattr(self.panel_configs[stype][idx], e.name, e.new)
+                else:
+                    setattr(self.configs[stype][idx], e.name, e.new)
 
 
 if __name__ == '__main__':
