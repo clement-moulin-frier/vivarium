@@ -1,11 +1,11 @@
 # vivarium
 
-## Installation 
+## Installation
 
 1- Get the repository
 
 ```bash
-git clone https://github.com/clement-moulin-frier/vivarium.git
+git clone git@github.com:clement-moulin-frier/vivarium.git
 cd vivarium/
 ```
 2- Create and activate a virtual environment (optional)
@@ -15,7 +15,7 @@ python -m venv myvenv
 source myvenv/bin/activate
 ```
 
-2- Install the dependencies 
+3- Install the dependencies 
 
 ```bash
 pip install -r requirements.txt

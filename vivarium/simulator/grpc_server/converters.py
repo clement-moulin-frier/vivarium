@@ -11,6 +11,7 @@ def proto_to_state(state):
                  agent_state=proto_to_agent_state(state.agent_state),
                  object_state=proto_to_object_state(state.object_state))
 
+
 def proto_to_simulator_state(simulator_state):
     return SimulatorState(idx=proto_to_ndarray(simulator_state.idx),
                           box_size=proto_to_ndarray(simulator_state.box_size),
@@ -24,6 +25,7 @@ def proto_to_simulator_state(simulator_state):
                           use_fori_loop=proto_to_ndarray(simulator_state.use_fori_loop)
                           )
 
+
 def proto_to_nve_state(nve_state):
     return NVEState(position=RigidBody(center=proto_to_ndarray(nve_state.position.center).astype(float),
                                        orientation=proto_to_ndarray(nve_state.position.orientation).astype(float)),
@@ -36,7 +38,8 @@ def proto_to_nve_state(nve_state):
                     entity_type=proto_to_ndarray(nve_state.entity_type).astype(int),
                     entity_idx=proto_to_ndarray(nve_state.entity_idx).astype(int),
                     diameter=proto_to_ndarray(nve_state.diameter).astype(float),
-                    friction=proto_to_ndarray(nve_state.friction).astype(float)
+                    friction=proto_to_ndarray(nve_state.friction).astype(float),
+                    visible=proto_to_ndarray(nve_state.visible).astype(int)
                     )
 
 
@@ -81,6 +84,7 @@ def simulator_state_to_proto(simulator_state):
         use_fori_loop=ndarray_to_proto(simulator_state.use_fori_loop)
     )
 
+
 def nve_state_to_proto(nve_state):
     return simulator_pb2.NVEState(position=simulator_pb2.RigidBody(center=ndarray_to_proto(nve_state.position.center),
                                                                    orientation=ndarray_to_proto(nve_state.position.orientation)),
@@ -93,7 +97,8 @@ def nve_state_to_proto(nve_state):
                                   entity_type=ndarray_to_proto(nve_state.entity_type),
                                   entity_idx=ndarray_to_proto(nve_state.entity_idx),
                                   diameter=ndarray_to_proto(nve_state.diameter),
-                                  friction=ndarray_to_proto(nve_state.friction)
+                                  friction=ndarray_to_proto(nve_state.friction),
+                                  visible=ndarray_to_proto(nve_state.visible)
                                   )
 
 

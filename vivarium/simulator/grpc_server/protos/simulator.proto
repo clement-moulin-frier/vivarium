@@ -77,6 +77,7 @@ message NVEState {
   NDArray entity_type = 6;
   NDArray entity_idx = 7;
   NDArray friction = 8;
+  NDArray visible = 9;
 }
 
 message AgentState {
