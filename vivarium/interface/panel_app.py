@@ -242,7 +242,7 @@ entity_toggle.param.watch(toggle_callback, "value")
 
 
 update_slider = pn.widgets.IntSlider(value=10, start=0, end=1000, step=10,
-                                     name="Update frequency (ms)")
+                                     name="Update timestep (ms)")
 
 
 app = pn.Row(pn.Column(pn.Row("### Start/Stop server", start_toggle, update_slider),
