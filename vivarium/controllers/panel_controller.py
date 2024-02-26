@@ -46,24 +46,27 @@ class PanelController(SimulatorController):
 
     def __init__(self, **params):
         self._selected_configs_watchers = None
+        self._selected_panel_configs_watchers = None
         self.selected_entities = {EntityType.AGENT: Selected(), EntityType.OBJECT: Selected()}
         self.selected_configs = {EntityType.AGENT: AgentConfig(), EntityType.OBJECT: ObjectConfig()}
         super().__init__(**params)
         self.panel_configs = {stype: [stype_to_panel_config[stype]() for _ in range(len(configs))]
                               for stype, configs in self.configs.items()}
         self.selected_panel_configs = {EntityType.AGENT: PanelAgentConfig(), EntityType.OBJECT: PanelObjectConfig()}
-        self._selected_panel_configs_watchers = {etype: config.param.watch(self.push_selected_to_config_list,
-                                                                           config.param_names(), onlychanged=True)
-                                                 for etype, config in self.selected_panel_configs.items()}
+
         self.update_entity_list()
         for etype, selected in self.selected_entities.items():
             selected.param.watch(self.pull_selected_configs, ['selection'], onlychanged=True, precedence=1)
             selected.param.watch(self.pull_selected_panel_configs, ['selection'], onlychanged=True)
 
-
     def watch_selected_configs(self):
         watchers = {etype: config.param.watch(self.push_selected_to_config_list, config.param_names(), onlychanged=True)
                     for etype, config in self.selected_configs.items()}
+        return watchers
+
+    def watch_selected_panel_configs(self):
+        watchers = {etype: config.param.watch(self.push_selected_to_config_list, config.param_names(), onlychanged=True)
+                    for etype, config in self.selected_panel_configs.items()}
         return watchers
 
     @contextmanager
@@ -75,6 +78,16 @@ class PanelController(SimulatorController):
             yield
         finally:
             self._selected_configs_watchers = self.watch_selected_configs()
+
+    @contextmanager
+    def dont_push_selected_panel_configs(self):
+        if self._selected_panel_configs_watchers is not None:
+            for etype, config in self.selected_panel_configs.items():
+                config.param.unwatch(self._selected_panel_configs_watchers[etype])
+        try:
+            yield
+        finally:
+            self._selected_panel_configs_watchers = self.watch_selected_panel_configs()
 
     def update_entity_list(self, *events):
         state = self.state
@@ -92,8 +105,9 @@ class PanelController(SimulatorController):
         return state
 
     def pull_selected_panel_configs(self, *events):
-        for etype, panel_config in self.selected_panel_configs.items():
-            panel_config.param.update(**self.panel_configs[etype.to_state_type()][self.selected_entities[etype].selection[0]].to_dict())
+        with self.dont_push_selected_panel_configs():
+            for etype, panel_config in self.selected_panel_configs.items():
+                panel_config.param.update(**self.panel_configs[etype.to_state_type()][self.selected_entities[etype].selection[0]].to_dict())
 
     def pull_all_data(self):
         self.pull_selected_configs()
