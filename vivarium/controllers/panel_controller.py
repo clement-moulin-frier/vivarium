@@ -8,6 +8,10 @@ import param
 import numpy as np
 from contextlib import contextmanager
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+lg = logging.getLogger(__name__)
 
 class Selected(param.Parameterized):
     selection = param.ListSelector([0], objects=[0])
@@ -62,7 +66,7 @@ class PanelController(SimulatorController):
         self.pull_configs({StateType.SIMULATOR: self.configs[StateType.SIMULATOR]})
 
     def push_selected_to_state(self, *events):
-        print('push_selected_to_state', len(events))
+        lg.info('push_selected_to_state %d', len(events))
         for e in events:
             stype = config_to_stype[type(e.obj)]
             selected_entities = self.selected_entities[stype.to_entity_type()].selection
@@ -72,5 +76,5 @@ class PanelController(SimulatorController):
 
 if __name__ == '__main__':
     simulator = PanelController(client=SimulatorGRPCClient())
-    print('Done')
+    lg.info('Done')
     
