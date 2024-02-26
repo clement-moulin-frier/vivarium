@@ -1,5 +1,5 @@
 # vivarium
- 
+
 ## Installation
 
 1- Get the repository
@@ -15,7 +15,7 @@ python -m venv myvenv
 source myvenv/bin/activate
 ```
 
-2- Install the dependencies 
+3- Install the dependencies 
 
 ```bash
 pip install -r requirements.txt
@@ -56,3 +56,13 @@ grpc compilation command line (normally only needed if modifying the .proto file
 ```bash
 python -m grpc_tools.protoc -I./vivarium/simulator/grpc_server/protos --python_out=./vivarium/simulator/grpc_server/ --pyi_out=./vivarium/simulator/grpc_server/ --grpc_python_out=./vivarium/simulator/grpc_server/ ./vivarium/simulator/grpc_server/protos/simulator.proto
 ```
+
+### Automated tests
+
+If you want to test your changes locally, you can run the following command in the root of the directory :
+
+```bash
+pytest
+```
+
+You can add your own tests in the tests/ subdirector. Make sure that the name or your files and test functions start with "test".
