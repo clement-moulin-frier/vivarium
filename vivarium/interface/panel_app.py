@@ -29,6 +29,8 @@ class EntityManager:
         self.cds_view = self.create_cds_view()
         selected.param.watch(self.update_selected_plot, ['selection'],
                              onlychanged=True, precedence=0)
+        for pc in self.panel_configs:
+            pc.param.watch(self.update_cds_view, pc.param_names())
 
     def get_cds_data(self, state):
         raise NotImplementedError()
@@ -41,10 +43,10 @@ class EntityManager:
         for c in self.panel_configs:
             if "visible" in c.param:
                 visible["all"].append(c.visible)
-                if "visible_proxs" in c.param:
-                    visible["proxs"].append(c.visible_proxs and c.visible)
-                if "visible_wheels" in c.param:
-                    visible["wheels"].append(c.visible_wheels and c.visible)
+            if "visible_proxs" in c.param:
+                visible["proxs"].append(c.visible_proxs and c.visible)
+            if "visible_wheels" in c.param:
+                visible["wheels"].append(c.visible_wheels and c.visible)
         return {k:CDSView(filter=BooleanFilter(v)) for k, v in visible.items()}
 
     def update_cds_view(self, event):
@@ -184,10 +186,6 @@ entity_managers = {
         for etype, manager_class in entity_manager_classes.items()
 }
 
-for et in entity_types:
-    for pc in simulator.panel_configs[et.to_state_type()]:
-        pc.param.watch(entity_managers[et].update_cds_view, pc.param_names())
-
 TOOLS = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
 
 p = figure(tools=TOOLS)
@@ -226,7 +224,7 @@ config_columns = pn.Row(*[
         simulator.selected_entities[etype],
         simulator.selected_panel_configs[etype],
         simulator.selected_configs[etype],
-        visible=False, sizing_mode="scale_both", scroll=True)
+        visible=False, sizing_mode="stretch_width", scroll=True)
     for etype in EntityType])
 config_columns.append(pn.Column(simulator.simulator_config, visible=False, sizing_mode="scale_both",
                                 scroll=True))
@@ -240,12 +238,14 @@ def toggle_callback(event):
 
 entity_toggle.param.watch(toggle_callback, "value")
 
+update_switch = pn.widgets.Switch(name="Update plot", value=True, align="center")
+update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=10, start=0, end=1000)
 
-update_slider = pn.widgets.IntSlider(value=10, start=0, end=1000, step=10,
-                                     name="Update timestep (ms)")
 
-
-app = pn.Row(pn.Column(pn.Row("### Start/Stop server", start_toggle, update_slider),
+app = pn.Row(pn.Column(pn.Row(pn.pane.Markdown("### Start/Stop server", align="center"),
+                              start_toggle),
+                       pn.Row(pn.pane.Markdown("### Start/Stop update", align="center"),
+                              update_switch, update_timestep),
                        pn.panel(p)),
              pn.Column(pn.Row("### Show Configs",entity_toggle),
                        pn.Row(*config_columns)))
@@ -264,12 +264,14 @@ def update_plot():
 
 pcb_plot = pn.state.add_periodic_callback(update_plot, 10)
 
-def update_freq(event):
+def timestep_callback(event):
     pcb_plot.period = event.new
-    if event.new == 0 and pcb_plot.running:
-        pcb_plot.stop()
-    elif not pcb_plot.running:
+
+def plot_update_callback(event):
+    if event.new and not pcb_plot.running:
         pcb_plot.start()
+    elif not event.new and pcb_plot.running:
+        pcb_plot.stop()
 
-
-update_slider.param.watch(update_freq, "value")
+update_switch.param.watch(plot_update_callback, "value")
+update_timestep.param.watch(timestep_callback, "value")
