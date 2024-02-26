@@ -84,6 +84,7 @@ class AgentManager(EntityManager):
         proxs = state.agent_state.prox
         max_prox = state.agent_state.proxs_dist_max
         angle_min = np.arccos(state.agent_state.proxs_cos_min)
+        wheel_diameter = state.agent_state.wheel_diameter
 
         # line direction
         angles = np.array(thetas)
@@ -123,7 +124,8 @@ class AgentManager(EntityManager):
                     angle=thetas, pr=0.2*radii, rwx=r_wheel_x, rwy=r_wheel_y, lwx=l_wheel_x,
                     lwy=l_wheel_y, rwi=motors[:, 0], lwi=motors[:, 1], rpx=r_prox_x,
                     rpy=r_prox_y, lpx=l_prox_x, lpy=l_prox_y, rpi=proxs[:, 0],
-                    lpi=proxs[:, 1], mar=max_angle_r, mal=max_angle_l, mpr=max_prox)
+                    lpi=proxs[:, 1], mar=max_angle_r, mal=max_angle_l, mpr=max_prox,
+                    wd=wheel_diameter)
 
         return data
 
@@ -131,9 +133,9 @@ class AgentManager(EntityManager):
     def plot(self, fig: figure):
         src = {"source":self.cds}
         # wheels
-        fig.rect('rwx', 'rwy', width=3, height=1, angle='angle', fill_color='black',
+        fig.rect('rwx', 'rwy', width='wd', height=1, angle='angle', fill_color='black',
                  fill_alpha='rwi', line_color=None, view=self.cds_view["wheels"], **src)
-        fig.rect('lwx', 'lwy', width=3, height=1, angle='angle', fill_color='black',
+        fig.rect('lwx', 'lwy', width='wd', height=1, angle='angle', fill_color='black',
                  fill_alpha='lwi', line_color=None, view=self.cds_view["wheels"], **src)
         # proxs
         fig.circle('rpx', 'rpy', radius='pr', fill_color='red', fill_alpha='rpi', line_color=None,
