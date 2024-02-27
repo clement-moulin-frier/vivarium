@@ -3,6 +3,7 @@ import panel as pn
 
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, PointDrawTool, HoverTool, Range1d, CDSView, BooleanFilter
+from param import Parameterized
 
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.controllers.panel_controller import PanelController
@@ -173,107 +174,107 @@ class ObjectManager(EntityManager):
                         view=self.cds_view["all"], **src)
 
 
-simulator = PanelController(client=SimulatorGRPCClient())
-sim_state = simulator.state
+class WindowManager(Parameterized):
+    TOOLS = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
+    config_types = ["Agents", "Objects", "Simulator"]
+    simulator = PanelController(client=SimulatorGRPCClient())
+    start_toggle = pn.widgets.Toggle(**({"name": "Stop", "value": True} if simulator.is_started()
+                                        else {"name": "Start", "value": False}),align="center")
+    entity_types = [EntityType.AGENT, EntityType.OBJECT]
+    sim_panel = pn.Param(simulator.param)
+    entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=config_types,
+                                           align="center")
+    update_switch = pn.widgets.Switch(name="Update plot", value=True, align="center")
+    update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=10, start=0, end=1000)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.sim_state = self.simulator.state
+        self.entity_manager_classes = {EntityType.AGENT: AgentManager,
+                                       EntityType.OBJECT: ObjectManager}
+        # https://panel.holoviz.org/how_to/param/custom.html
+        self.entity_managers = {
+            etype: manager_class(
+                config=self.simulator.selected_configs[etype],
+                panel_configs=self.simulator.panel_configs[etype.to_state_type()],
+                selected=self.simulator.selected_entities[etype], etype=etype, state=self.sim_state)
+                for etype, manager_class in self.entity_manager_classes.items()
+        }
 
-entity_types = [EntityType.AGENT, EntityType.OBJECT]
+        self.plot = self.create_plot()
+        self.app = self.create_pane()
+        self.set_callbacks()
 
-entity_manager_classes = {EntityType.AGENT: AgentManager, EntityType.OBJECT: ObjectManager}
+    def start_toggle_cb(self, event):
+        if event.type != "changed":
+            return
+        if self.simulator.is_started():
+            self.simulator.stop()
+            self.start_toggle.name = "Start"
+        else:
+            self.simulator.start()
+            self.start_toggle.name = "Stop"
 
-entity_managers = {
-    etype: manager_class(
-        config=simulator.selected_configs[etype],
-        panel_configs=simulator.panel_configs[etype.to_state_type()],
-        selected=simulator.selected_entities[etype], etype=etype, state=sim_state)
-        for etype, manager_class in entity_manager_classes.items()
-}
+    def entity_toggle_cb(self, event):
+        for i, t in enumerate(self.config_types):
+            self.config_columns[i].visible = t in event.new
 
-TOOLS = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
+    def update_timestep_cb(self, event):
+        self.pcb_plot.period = event.new
 
-p = figure(tools=TOOLS)
-p.axis.major_label_text_font_size = "24px"
-hover = HoverTool(tooltips=None)
-p.add_tools(hover)
-p.x_range = Range1d(0, simulator.simulator_config.box_size)
-p.y_range = Range1d(0, simulator.simulator_config.box_size)
+    def update_plot_cb(self):
+        for em in self.entity_managers.values():
+            em.update_selected_simulator()
+        state = self.simulator.update_state()
+        self.simulator.pull_configs()
+        for em in self.entity_managers.values():
+            em.update_cds(state)
 
-start_toggle = pn.widgets.Toggle(**({"name": "Stop", "value": True} if simulator.is_started()
-                                    else {"name": "Start", "value": False}), align="center")
+    def update_switch_cb(self, event):
+        if event.new and not self.pcb_plot.running:
+            self.pcb_plot.start()
+        elif not event.new and self.pcb_plot.running:
+            self.pcb_plot.stop()
 
+    def create_plot(self):
+        self.config_columns = pn.Row(*[
+            pn.Column(
+                self.simulator.selected_entities[etype],
+                self.simulator.selected_panel_configs[etype],
+                self.simulator.selected_configs[etype],
+                visible=False, sizing_mode="stretch_width", scroll=True)
+            for etype in EntityType])
+        self.config_columns.append(pn.Column(self.simulator.simulator_config, visible=False,
+                                             sizing_mode="scale_both",scroll=True))
+        
+        p = figure(tools=self.TOOLS)
+        p.axis.major_label_text_font_size = "24px"
+        hover = HoverTool(tooltips=None)
+        p.add_tools(hover)
+        p.x_range = Range1d(0, self.simulator.simulator_config.box_size)
+        p.y_range = Range1d(0, self.simulator.simulator_config.box_size)
+        draw_tool = PointDrawTool(renderers=[self.entity_managers[etype].plot(p)
+                                             for etype in self.entity_types])
+        p.add_tools(draw_tool)
+        return p
 
-def callback(event):
-    if event.type != "changed":
-        return
-    if simulator.is_started():
-        simulator.stop()
-        start_toggle.name = "Start"
-    else:
-        simulator.start()
-        start_toggle.name = "Stop"
+    def create_pane(self):
+        app = pn.Row(pn.Column(pn.Row(pn.pane.Markdown("### Start/Stop server", align="center"),
+                                      self.start_toggle),
+                               pn.Row(pn.pane.Markdown("### Start/Stop update", align="center"),
+                                      self.update_switch, self.update_timestep),
+                               pn.panel(self.plot)),
+                     pn.Column(pn.Row("### Show Configs", self.entity_toggle),
+                               pn.Row(*self.config_columns)))
+        return app
 
-start_toggle.param.watch(callback, "value")
+    def set_callbacks(self):
+        self.pcb_plot = pn.state.add_periodic_callback(self.update_plot_cb,
+                                                       self.update_timestep.value)
+        self.entity_toggle.param.watch(self.entity_toggle_cb, "value")
+        self.start_toggle.param.watch(self.start_toggle_cb, "value")
+        self.update_switch.param.watch(self.update_switch_cb, "value")
+        self.update_timestep.param.watch(self.update_timestep_cb, "value")
 
-draw_tool = PointDrawTool(renderers=[entity_managers[etype].plot(p) for etype in entity_types])
-p.add_tools(draw_tool)
-# p.toolbar.active_tap = draw_tool
-
-# https://panel.holoviz.org/how_to/param/custom.html
-sim_panel = pn.Param(simulator.param)
-
-# Selector for entity attributes
-config_columns = pn.Row(*[
-    pn.Column(
-        simulator.selected_entities[etype],
-        simulator.selected_panel_configs[etype],
-        simulator.selected_configs[etype],
-        visible=False, sizing_mode="stretch_width", scroll=True)
-    for etype in EntityType])
-config_columns.append(pn.Column(simulator.simulator_config, visible=False, sizing_mode="scale_both",
-                                scroll=True))
-
-config_types = ["Agents", "Objects", "Simulator"]
-entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=config_types, align="center")
-
-def toggle_callback(event):
-    for i, t in enumerate(config_types):
-        config_columns[i].visible = t in event.new
-
-entity_toggle.param.watch(toggle_callback, "value")
-
-update_switch = pn.widgets.Switch(name="Update plot", value=True, align="center")
-update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=10, start=0, end=1000)
-
-
-app = pn.Row(pn.Column(pn.Row(pn.pane.Markdown("### Start/Stop server", align="center"),
-                              start_toggle),
-                       pn.Row(pn.pane.Markdown("### Start/Stop update", align="center"),
-                              update_switch, update_timestep),
-                       pn.panel(p)),
-             pn.Column(pn.Row("### Show Configs",entity_toggle),
-                       pn.Row(*config_columns)))
-
-app.servable()
-
-
-def update_plot():
-    for em in entity_managers.values():
-        em.update_selected_simulator()
-    state = simulator.update_state()
-    simulator.pull_configs()
-    for em in entity_managers.values():
-        em.update_cds(state)
-
-
-pcb_plot = pn.state.add_periodic_callback(update_plot, 10)
-
-def timestep_callback(event):
-    pcb_plot.period = event.new
-
-def plot_update_callback(event):
-    if event.new and not pcb_plot.running:
-        pcb_plot.start()
-    elif not event.new and pcb_plot.running:
-        pcb_plot.stop()
-
-update_switch.param.watch(plot_update_callback, "value")
-update_timestep.param.watch(timestep_callback, "value")
+# Serve the app
+wm = WindowManager()
+wm.app.servable()
