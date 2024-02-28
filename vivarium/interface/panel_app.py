@@ -11,7 +11,7 @@ from vivarium.simulator.sim_computation import EntityType
 
 
 pn.extension()
-
+# pn.config.theme = 'dark'
 
 def normal(array):
     normals = np.zeros((array.shape[0], 2))
@@ -40,27 +40,20 @@ class EntityManager:
         self.cds.data.update(self.get_cds_data(state))
 
     def create_cds_view(self):
-        visible = {"all":[], "proxs":[], "wheels":[]}
-        for c in self.panel_configs:
-            if "visible" in c.param:
-                visible["all"].append(c.visible)
-            if "visible_proxs" in c.param:
-                visible["proxs"].append(c.visible_proxs and c.visible)
-            if "visible_wheels" in c.param:
-                visible["wheels"].append(c.visible_wheels and c.visible)
+        visible = {k:[] for k in self.panel_configs[0].param if k != "name"}
+        for pc in self.panel_configs:
+            if "visible" in pc.param:
+                visible["visible"].append(pc.visible)
+            if "visible_proxs" in pc.param:
+                visible["visible_proxs"].append(pc.visible_proxs and pc.visible)
+            if "visible_wheels" in pc.param:
+                visible["visible_wheels"].append(pc.visible_wheels and pc.visible)
         return {k:CDSView(filter=BooleanFilter(v)) for k, v in visible.items()}
 
     def update_cds_view(self, event):
         n = event.name
-        if n == "visible":
-            f = [c.visible for c in self.panel_configs]
-            self.cds_view["all"].filter = BooleanFilter(f)
-        elif n == "visible_wheels":
-            f = [c.visible_wheels for c in self.panel_configs]
-            self.cds_view["wheels"].filter = BooleanFilter(f)
-        elif n == "visible_proxs":
-            f = [c.visible_proxs for c in self.panel_configs]
-            self.cds_view["proxs"].filter = BooleanFilter(f)
+        f = [getattr(pc, n) and pc.visible for pc in self.panel_configs]
+        self.cds_view[n].filter.booleans = f
 
     def update_selected_plot(self, event):
         self.cds.selected.indices = event.new
@@ -135,24 +128,24 @@ class AgentManager(EntityManager):
         src = {"source":self.cds}
         # wheels
         fig.rect('rwx', 'rwy', width='wd', height=1, angle='angle', fill_color='black',
-                 fill_alpha='rwi', line_color=None, view=self.cds_view["wheels"], **src)
+                 fill_alpha='rwi', line_color=None, view=self.cds_view["visible_wheels"], **src)
         fig.rect('lwx', 'lwy', width='wd', height=1, angle='angle', fill_color='black',
-                 fill_alpha='lwi', line_color=None, view=self.cds_view["wheels"], **src)
+                 fill_alpha='lwi', line_color=None, view=self.cds_view["visible_wheels"], **src)
         # proxs
         fig.circle('rpx', 'rpy', radius='pr', fill_color='red', fill_alpha='rpi', line_color=None,
-                   view=self.cds_view["proxs"], **src)
+                   view=self.cds_view["visible_proxs"], **src)
         fig.circle('lpx', 'lpy', radius='pr', fill_color='red', fill_alpha='lpi', line_color=None,
-                   view=self.cds_view["proxs"], **src)
+                   view=self.cds_view["visible_proxs"], **src)
         fig.wedge('x', 'y', radius='mpr', start_angle='angle', end_angle='mar', color="firebrick",
-                  alpha=0.1, direction="clock", view=self.cds_view["proxs"], **src)
+                  alpha=0.1, direction="clock", view=self.cds_view["visible_proxs"], **src)
         fig.wedge('x', 'y', radius='mpr', start_angle='angle', end_angle='mal', color="firebrick",
-                  alpha=0.1, direction="anticlock", view=self.cds_view["proxs"], **src)
+                  alpha=0.1, direction="anticlock", view=self.cds_view["visible_proxs"], **src)
         # direction lines
-        fig.multi_line('ox', 'oy', color='black', line_width=1, view=self.cds_view["all"], **src)
+        fig.multi_line('ox', 'oy', color='black', view=self.cds_view["visible"], **src)
         # agents
         return fig.circle('x', 'y', radius='r', fill_color='fc', fill_alpha=0.6, line_color=None,
                           hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None,
-                          view=self.cds_view["all"], **src)
+                          view=self.cds_view["visible"], **src)
 
 
 class ObjectManager(EntityManager):
@@ -171,48 +164,43 @@ class ObjectManager(EntityManager):
         return fig.rect(x='x', y='y', width='width', height='height', angle='angle',
                         fill_color='fill_color', fill_alpha=0.6, line_color=None,
                         hover_fill_color="black", hover_fill_alpha=0.7, hover_line_color=None,
-                        view=self.cds_view["all"], **src)
+                        view=self.cds_view["visible"], **src)
 
 
 class WindowManager(Parameterized):
-    TOOLS = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
     config_types = ["Agents", "Objects", "Simulator"]
     simulator = PanelController(client=SimulatorGRPCClient())
     start_toggle = pn.widgets.Toggle(**({"name": "Stop", "value": True} if simulator.is_started()
                                         else {"name": "Start", "value": False}),align="center")
-    entity_types = [EntityType.AGENT, EntityType.OBJECT]
-    sim_panel = pn.Param(simulator.param)
     entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=config_types,
                                            align="center")
     update_switch = pn.widgets.Switch(name="Update plot", value=True, align="center")
     update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=10, start=0, end=1000)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.sim_state = self.simulator.state
         self.entity_manager_classes = {EntityType.AGENT: AgentManager,
                                        EntityType.OBJECT: ObjectManager}
-        # https://panel.holoviz.org/how_to/param/custom.html
         self.entity_managers = {
             etype: manager_class(
                 config=self.simulator.selected_configs[etype],
                 panel_configs=self.simulator.panel_configs[etype.to_state_type()],
-                selected=self.simulator.selected_entities[etype], etype=etype, state=self.sim_state)
+                selected=self.simulator.selected_entities[etype], etype=etype,
+                state=self.simulator.state)
                 for etype, manager_class in self.entity_manager_classes.items()
         }
 
         self.plot = self.create_plot()
-        self.app = self.create_pane()
+        self.app = self.create_app()
         self.set_callbacks()
 
     def start_toggle_cb(self, event):
-        if event.type != "changed":
-            return
-        if self.simulator.is_started():
-            self.simulator.stop()
-            self.start_toggle.name = "Start"
-        else:
-            self.simulator.start()
-            self.start_toggle.name = "Stop"
+        if event.new != self.simulator.is_started():
+            if event.new:
+                self.simulator.start()
+            else:
+                self.simulator.stop()
+        self.start_toggle.name = "Stop" if self.simulator.is_started() else "Start"
+
 
     def entity_toggle_cb(self, event):
         for i, t in enumerate(self.config_types):
@@ -245,19 +233,20 @@ class WindowManager(Parameterized):
             for etype in EntityType])
         self.config_columns.append(pn.Column(self.simulator.simulator_config, visible=False,
                                              sizing_mode="scale_both",scroll=True))
-        
-        p = figure(tools=self.TOOLS)
+
+        p_tools = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
+        p = figure(tools=p_tools)
         p.axis.major_label_text_font_size = "24px"
         hover = HoverTool(tooltips=None)
         p.add_tools(hover)
         p.x_range = Range1d(0, self.simulator.simulator_config.box_size)
         p.y_range = Range1d(0, self.simulator.simulator_config.box_size)
         draw_tool = PointDrawTool(renderers=[self.entity_managers[etype].plot(p)
-                                             for etype in self.entity_types])
+                                             for etype in EntityType])
         p.add_tools(draw_tool)
         return p
 
-    def create_pane(self):
+    def create_app(self):
         app = pn.Row(pn.Column(pn.Row(pn.pane.Markdown("### Start/Stop server", align="center"),
                                       self.start_toggle),
                                pn.Row(pn.pane.Markdown("### Start/Stop update", align="center"),
@@ -277,4 +266,4 @@ class WindowManager(Parameterized):
 
 # Serve the app
 wm = WindowManager()
-wm.app.servable()
+wm.app.servable(title="Vivarium")
