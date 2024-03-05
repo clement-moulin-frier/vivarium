@@ -207,14 +207,15 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
 
         return state.set(nve_state=nve_state)
 
-    def compute_prox(state, agent_neighs_idx):
+    def compute_prox(state, agent_neighs_idx, mask):
         body = state.nve_state.position
+        mask = mask[agent_neighs_idx[1, :]]
         senders, receivers = agent_neighs_idx
         Ra = body.center[senders]
         Rb = body.center[receivers]
-        dR = - space.map_bond(displacement)(Ra, Rb) # Looks like it should be opposite, but don't understand why
+        dR = - space.map_bond(displacement)(Ra, Rb)  # Looks like it should be opposite, but don't understand why
         prox = sensor(dR, body.orientation[senders], state.agent_state.proxs_dist_max[senders],
-                      state.agent_state.proxs_cos_min[senders], len(state.agent_state.nve_idx), senders)
+                      state.agent_state.proxs_cos_min[senders], len(state.agent_state.nve_idx), senders, mask)
         return state.agent_state.set(prox=prox)
 
     def sensorimotor(agent_state):
@@ -224,8 +225,8 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
         return agent_state.set(motor=motor)
 
     def step_fn(state, neighbor, agent_neighs_idx, **kwargs):
-        print('neighbor', neighbor)
-        state = state.set(agent_state=compute_prox(state, agent_neighs_idx))
+        mask = (state.nve_state.visible == 1)  # Only existing entities have effect on others
+        state = state.set(agent_state=compute_prox(state, agent_neighs_idx, mask=mask))
         state = state.set(agent_state=sensorimotor(state.agent_state))
         force = force_fn(state, neighbor)
         state = physics_fn(state, force, shift, state.simulator_state.dt[0], neighbor=neighbor)
@@ -273,8 +274,9 @@ def sensor_fn(dist, relative_theta, dist_max, cos_min):
 sensor_fn = vmap(sensor_fn, (0, 0, 0, 0))
 
 
-def sensor(displ, theta, dist_max, cos_min, n_agents, senders):
+def sensor(displ, theta, dist_max, cos_min, n_agents, senders, mask):
     dist, relative_theta = proximity_map(displ, theta)
+    dist = jnp.where(mask, dist, dist_max.max() + 1.)
     proxs = ops.segment_max(sensor_fn(dist, relative_theta, dist_max, cos_min),
                             senders, n_agents)
     return proxs
