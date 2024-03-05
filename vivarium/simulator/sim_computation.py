@@ -41,7 +41,7 @@ class NVEState(simulate.NVEState):
     entity_idx: util.Array  # idx in XState (e.g. AgentState)
     diameter: util.Array
     friction: util.Array
-    visible: util.Array
+    exists: util.Array
 
     @property
     def velocity(self) -> util.Array:
@@ -225,7 +225,7 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
         return agent_state.set(motor=motor)
 
     def step_fn(state, neighbor, agent_neighs_idx, **kwargs):
-        mask = (state.nve_state.visible == 1)  # Only existing entities have effect on others
+        mask = (state.nve_state.exists == 1)  # Only existing entities have effect on others
         state = state.set(agent_state=compute_prox(state, agent_neighs_idx, mask=mask))
         state = state.set(agent_state=sensorimotor(state.agent_state))
         force = force_fn(state, neighbor)

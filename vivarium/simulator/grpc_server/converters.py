@@ -39,7 +39,7 @@ def proto_to_nve_state(nve_state):
                     entity_idx=proto_to_ndarray(nve_state.entity_idx).astype(int),
                     diameter=proto_to_ndarray(nve_state.diameter).astype(float),
                     friction=proto_to_ndarray(nve_state.friction).astype(float),
-                    visible=proto_to_ndarray(nve_state.visible).astype(int)
+                    exists=proto_to_ndarray(nve_state.exists).astype(int)
                     )
 
 
@@ -98,7 +98,7 @@ def nve_state_to_proto(nve_state):
                                   entity_idx=ndarray_to_proto(nve_state.entity_idx),
                                   diameter=ndarray_to_proto(nve_state.diameter),
                                   friction=ndarray_to_proto(nve_state.friction),
-                                  visible=ndarray_to_proto(nve_state.visible)
+                                  exists=ndarray_to_proto(nve_state.exists)
                                   )
 
 
