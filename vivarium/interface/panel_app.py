@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 import numpy as np
 import panel as pn
 
@@ -27,11 +29,23 @@ class EntityManager:
         self.selected = selected
         self.etype = etype
         self.cds = ColumnDataSource(data=self.get_cds_data(state))
+        self.cds.on_change('data', self.drag_cb)
         self.cds_view = self.create_cds_view()
         selected.param.watch(self.update_selected_plot, ['selection'],
                              onlychanged=True, precedence=0)
         for pc in self.panel_configs:
             pc.param.watch(self.update_cds_view, pc.param_names())
+
+    def drag_cb(self, attr, old, new):
+        for i in self.selected.selection:
+            self.config[i].x_position = new['x'][i]
+            self.config[i].y_position = new['y'][i]
+
+    @contextmanager
+    def no_drag_cb(self):
+        self.cds.remove_on_change('data', self.drag_cb)
+        yield
+        self.cds.on_change('data', self.drag_cb)
 
     def get_cds_data(self, state):
         raise NotImplementedError()
@@ -182,7 +196,7 @@ class WindowManager(Parameterized):
                                        EntityType.OBJECT: ObjectManager}
         self.entity_managers = {
             etype: manager_class(
-                config=self.simulator.selected_configs[etype],
+                config=self.simulator.configs[etype.to_state_type()],
                 panel_configs=self.simulator.panel_configs[etype.to_state_type()],
                 selected=self.simulator.selected_entities[etype], etype=etype,
                 state=self.simulator.state)
@@ -215,7 +229,8 @@ class WindowManager(Parameterized):
         state = self.simulator.update_state()
         self.simulator.pull_configs()
         for em in self.entity_managers.values():
-            em.update_cds(state)
+            with em.no_drag_cb():
+                em.update_cds(state)
 
     def update_switch_cb(self, event):
         if event.new and not self.pcb_plot.running:
@@ -242,7 +257,7 @@ class WindowManager(Parameterized):
         p.x_range = Range1d(0, self.simulator.simulator_config.box_size)
         p.y_range = Range1d(0, self.simulator.simulator_config.box_size)
         draw_tool = PointDrawTool(renderers=[self.entity_managers[etype].plot(p)
-                                             for etype in EntityType])
+                                             for etype in EntityType], add=False)
         p.add_tools(draw_tool)
         return p
 
