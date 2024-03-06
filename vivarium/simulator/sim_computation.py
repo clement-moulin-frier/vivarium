@@ -207,9 +207,18 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
 
         return state.set(nve_state=nve_state)
 
-    def compute_prox(state, agent_neighs_idx, mask):
+    def compute_prox(state, agent_neighs_idx, target_exists_mask):
+        """
+        Set agents' proximeter activations
+        :param state: full simulation State
+        :param agent_neighs_idx: Neighbor representation, where sources are only agents. Matrix of shape (2, n_pairs),
+        where n_pairs is the number of neighbor entity pairs where sources (first row) are agent indexes.
+        :param target_exists_mask: Specify which target entities exist. Vector with shape (n_entities,).
+        target_exists_mask[i] is True (resp. False) if entity of index i in state.nve_state exists (resp. don't exist).
+        :return:
+        """
         body = state.nve_state.position
-        mask = mask[agent_neighs_idx[1, :]]
+        mask = target_exists_mask[agent_neighs_idx[1, :]]
         senders, receivers = agent_neighs_idx
         Ra = body.center[senders]
         Rb = body.center[receivers]
@@ -224,9 +233,9 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
 
         return agent_state.set(motor=motor)
 
-    def step_fn(state, neighbor, agent_neighs_idx, **kwargs):
-        mask = (state.nve_state.exists == 1)  # Only existing entities have effect on others
-        state = state.set(agent_state=compute_prox(state, agent_neighs_idx, mask=mask))
+    def step_fn(state, neighbor, agent_neighs_idx):
+        target_exists_mask = (state.nve_state.exists == 1)  # Only existing entities have effect on others
+        state = state.set(agent_state=compute_prox(state, agent_neighs_idx, target_exists_mask=target_exists_mask))
         state = state.set(agent_state=sensorimotor(state.agent_state))
         force = force_fn(state, neighbor)
         state = physics_fn(state, force, shift, state.simulator_state.dt[0], neighbor=neighbor)
@@ -253,7 +262,7 @@ def dist_theta(displ, theta):
 proximity_map = vmap(dist_theta, (0, 0))
 
 
-def sensor_fn(dist, relative_theta, dist_max, cos_min):
+def sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists):
     """
     Compute the proximeter activations (left, right) induced by the presence of an entity
     :param dist: distance from the agent to the entity
@@ -268,16 +277,15 @@ def sensor_fn(dist, relative_theta, dist_max, cos_min):
     at_left = jnp.logical_and(True, jnp.sin(relative_theta) >= 0)
     left = in_view * at_left * prox
     right = in_view * (1. - at_left) * prox
-    return jnp.array([left, right])
+    return jnp.array([left, right]) * target_exists  # i.e. 0 if target does not exist
 
 
-sensor_fn = vmap(sensor_fn, (0, 0, 0, 0))
+sensor_fn = vmap(sensor_fn, (0, 0, 0, 0, 0))
 
 
-def sensor(displ, theta, dist_max, cos_min, n_agents, senders, mask):
+def sensor(displ, theta, dist_max, cos_min, n_agents, senders, target_exists):
     dist, relative_theta = proximity_map(displ, theta)
-    dist = jnp.where(mask, dist, dist_max.max() + 1.)
-    proxs = ops.segment_max(sensor_fn(dist, relative_theta, dist_max, cos_min),
+    proxs = ops.segment_max(sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists),
                             senders, n_agents)
     return proxs
 
