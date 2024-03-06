@@ -13,7 +13,6 @@ from vivarium.simulator.sim_computation import EntityType
 
 
 pn.extension()
-# pn.config.theme = 'dark'
 
 def normal(array):
     normals = np.zeros((array.shape[0], 2))
@@ -54,20 +53,20 @@ class EntityManager:
         self.cds.data.update(self.get_cds_data(state))
 
     def create_cds_view(self):
-        visible = {k:[] for k in self.panel_configs[0].param if k != "name"}
-        for pc in self.panel_configs:
-            if "visible" in pc.param:
-                visible["visible"].append(pc.visible)
-            if "visible_proxs" in pc.param:
-                visible["visible_proxs"].append(pc.visible_proxs and pc.visible)
-            if "visible_wheels" in pc.param:
-                visible["visible_wheels"].append(pc.visible_wheels and pc.visible)
-        return {k:CDSView(filter=BooleanFilter(v)) for k, v in visible.items()}
+        # For each attribute in the panel config, create a filter
+        # that is a logical AND of the visibility and the attribute
+        return {
+            attr: CDSView(filter=BooleanFilter(
+                [getattr(pc, attr) and pc.visible for pc in self.panel_configs]
+            )) for attr in self.panel_configs[0].param_names()
+        }
 
     def update_cds_view(self, event):
         n = event.name
-        f = [getattr(pc, n) and pc.visible for pc in self.panel_configs]
-        self.cds_view[n].filter.booleans = f
+        for attr in [n] if n != "visible" else self.panel_configs[0].param_names():
+            f = [getattr(pc, attr) and pc.visible for pc in self.panel_configs]
+            self.cds_view[attr].filter.booleans = f
+
 
     def update_selected_plot(self, event):
         self.cds.selected.indices = event.new
@@ -182,8 +181,8 @@ class ObjectManager(EntityManager):
 
 
 class WindowManager(Parameterized):
-    config_types = ["Agents", "Objects", "Simulator"]
     simulator = PanelController(client=SimulatorGRPCClient())
+    config_types = [key.name for key in simulator.configs.keys()]
     start_toggle = pn.widgets.Toggle(**({"name": "Stop", "value": True} if simulator.is_started()
                                         else {"name": "Start", "value": False}),align="center")
     entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=config_types,
@@ -239,15 +238,16 @@ class WindowManager(Parameterized):
             self.pcb_plot.stop()
 
     def create_plot(self):
-        self.config_columns = pn.Row(*[
-            pn.Column(
+        self.config_columns = pn.Row(*
+            [pn.Column(
+                self.simulator.simulator_config, visible=False,
+                sizing_mode="scale_both",scroll=True)] +
+            [pn.Column(
                 self.simulator.selected_entities[etype],
                 self.simulator.selected_panel_configs[etype],
                 self.simulator.selected_configs[etype],
                 visible=False, sizing_mode="stretch_width", scroll=True)
             for etype in EntityType])
-        self.config_columns.append(pn.Column(self.simulator.simulator_config, visible=False,
-                                             sizing_mode="scale_both",scroll=True))
 
         p_tools = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
         p = figure(tools=p_tools)
