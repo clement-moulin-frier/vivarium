@@ -181,9 +181,9 @@ class ObjectManager(EntityManager):
 
 
 class WindowManager(Parameterized):
-    simulator = PanelController(client=SimulatorGRPCClient())
-    config_types = [key.name for key in simulator.configs.keys()]
-    start_toggle = pn.widgets.Toggle(**({"name": "Stop", "value": True} if simulator.is_started()
+    controller = PanelController(client=SimulatorGRPCClient())
+    config_types = [key.name for key in controller.configs.keys()]
+    start_toggle = pn.widgets.Toggle(**({"name": "Stop", "value": True} if controller.is_started()
                                         else {"name": "Start", "value": False}),align="center")
     entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=config_types,
                                            align="center")
@@ -195,10 +195,10 @@ class WindowManager(Parameterized):
                                        EntityType.OBJECT: ObjectManager}
         self.entity_managers = {
             etype: manager_class(
-                config=self.simulator.configs[etype.to_state_type()],
-                panel_configs=self.simulator.panel_configs[etype.to_state_type()],
-                selected=self.simulator.selected_entities[etype], etype=etype,
-                state=self.simulator.state)
+                config=self.controller.configs[etype.to_state_type()],
+                panel_configs=self.controller.panel_configs[etype.to_state_type()],
+                selected=self.controller.selected_entities[etype], etype=etype,
+                state=self.controller.state)
                 for etype, manager_class in self.entity_manager_classes.items()
         }
 
@@ -207,12 +207,12 @@ class WindowManager(Parameterized):
         self.set_callbacks()
 
     def start_toggle_cb(self, event):
-        if event.new != self.simulator.is_started():
+        if event.new != self.controller.is_started():
             if event.new:
-                self.simulator.start()
+                self.controller.start()
             else:
-                self.simulator.stop()
-        self.start_toggle.name = "Stop" if self.simulator.is_started() else "Start"
+                self.controller.stop()
+        self.start_toggle.name = "Stop" if self.controller.is_started() else "Start"
 
 
     def entity_toggle_cb(self, event):
@@ -225,8 +225,8 @@ class WindowManager(Parameterized):
     def update_plot_cb(self):
         for em in self.entity_managers.values():
             em.update_selected_simulator()
-        state = self.simulator.update_state()
-        self.simulator.pull_configs()
+        state = self.controller.update_state()
+        self.controller.pull_configs()
         for em in self.entity_managers.values():
             with em.no_drag_cb():
                 em.update_cds(state)
@@ -240,12 +240,12 @@ class WindowManager(Parameterized):
     def create_plot(self):
         self.config_columns = pn.Row(*
             [pn.Column(
-                self.simulator.simulator_config, visible=False,
-                sizing_mode="scale_both",scroll=True)] +
+                self.controller.simulator_config, visible=False,
+                sizing_mode="scale_both",scroll=True, name="test")] +
             [pn.Column(
-                self.simulator.selected_entities[etype],
-                self.simulator.selected_panel_configs[etype],
-                self.simulator.selected_configs[etype],
+                self.controller.selected_entities[etype],
+                self.controller.selected_panel_configs[etype],
+                self.controller.selected_configs[etype],
                 visible=False, sizing_mode="stretch_width", scroll=True)
             for etype in EntityType])
 
@@ -254,8 +254,8 @@ class WindowManager(Parameterized):
         p.axis.major_label_text_font_size = "24px"
         hover = HoverTool(tooltips=None)
         p.add_tools(hover)
-        p.x_range = Range1d(0, self.simulator.simulator_config.box_size)
-        p.y_range = Range1d(0, self.simulator.simulator_config.box_size)
+        p.x_range = Range1d(0, self.controller.simulator_config.box_size)
+        p.y_range = Range1d(0, self.controller.simulator_config.box_size)
         draw_tool = PointDrawTool(renderers=[self.entity_managers[etype].plot(p)
                                              for etype in EntityType], add=False)
         p.add_tools(draw_tool)
