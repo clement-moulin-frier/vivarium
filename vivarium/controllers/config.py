@@ -50,7 +50,7 @@ class AgentConfig(Config):
     proxs_cos_min = param.Number(0., bounds=(-1., 1.))
     color = param.Color('blue')
     friction = param.Number(1e-1)
-    visible = param.Boolean(True)
+    exists = param.Boolean(True)
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -66,7 +66,7 @@ class ObjectConfig(Config):
     diameter = param.Number(5.)
     color = param.Color('red')
     friction = param.Number(10.)
-    visible = param.Boolean(True)
+    exists = param.Boolean(True)
 
     def __init__(self, **params):
         super().__init__(**params)
