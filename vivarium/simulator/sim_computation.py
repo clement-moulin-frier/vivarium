@@ -50,6 +50,8 @@ class NVEState(simulate.NVEState):
 @dataclass
 class AgentState:
     nve_idx: util.Array  # idx in NVEState
+    neighbor_map_dist: util.Array
+    neighbor_map_theta: util.Array
     prox: util.Array
     motor: util.Array
     behavior: util.Array
@@ -223,9 +225,15 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
         Ra = body.center[senders]
         Rb = body.center[receivers]
         dR = - space.map_bond(displacement)(Ra, Rb)  # Looks like it should be opposite, but don't understand why
-        prox = sensor(dR, body.orientation[senders], state.agent_state.proxs_dist_max[senders],
+
+        dist_theta = proximity_map(dR, body.orientation[senders])
+        neighbor_map_dist = jnp.zeros((state.agent_state.nve_idx.shape[0], state.nve_state.entity_idx.shape[0]))
+        neighbor_map_dist = neighbor_map_dist.at[agent_neighs_idx[0, :], agent_neighs_idx[1, :]].set(dist_theta[:, 0])
+        neighbor_map_theta = jnp.zeros((state.agent_state.nve_idx.shape[0], state.nve_state.entity_idx.shape[0]))
+        neighbor_map_theta = neighbor_map_theta.at[agent_neighs_idx[0, :], agent_neighs_idx[1, :]].set(dist_theta[:, 1])
+        prox = sensor(dist_theta[:, 0], dist_theta[:, 1], state.agent_state.proxs_dist_max[senders],
                       state.agent_state.proxs_cos_min[senders], len(state.agent_state.nve_idx), senders, mask)
-        return state.agent_state.set(prox=prox)
+        return state.agent_state.set(neighbor_map_dist=neighbor_map_dist, neighbor_map_theta=neighbor_map_theta, prox=prox)
 
     def sensorimotor(agent_state):
 
@@ -256,7 +264,7 @@ def dist_theta(displ, theta):
     norm_displ = displ / dist
     theta_displ = jnp.arccos(norm_displ[0]) * jnp.sign(jnp.arcsin(norm_displ[1]))
     relative_theta = theta_displ - theta
-    return dist, relative_theta
+    return jnp.array([dist, relative_theta])
 
 
 proximity_map = vmap(dist_theta, (0, 0))
@@ -283,8 +291,7 @@ def sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists):
 sensor_fn = vmap(sensor_fn, (0, 0, 0, 0, 0))
 
 
-def sensor(displ, theta, dist_max, cos_min, n_agents, senders, target_exists):
-    dist, relative_theta = proximity_map(displ, theta)
+def sensor(dist, relative_theta, dist_max, cos_min, n_agents, senders, target_exists):
     proxs = ops.segment_max(sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists),
                             senders, n_agents)
     return proxs

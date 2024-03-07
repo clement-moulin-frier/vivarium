@@ -53,6 +53,7 @@ color_c_to_s = lambda x: mcolors.to_rgb(x)
 mass_center_s_to_c = lambda x, typ: typ(x)
 mass_center_c_to_s = lambda x: [x]
 exists_c_to_s = lambda x: int(x)
+neighbor_map_s_to_c = lambda x, typ: x
 
 
 agent_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
@@ -66,6 +67,8 @@ agent_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'posit
                                'right_motor': StateFieldInfo(('agent_state', 'motor',), 1, identity_s_to_c, identity_c_to_s),
                                'left_prox': StateFieldInfo(('agent_state', 'prox',), 0, identity_s_to_c, identity_c_to_s),
                                'right_prox': StateFieldInfo(('agent_state', 'prox',), 1, identity_s_to_c, identity_c_to_s),
+                               'neighbor_map_dist': StateFieldInfo(('agent_state', 'neighbor_map_dist',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
+                               'neighbor_map_theta': StateFieldInfo(('agent_state', 'neighbor_map_theta',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
                                'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
                                'color': StateFieldInfo(('agent_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
                                'idx': StateFieldInfo(('agent_state', 'nve_idx',), None, identity_s_to_c, identity_c_to_s),
@@ -118,6 +121,8 @@ def get_default_state(n_entities_dict):
                                     exists=jnp.ones(n_entities, dtype=int)
                                     ),
                  agent_state=AgentState(nve_idx=jnp.zeros(n_agents, dtype=int),
+                                        neighbor_map_dist=jnp.zeros((n_agents, 1)),
+                                        neighbor_map_theta=jnp.zeros((n_agents, 1)),
                                         prox=jnp.zeros((n_agents, 2)),
                                         motor=jnp.zeros((n_agents, 2)),
                                         behavior=jnp.zeros(n_agents, dtype=int),
@@ -202,6 +207,10 @@ def rec_set_dataclass(var, nested_field, row_idx, column_idx, value):
 
     if len(nested_field) == 1:
         field = nested_field[0]
+        if isinstance(column_idx, slice):
+            column_idx = np.arange(column_idx.start if column_idx.start is not None else 0,
+                                   column_idx.stop if column_idx.stop is not None else getattr(var, field).shape[1],
+                                   column_idx.step if column_idx.step is not None else 1, dtype=int)
         if column_idx is None or len(column_idx) == 0:
             d = {field: getattr(var, field).at[row_idx].set(value.reshape(-1))}
         else:

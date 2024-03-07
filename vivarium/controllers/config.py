@@ -6,6 +6,8 @@ from vivarium.simulator.sim_computation import StateType
 
 from jax_md.rigid_body import monomer
 
+import numpy as np
+
 
 mass = monomer.mass()
 mass_center = float(mass.center[0])
@@ -42,6 +44,8 @@ class AgentConfig(Config):
     right_motor = param.Number(0., bounds=(0., 1.))
     left_prox = param.Number(0., bounds=(0., 1.))
     right_prox = param.Number(0., bounds=(0., 1.))
+    neighbor_map_dist = param.Array(np.array([0.]))
+    neighbor_map_theta = param.Array(np.array([0.]))
     wheel_diameter = param.Number(2.)
     diameter = param.Number(5.)
     speed_mul = param.Number(1.)
