@@ -51,7 +51,7 @@ class SimulatorState(_message.Message):
     def __init__(self, idx: _Optional[_Union[NDArray, _Mapping]] = ..., box_size: _Optional[_Union[NDArray, _Mapping]] = ..., n_agents: _Optional[_Union[NDArray, _Mapping]] = ..., n_objects: _Optional[_Union[NDArray, _Mapping]] = ..., num_steps_lax: _Optional[_Union[NDArray, _Mapping]] = ..., dt: _Optional[_Union[NDArray, _Mapping]] = ..., freq: _Optional[_Union[NDArray, _Mapping]] = ..., neighbor_radius: _Optional[_Union[NDArray, _Mapping]] = ..., to_jit: _Optional[_Union[NDArray, _Mapping]] = ..., use_fori_loop: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class NVEState(_message.Message):
-    __slots__ = ["position", "momentum", "force", "mass", "diameter", "entity_type", "entity_idx", "friction", "visible"]
+    __slots__ = ["position", "momentum", "force", "mass", "diameter", "entity_type", "entity_idx", "friction", "exists"]
     POSITION_FIELD_NUMBER: _ClassVar[int]
     MOMENTUM_FIELD_NUMBER: _ClassVar[int]
     FORCE_FIELD_NUMBER: _ClassVar[int]
@@ -60,7 +60,7 @@ class NVEState(_message.Message):
     ENTITY_TYPE_FIELD_NUMBER: _ClassVar[int]
     ENTITY_IDX_FIELD_NUMBER: _ClassVar[int]
     FRICTION_FIELD_NUMBER: _ClassVar[int]
-    VISIBLE_FIELD_NUMBER: _ClassVar[int]
+    EXISTS_FIELD_NUMBER: _ClassVar[int]
     position: RigidBody
     momentum: RigidBody
     force: RigidBody
@@ -69,8 +69,8 @@ class NVEState(_message.Message):
     entity_type: NDArray
     entity_idx: NDArray
     friction: NDArray
-    visible: NDArray
-    def __init__(self, position: _Optional[_Union[RigidBody, _Mapping]] = ..., momentum: _Optional[_Union[RigidBody, _Mapping]] = ..., force: _Optional[_Union[RigidBody, _Mapping]] = ..., mass: _Optional[_Union[RigidBody, _Mapping]] = ..., diameter: _Optional[_Union[NDArray, _Mapping]] = ..., entity_type: _Optional[_Union[NDArray, _Mapping]] = ..., entity_idx: _Optional[_Union[NDArray, _Mapping]] = ..., friction: _Optional[_Union[NDArray, _Mapping]] = ..., visible: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
+    exists: NDArray
+    def __init__(self, position: _Optional[_Union[RigidBody, _Mapping]] = ..., momentum: _Optional[_Union[RigidBody, _Mapping]] = ..., force: _Optional[_Union[RigidBody, _Mapping]] = ..., mass: _Optional[_Union[RigidBody, _Mapping]] = ..., diameter: _Optional[_Union[NDArray, _Mapping]] = ..., entity_type: _Optional[_Union[NDArray, _Mapping]] = ..., entity_idx: _Optional[_Union[NDArray, _Mapping]] = ..., friction: _Optional[_Union[NDArray, _Mapping]] = ..., exists: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class AgentState(_message.Message):
     __slots__ = ["nve_idx", "prox", "motor", "behavior", "wheel_diameter", "speed_mul", "theta_mul", "proxs_dist_max", "proxs_cos_min", "color"]
