@@ -52,7 +52,7 @@ color_s_to_c = lambda x, typ: mcolors.to_hex(np.array(x))  # Warning : temporary
 color_c_to_s = lambda x: mcolors.to_rgb(x)
 mass_center_s_to_c = lambda x, typ: typ(x)
 mass_center_c_to_s = lambda x: [x]
-visible_c_to_s = lambda x: int(x)
+exists_c_to_s = lambda x: int(x)
 
 
 agent_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
@@ -69,7 +69,7 @@ agent_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'posit
                                'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
                                'color': StateFieldInfo(('agent_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
                                'idx': StateFieldInfo(('agent_state', 'nve_idx',), None, identity_s_to_c, identity_c_to_s),
-                               'visible': StateFieldInfo(('nve_state', 'visible'), None, identity_s_to_c, visible_c_to_s)
+                               'exists': StateFieldInfo(('nve_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
                                }
 
 agent_configs_to_state_dict.update({f: StateFieldInfo(('agent_state', f,), None, identity_s_to_c, identity_c_to_s) for f in agent_common_fields if f not in agent_configs_to_state_dict})
@@ -83,7 +83,7 @@ object_configs_to_state_dict = {'x_position': StateFieldInfo(('nve_state', 'posi
                                 'friction': StateFieldInfo(('nve_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
                                 'color': StateFieldInfo(('object_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
                                 'idx': StateFieldInfo(('object_state', 'nve_idx',), None, identity_s_to_c, identity_c_to_s),
-                                'visible': StateFieldInfo(('nve_state', 'visible'), None, identity_s_to_c, visible_c_to_s)
+                                'exists': StateFieldInfo(('nve_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
 
                                 }
 
@@ -115,7 +115,7 @@ def get_default_state(n_entities_dict):
                                     entity_idx = jnp.array(list(range(n_agents)) + list(range(n_objects))),
                                     diameter=jnp.zeros(n_entities),
                                     friction=jnp.zeros(n_entities),
-                                    visible=jnp.ones(n_entities, dtype=int)
+                                    exists=jnp.ones(n_entities, dtype=int)
                                     ),
                  agent_state=AgentState(nve_idx=jnp.zeros(n_agents, dtype=int),
                                         prox=jnp.zeros((n_agents, 2)),
