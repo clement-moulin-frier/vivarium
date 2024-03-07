@@ -1,13 +1,12 @@
-import jax
-from jax import ops, vmap, lax
-import jax.numpy as jnp
-
-from jax_md import space, rigid_body, util, simulate, energy, quantity
-from jax_md.dataclasses import dataclass
-
 from functools import partial
 from enum import Enum
-from itertools import compress
+
+import jax
+import jax.numpy as jnp
+
+from jax import ops, vmap, lax
+from jax_md import space, rigid_body, util, simulate, energy, quantity
+from jax_md.dataclasses import dataclass
 
 
 f32 = util.f32
@@ -110,9 +109,10 @@ class State:
 
         return res
 
-    def nve_idx(self, etype):
-        cond = self.e_cond(etype)
-        return compress(range(len(cond)), cond)  # https://stackoverflow.com/questions/21448225/getting-indices-of-true-values-in-a-boolean-list
+    # Should we keep this function because it is duplicated below ? 
+    # def nve_idx(self, etype):
+    #     cond = self.e_cond(etype)
+    #     return compress(range(len(cond)), cond)  # https://stackoverflow.com/questions/21448225/getting-indices-of-true-values-in-a-boolean-list
 
     def nve_idx(self, etype, entity_idx):
         return self.field(etype).nve_idx[entity_idx]
@@ -138,7 +138,7 @@ class State:
 
 
 def normal(theta):
-  return jnp.array([jnp.cos(theta), jnp.sin(theta)])
+    return jnp.array([jnp.cos(theta), jnp.sin(theta)])
 
 normal = vmap(normal)
 
@@ -204,8 +204,8 @@ def get_verlet_force_fn(displacement):
     def friction_force(nve_state, exists_mask):
         cur_vel = nve_state.momentum.center / nve_state.mass.center
         # stack the mask to give it the same shape as cur_vel (that has 2 rows for forward and angular velocities) 
-        # mask = jnp.stack([exists_mask] * 2, axis=1) 
-        # cur_vel = jnp.where(mask, cur_vel, 0.)
+        mask = jnp.stack([exists_mask] * 2, axis=1) 
+        cur_vel = jnp.where(mask, cur_vel, 0.)
         return - jnp.tile(nve_state.friction, (SPACE_NDIMS, 1)).T * cur_vel
 
     def motor_force(state, exists_mask):
@@ -228,15 +228,15 @@ def get_verlet_force_fn(displacement):
         center=jnp.zeros_like(state.nve_state.position.center).at[agent_idx].set(fwd_force)
         orientation=jnp.zeros_like(state.nve_state.position.orientation).at[agent_idx].set(rot_force)
 
-        # apply mask to make non existing agents stand still 
+        # apply mask to make non existing agents stand still
         orientation = jnp.where(exists_mask, orientation, 0.)
-        # Because position has SPACE_NDMS dims, need to stack the mask to give it the same shape as center 
-        exists_mask = jnp.stack([exists_mask] * SPACE_NDIMS, axis=1) 
+        # Because position has SPACE_NDMS dims, need to stack the mask to give it the same shape as center
+        exists_mask = jnp.stack([exists_mask] * SPACE_NDIMS, axis=1)
         center = jnp.where(exists_mask, center, 0.)
+
 
         return rigid_body.RigidBody(center=center,
                                     orientation=orientation)
-    
 
     def force_fn(state, neighbor, exists_mask):
         mf = motor_force(state, exists_mask)
@@ -301,14 +301,27 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
     # shape = rigid_body.monomer
 
     def init_fn(state, key, kT=0.):
-        key, subkey = jax.random.split(key)
+        key, _ = jax.random.split(key)
         assert state.nve_state.momentum is None
         assert not jnp.any(state.nve_state.force.center) and not jnp.any(state.nve_state.force.orientation)
 
         state = state.set(nve_state=simulate.initialize_momenta(state.nve_state, key, kT))
         return state
+    
+    def mask_momentum(nve_state, exists_mask):
+        """
+        Set the momentum values to zeros for non existing entities
+        :param nve_state: nve_state
+        :param exists_mask: bool array specifying which entities exist or not
+        :return: nve_state: new nve state state with masked momentum values
+        """
+        orientation = jnp.where(exists_mask, nve_state.momentum.orientation, 0)
+        exists_mask = jnp.stack([exists_mask] * SPACE_NDIMS, axis=1)
+        center = jnp.where(exists_mask, nve_state.momentum.center, 0)
+        momentum = rigid_body.RigidBody(center=center, orientation=orientation)
+        return nve_state.set(momentum=momentum)
 
-    def physics_fn(state, force, shift_fn, dt, neighbor):
+    def physics_fn(state, force, shift_fn, dt, neighbor, mask):
         """Apply a single step of velocity Verlet integration to a state."""
         # dt = f32(dt)
         dt_2 = dt / 2.  # f32(dt / 2)
@@ -317,6 +330,7 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
         nve_state = simulate.position_step(nve_state, shift_fn, dt, neighbor=neighbor)
         nve_state = nve_state.set(force=force)
         nve_state = simulate.momentum_step(nve_state, dt_2)
+        nve_state = mask_momentum(nve_state, mask)
 
         return state.set(nve_state=nve_state)
 
@@ -349,7 +363,7 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
         state = state.set(agent_state=compute_prox(state, agent_neighs_idx, target_exists_mask=exists_mask))
         state = state.set(agent_state=sensorimotor(state.agent_state))
         force = force_fn(state, neighbor, exists_mask)
-        state = physics_fn(state, force, shift, state.simulator_state.dt[0], neighbor=neighbor)
+        state = physics_fn(state, force, shift, state.simulator_state.dt[0], neighbor=neighbor, mask=exists_mask)
         return state
 
     return init_fn, step_fn
