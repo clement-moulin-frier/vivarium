@@ -186,7 +186,7 @@ class WindowManager(Parameterized):
     start_toggle = pn.widgets.Toggle(**({"name": "Stop", "value": True} if controller.is_started()
                                         else {"name": "Start", "value": False}),align="center")
     entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=config_types,
-                                           align="center")
+                                           align="center", value=config_types[1:])
     update_switch = pn.widgets.Switch(name="Update plot", value=True, align="center")
     update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=10, start=0, end=1000)
     def __init__(self, **kwargs):
@@ -244,9 +244,9 @@ class WindowManager(Parameterized):
                 sizing_mode="scale_both",scroll=True, name="test")] +
             [pn.Column(
                 self.controller.selected_entities[etype],
-                self.controller.selected_panel_configs[etype],
+                pn.panel(self.controller.selected_panel_configs[etype], name="Visualization configs"),
                 self.controller.selected_configs[etype],
-                visible=False, sizing_mode="stretch_width", scroll=True)
+                visible=True, sizing_mode="stretch_width", scroll=True)
             for etype in EntityType])
 
         p_tools = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
