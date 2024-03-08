@@ -41,7 +41,7 @@ class NVEState(simulate.NVEState):
     entity_idx: util.Array  # idx in XState (e.g. AgentState)
     diameter: util.Array
     friction: util.Array
-    visible: util.Array
+    exists: util.Array
 
     @property
     def velocity(self) -> util.Array:
@@ -207,14 +207,24 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
 
         return state.set(nve_state=nve_state)
 
-    def compute_prox(state, agent_neighs_idx):
+    def compute_prox(state, agent_neighs_idx, target_exists_mask):
+        """
+        Set agents' proximeter activations
+        :param state: full simulation State
+        :param agent_neighs_idx: Neighbor representation, where sources are only agents. Matrix of shape (2, n_pairs),
+        where n_pairs is the number of neighbor entity pairs where sources (first row) are agent indexes.
+        :param target_exists_mask: Specify which target entities exist. Vector with shape (n_entities,).
+        target_exists_mask[i] is True (resp. False) if entity of index i in state.nve_state exists (resp. don't exist).
+        :return:
+        """
         body = state.nve_state.position
+        mask = target_exists_mask[agent_neighs_idx[1, :]]
         senders, receivers = agent_neighs_idx
         Ra = body.center[senders]
         Rb = body.center[receivers]
-        dR = - space.map_bond(displacement)(Ra, Rb) # Looks like it should be opposite, but don't understand why
+        dR = - space.map_bond(displacement)(Ra, Rb)  # Looks like it should be opposite, but don't understand why
         prox = sensor(dR, body.orientation[senders], state.agent_state.proxs_dist_max[senders],
-                      state.agent_state.proxs_cos_min[senders], len(state.agent_state.nve_idx), senders)
+                      state.agent_state.proxs_cos_min[senders], len(state.agent_state.nve_idx), senders, mask)
         return state.agent_state.set(prox=prox)
 
     def sensorimotor(agent_state):
@@ -223,8 +233,9 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
 
         return agent_state.set(motor=motor)
 
-    def step_fn(state, neighbor, agent_neighs_idx, **kwargs):
-        state = state.set(agent_state=compute_prox(state, agent_neighs_idx))
+    def step_fn(state, neighbor, agent_neighs_idx):
+        target_exists_mask = (state.nve_state.exists == 1)  # Only existing entities have effect on others
+        state = state.set(agent_state=compute_prox(state, agent_neighs_idx, target_exists_mask=target_exists_mask))
         state = state.set(agent_state=sensorimotor(state.agent_state))
         force = force_fn(state, neighbor)
         state = physics_fn(state, force, shift, state.simulator_state.dt[0], neighbor=neighbor)
@@ -233,25 +244,48 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
     return init_fn, step_fn
 
 
-def sensor_fn(displ, theta, dist_max, cos_min):
+def dist_theta(displ, theta):
+    """
+    Compute the relative distance and angle from a source agent to a target agent
+    :param displ: Displacement vector (jnp arrray with shape (2,) from source to target
+    :param theta: Orientation of the source agent (in the reference frame of the map)
+    :return: dist: distance from source to target.
+    relative_theta: relative angle of the target in the reference frame of the source agent (front direction at angle 0)
+    """
     dist = jnp.linalg.norm(displ)
-    n = jnp.array([jnp.cos( - theta), jnp.sin(- theta)])
-    rot_matrix = jnp.array([[n[0], - n[1]], [n[1], n[0]]])
-    rot_displ = jnp.dot(rot_matrix, jnp.reshape(displ, (2, 1))).reshape((-1, ))
-    cos_dir = rot_displ[0] / dist
+    norm_displ = displ / dist
+    theta_displ = jnp.arccos(norm_displ[0]) * jnp.sign(jnp.arcsin(norm_displ[1]))
+    relative_theta = theta_displ - theta
+    return dist, relative_theta
+
+
+proximity_map = vmap(dist_theta, (0, 0))
+
+
+def sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists):
+    """
+    Compute the proximeter activations (left, right) induced by the presence of an entity
+    :param dist: distance from the agent to the entity
+    :param relative_theta: angle of the entity in the reference frame of the agent (front direction at angle 0)
+    :param dist_max: Max distance of the proximiter (will return 0. above this distance)
+    :param cos_min: Field of view as a cosinus (e.g. cos_min = 0 means a pi/4 FoV on each proximeter, so pi/2 in total)
+    :return: left and right proximeter activation in a jnp array with shape (2,)
+    """
+    cos_dir = jnp.cos(relative_theta)
     prox = 1. - (dist / dist_max)
     in_view = jnp.logical_and(dist < dist_max, cos_dir > cos_min)
-    at_left = jnp.logical_and(True, rot_displ[1] >= 0)
+    at_left = jnp.logical_and(True, jnp.sin(relative_theta) >= 0)
     left = in_view * at_left * prox
     right = in_view * (1. - at_left) * prox
-    return jnp.array([left, right])
+    return jnp.array([left, right]) * target_exists  # i.e. 0 if target does not exist
 
 
-sensor_fn = vmap(sensor_fn, (0, 0, 0, 0))
+sensor_fn = vmap(sensor_fn, (0, 0, 0, 0, 0))
 
 
-def sensor(displ, theta, dist_max, cos_min, n_agents, senders):
-    proxs = ops.segment_max(sensor_fn(displ, theta, dist_max, cos_min),
+def sensor(displ, theta, dist_max, cos_min, n_agents, senders, target_exists):
+    dist, relative_theta = proximity_map(displ, theta)
+    proxs = ops.segment_max(sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists),
                             senders, n_agents)
     return proxs
 

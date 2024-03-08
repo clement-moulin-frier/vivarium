@@ -11,5 +11,6 @@ matplotlib==3.8.2
 # Client-server communication
 grpcio==1.60.0
 
-# Tests 
+# Tests and code formatting
 pytest==8.0.0
+black
