@@ -8,6 +8,10 @@ import param
 import numpy as np
 from contextlib import contextmanager
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+lg = logging.getLogger(__name__)
 
 class PanelConfig(Config):
     pass
@@ -114,7 +118,7 @@ class PanelController(SimulatorController):
         self.pull_configs({StateType.SIMULATOR: self.configs[StateType.SIMULATOR]})
 
     def push_selected_to_config_list(self, *events):
-        print('push_selected_to_config_list', len(events))
+        lg.info('push_selected_to_config_list %d', len(events))
         for e in events:
             if isinstance(e.obj, PanelEntityConfig):
                 stype = panel_config_to_stype[type(e.obj)]
@@ -130,5 +134,5 @@ class PanelController(SimulatorController):
 
 if __name__ == '__main__':
     simulator = PanelController(client=SimulatorGRPCClient())
-    print('Done')
+    lg.info('Done')
     

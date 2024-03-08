@@ -16,7 +16,10 @@ import vivarium.simulator.behaviors as behaviors
 import time
 import threading
 import math
+import logging
 
+logging.basicConfig(level=logging.INFO)
+lg = logging.getLogger(__name__)
 
 class Simulator:
     def __init__(self, state, behavior_bank, dynamics_fn):
@@ -49,7 +52,7 @@ class Simulator:
 
     def _run(self, num_loops=math.inf):
         self._is_started = True
-        print('Run starts')
+        lg.info('Run starts')
         loop_count = 0
         while loop_count < num_loops:
             if self._to_stop:
@@ -68,7 +71,7 @@ class Simulator:
                     new_state, neighbors = self.update_fn(i, (new_state, neighbors))
             # If the neighbor list can't fit in the allocation, rebuild it but bigger.
             if neighbors.did_buffer_overflow:
-                print('REBUILDING')
+                lg.warning('REBUILDING')
                 neighbors = self.allocate_neighbors(new_state.nve_state.position.center)
                 # new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_lax_loops, self.update_fn, (self.state, neighbors))
                 for i in range(0, self.num_steps_lax):
@@ -76,13 +79,13 @@ class Simulator:
                 assert not neighbors.did_buffer_overflow
             self.state = new_state
             self.neighbors = neighbors
-            # print(self.state)
+            # lg.info(self.state)
             loop_count += 1
         self._is_started = False
-        print('Run stops')
+        lg.info('Run stops')
 
     def set_state(self, nested_field, nve_idx, column_idx, value):
-        print('set_state', nested_field, nve_idx, column_idx, value)
+        lg.info(f'set_state {nested_field} {nve_idx} {column_idx} {value}')
         row_idx = self.state.row_idx(nested_field[0], jnp.array(nve_idx))
         col_idx = None if column_idx is None else jnp.array(column_idx)
         change = converters.rec_set_dataclass(self.state, nested_field, row_idx, col_idx, value)
@@ -110,8 +113,8 @@ class Simulator:
         if blocking:
             while self._is_started:
                 time.sleep(0.01)
-                print('still started')
-            print('now stopped')
+                lg.info('still started')
+            lg.info('now stopped')
 
     def is_started(self):
         return self._is_started
@@ -130,15 +133,15 @@ class Simulator:
             self.run(threaded=True)
 
     def update_attr(self, attr, type_):
-        print('update_attr')
+        lg.info('update_attr')
         setattr(self, attr, type_(getattr(self.state.simulator_state, attr)[0]))
 
     def update_space(self, box_size):
-        print('update_space')
+        lg.info('update_space')
         self.displacement, self.shift = space.periodic(box_size)
 
     def update_function_update(self):
-        print('update_function_update')
+        lg.info('update_function_update')
         self.init_fn, self.step_fn = self.dynamics_fn(self.displacement, self.shift, self.behavior_bank)
 
         def update_fn(_, state_and_neighbors):
@@ -153,11 +156,11 @@ class Simulator:
             self.update_fn = update_fn
 
     def init_state(self, state):
-        print('init_state')
+        lg.info('init_state')
         self.state = self.init_fn(state, self.key)
 
     def update_neighbor_fn(self, box_size, neighbor_radius):
-        print('update_neighbor_fn')
+        lg.info('update_neighbor_fn')
         self.neighbor_fn = partition.neighbor_list(self.displacement, box_size,
                                                    r_cutoff=neighbor_radius,
                                                    dr_threshold=10.,
@@ -166,7 +169,7 @@ class Simulator:
                                                    format=partition.Sparse)
 
     def allocate_neighbors(self, position=None):
-        print('allocate_neighbors')
+        lg.info('allocate_neighbors')
         position = self.state.nve_state.position.center if position is None else position
         self.neighbors = self.neighbor_fn.allocate(position)
         mask = self.state.nve_state.entity_type[self.neighbors.idx[0]] == EntityType.AGENT.value
