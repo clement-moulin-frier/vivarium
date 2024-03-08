@@ -318,14 +318,14 @@ normal = vmap(normal)
 
 def collision_energy(displacement_fn, r_a, r_b, l_a, l_b, epsilon, alpha):
     dist = jnp.linalg.norm(displacement_fn(r_a, r_b))
-    sigma = l_a + l_b
+    sigma = 3 * (l_a + l_b) # Increase the sigma (diameter of the sphere in soft_sphere)
     return energy.soft_sphere(dist, sigma=sigma, epsilon=epsilon, alpha=alpha)
 
 
 collision_energy = vmap(collision_energy, (None, 0, 0, 0, 0, None, None))
 
 
-def total_collision_energy(positions, diameter, neighbor, displacement, epsilon=1e-2, alpha=2, **kwargs):
+def total_collision_energy(positions, diameter, neighbor, displacement, epsilon=3., alpha=0.3, **kwargs):
     diameter = lax.stop_gradient(diameter)
     senders, receivers = neighbor.idx
     Ra = positions[senders]

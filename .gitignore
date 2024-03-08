@@ -158,4 +158,5 @@ profiler_stats
 
 .vscode
 .pylintrc
+test.ipynb
 myvenv/
