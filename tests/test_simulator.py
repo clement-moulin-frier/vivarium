@@ -39,7 +39,8 @@ def test_simulator_run():
         }
         )
 
-    simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
+    col_params = {'eps': 0.3, 'alpha': 0.4, 'dist_mul': 1.1}
+    simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid, col_params)
 
     simulator.run(threaded=False, num_loops=NUM_LOOPS)
 

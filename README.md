@@ -29,7 +29,7 @@ pip install -e .
 Use the following command :
 
 ```bash
-python3 vivarium/simulator/grpc_server/simulator_server.py
+python3 simulator_server.py
 ```
 
 ### Interact with it from a web interface

@@ -147,8 +147,8 @@ def get_verlet_force_fn(displacement):
     coll_force_fn = quantity.force(partial(total_collision_energy, displacement=displacement,
                                            epsilon=10., alpha=12))
 
-    def collision_force(nve_state, neighbor):
-        return coll_force_fn(nve_state.position.center, neighbor=neighbor, diameter=nve_state.diameter)
+    def collision_force(nve_state, neighbor, col_params):
+        return coll_force_fn(nve_state.position.center, neighbor=neighbor, diameter=nve_state.diameter, params=col_params)
 
     def friction_force(nve_state):
         cur_vel = nve_state.momentum.center / nve_state.mass.center
@@ -173,15 +173,17 @@ def get_verlet_force_fn(displacement):
         return rigid_body.RigidBody(center=jnp.zeros_like(state.nve_state.position.center).at[agent_idx].set(fwd_force),
                                     orientation=jnp.zeros_like(state.nve_state.position.orientation).at[agent_idx].set(rot_force))
 
-    def force_fn(state, neighbor):
+    def force_fn(state, neighbor, col_params):
         mf = motor_force(state)
-        return rigid_body.RigidBody(center=collision_force(state.nve_state, neighbor) + friction_force(state.nve_state) + mf.center,
+        cf = collision_force(state.nve_state, neighbor, col_params)
+        ff = friction_force(state.nve_state)
+        return rigid_body.RigidBody(center=cf + ff + mf.center,
                                     orientation=mf.orientation)
 
     return force_fn
 
 
-def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
+def dynamics_rigid(displacement, shift, behavior_bank, col_params, force_fn=None):
     force_fn = force_fn or get_verlet_force_fn(displacement)
     multi_switch = jax.vmap(switch_fn(behavior_bank), (0, 0, 0))
 
@@ -228,16 +230,14 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
         return state.agent_state.set(prox=prox)
 
     def sensorimotor(agent_state):
-
         motor = multi_switch(agent_state.behavior, agent_state.prox, agent_state.motor)
-
         return agent_state.set(motor=motor)
 
     def step_fn(state, neighbor, agent_neighs_idx):
         target_exists_mask = (state.nve_state.exists == 1)  # Only existing entities have effect on others
         state = state.set(agent_state=compute_prox(state, agent_neighs_idx, target_exists_mask=target_exists_mask))
         state = state.set(agent_state=sensorimotor(state.agent_state))
-        force = force_fn(state, neighbor)
+        force = force_fn(state, neighbor, col_params)
         state = physics_fn(state, force, shift, state.simulator_state.dt[0], neighbor=neighbor)
         return state
 
@@ -316,22 +316,23 @@ def normal(theta):
 
 normal = vmap(normal)
 
-def collision_energy(displacement_fn, r_a, r_b, l_a, l_b, epsilon, alpha):
+def collision_energy(displacement_fn, r_a, r_b, l_a, l_b, epsilon, alpha, dist_mul):
     dist = jnp.linalg.norm(displacement_fn(r_a, r_b))
-    sigma = 3 * (l_a + l_b) # Increase the sigma (diameter of the sphere in soft_sphere)
-    return energy.soft_sphere(dist, sigma=sigma, epsilon=epsilon, alpha=alpha)
+    sigma = dist_mul * (l_a + l_b) / 2 # Increase the sigma (diameter of the sphere in soft_sphere)
+    # I think there was an error on the alpha parameter before passing it to a f32
+    return energy.soft_sphere(dist, sigma=sigma, epsilon=epsilon, alpha=f32(alpha))
 
 
-collision_energy = vmap(collision_energy, (None, 0, 0, 0, 0, None, None))
+collision_energy = vmap(collision_energy, (None, 0, 0, 0, 0, None, None, None))
 
 
-def total_collision_energy(positions, diameter, neighbor, displacement, epsilon=3., alpha=0.3, **kwargs):
+def total_collision_energy(positions, diameter, neighbor, displacement, params, **kwargs):
     diameter = lax.stop_gradient(diameter)
     senders, receivers = neighbor.idx
     Ra = positions[senders]
     Rb = positions[receivers]
     l_a = diameter[senders]
     l_b = diameter[receivers]
-    e = collision_energy(displacement, Ra, Rb, l_a, l_b, epsilon, alpha)
+    e = collision_energy(displacement, Ra, Rb, l_a, l_b, params['eps'], params['alpha'], params['dist_mul'])
     return jnp.sum(e)
 
