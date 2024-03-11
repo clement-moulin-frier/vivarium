@@ -36,9 +36,9 @@ class EntityManager:
             pc.param.watch(self.update_cds_view, pc.param_names())
 
     def drag_cb(self, attr, old, new):
-        for i in self.selected.selection:
-            self.config[i].x_position = new['x'][i]
-            self.config[i].y_position = new['y'][i]
+        for i, c in enumerate(self.config):
+            c.x_position = new['x'][i]
+            c.y_position = new['y'][i]
 
     @contextmanager
     def no_drag_cb(self):
@@ -238,19 +238,8 @@ class WindowManager(Parameterized):
             self.pcb_plot.stop()
 
     def create_plot(self):
-        self.config_columns = pn.Row(*
-            [pn.Column(
-                self.controller.simulator_config, visible=False,
-                sizing_mode="scale_both",scroll=True, name="test")] +
-            [pn.Column(
-                self.controller.selected_entities[etype],
-                pn.panel(self.controller.selected_panel_configs[etype], name="Visualization configs"),
-                self.controller.selected_configs[etype],
-                visible=True, sizing_mode="stretch_width", scroll=True)
-            for etype in EntityType])
-
         p_tools = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
-        p = figure(tools=p_tools)
+        p = figure(tools=p_tools, active_drag="box_select")
         p.axis.major_label_text_font_size = "24px"
         hover = HoverTool(tooltips=None)
         p.add_tools(hover)
@@ -262,12 +251,25 @@ class WindowManager(Parameterized):
         return p
 
     def create_app(self):
+        self.config_columns = pn.Row(*
+            [pn.Column(
+                pn.pane.Markdown("### SIMULATOR", align="center"),
+                pn.panel(self.controller.simulator_config, name="Configurations"),
+                visible=False, sizing_mode="scale_height", scroll=True)] +
+            [pn.Column(
+                pn.pane.Markdown(f"### {etype.name}", align="center"),
+                self.controller.selected_entities[etype],
+                pn.panel(self.controller.selected_panel_configs[etype], name="Visualization configurations"),
+                pn.panel(self.controller.selected_configs[etype], name="State configurations"),
+                visible=True, sizing_mode="scale_height", scroll=True)
+            for etype in EntityType])
+
         app = pn.Row(pn.Column(pn.Row(pn.pane.Markdown("### Start/Stop server", align="center"),
                                       self.start_toggle),
                                pn.Row(pn.pane.Markdown("### Start/Stop update", align="center"),
                                       self.update_switch, self.update_timestep),
                                pn.panel(self.plot)),
-                     pn.Column(pn.Row("### Show Configs", self.entity_toggle),
+                     pn.Column(pn.Row("### Show Configurations", self.entity_toggle),
                                pn.Row(*self.config_columns)))
         return app
 
