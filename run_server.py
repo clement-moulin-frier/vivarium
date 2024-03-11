@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument('--freq', type=float, default=40.0, help='Frequency parameter')
     parser.add_argument('--neighbor_radius', type=float, default=100.0, help='Radius for neighbor calculations')
     # By default jit compile the code and use normal python loops
-    parser.add_argument('--to-jit', action='store_false', help='Whether to use JIT compilation')
+    parser.add_argument('--to_jit', action='store_false', help='Whether to use JIT compilation')
     parser.add_argument('--use_fori_loop', action='store_true', help='Whether to use fori loop')
    
     return parser.parse_args()
