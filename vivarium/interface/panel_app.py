@@ -279,6 +279,7 @@ class WindowManager(Parameterized):
         self.update_switch.param.watch(self.update_switch_cb, "value")
         self.update_timestep.param.watch(self.update_timestep_cb, "value")
 
-# Serve the app
-wm = WindowManager()
-wm.app.servable(title="Vivarium")
+# if __name__ == "__main__":
+#     # Serve the app
+#     wm = WindowManager()
+#     wm.app.servable(title="Vivarium")

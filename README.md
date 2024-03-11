@@ -29,7 +29,7 @@ pip install -e .
 Use the following command :
 
 ```bash
-python3 vivarium/simulator/grpc_server/simulator_server.py
+python3 run_server.py
 ```
 
 ### Interact with it from a web interface
@@ -37,7 +37,7 @@ python3 vivarium/simulator/grpc_server/simulator_server.py
 And launch the web interface from another terminal :
 
 ```bash
-panel serve vivarium/interface/panel_app.py --autoreload
+panel serve interface_app.py --autoreload
 ```
 
 Once this command will have completed, it will output a URL looking like `http://localhost:5006/panel_app`, that you can open in your browser.
