@@ -28,6 +28,7 @@ class Simulator:
         self.behavior_bank = behavior_bank
         self.dynamics_fn = dynamics_fn
 
+        # FIXME: explicitely copy the attributes of simulator_state (prevents linting errors and easier to understand which element is an attriute of the class)
         all_attrs = [f.name for f in dataclasses.fields(SimulatorState)]
         for attr in all_attrs:
             self.update_attr(attr, SimulatorState.get_type(attr))
@@ -36,12 +37,48 @@ class Simulator:
         self._to_stop = False
         self.key = jax.random.PRNGKey(0)
 
+        # FIXME: Define which attributes are affected but these functions
         self.update_space(self.box_size)
         self.update_function_update()
         self.init_state(state)
         self.update_neighbor_fn(self.box_size, self.neighbor_radius)
         self.allocate_neighbors()
 
+    
+    def step(self):
+        # TODO : Why do we check that here ?
+        # assert not self._is_started
+        new_state = self.state
+        neighbors = self.neighbors
+
+        # TODO : Is there a reason why we would sometimes use classical loops ? For debugging ? 
+        # TODO : should maybe find a more explicit name than num_steps_lax
+
+        if self.state.simulator_state.use_fori_loop:
+            new_state, neighbors = lax.fori_loop(0, self.num_steps_lax, self.update_fn, (new_state, neighbors))
+        else:
+            for i in range(0, self.num_steps_lax):
+                new_state, neighbors = self.update_fn(i, (new_state, neighbors))
+
+        # If the neighbor list can't fit in the allocation, rebuild it but bigger.
+        if neighbors.did_buffer_overflow:
+            lg.warning('REBUILDING')
+            neighbors = self.allocate_neighbors(new_state.nve_state.position.center)
+            # TODO : Should we keep the commented line below ? 
+            # new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_lax_loops, self.update_fn, (self.state, neighbors))
+
+            # TODO : Why do we update the state for num_steps_lax if the neigbhors list did buffer overflow ? And should we use lax or normal python loops ? 
+            for i in range(0, self.num_steps_lax):
+                new_state, neighbors = self.update_fn(i, (self.state, neighbors))
+
+            # TODO : linked to comment upward, do we need to update the state and check this ? And what if the neighbor list overflows again ?
+            # Are we not just going to have a new error ?    
+            assert not neighbors.did_buffer_overflow
+
+        return new_state, neighbors
+
+
+    # TODO : See history of threads where we can only run th
     def run(self, threaded=False, num_loops=math.inf):
         if self._is_started:
             raise Exception("Simulator is already started")
@@ -50,37 +87,25 @@ class Simulator:
         else:
             return self._run(num_loops)
 
+    # TODO : See if not cleaner to do a run that just runs, and if need to run for x timesteps do it with a loop and step ?
+    # Prevents from unsing np.inf, loop_count ..., could potentially take inspiration from 
+    # https://github.com/corentinlger/SimulationSandbox/blob/main/simulationsandbox/simulator_wrapper.py (far from being perfect but seems cleaner and easier to read)
     def _run(self, num_loops=math.inf):
         self._is_started = True
         lg.info('Run starts')
+
         loop_count = 0
         while loop_count < num_loops:
             if self._to_stop:
                 self._to_stop = False
                 break
+            # TODO : could be nice to have a sleep_time as attribute and update it instead of having if statement here
             if float(self.freq) > 0.:
                 time.sleep(1. / float(self.freq))
-            new_state = self.state
-            neighbors = self.neighbors
-            if self.state.simulator_state.use_fori_loop:
-                new_state, neighbors = lax.fori_loop(0, self.num_steps_lax, self.update_fn,
-                                                    (new_state, neighbors))
-            else:
-
-                for i in range(0, self.num_steps_lax):
-                    new_state, neighbors = self.update_fn(i, (new_state, neighbors))
-            # If the neighbor list can't fit in the allocation, rebuild it but bigger.
-            if neighbors.did_buffer_overflow:
-                lg.warning('REBUILDING')
-                neighbors = self.allocate_neighbors(new_state.nve_state.position.center)
-                # new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_lax_loops, self.update_fn, (self.state, neighbors))
-                for i in range(0, self.num_steps_lax):
-                    new_state, neighbors = self.update_fn(i, (self.state, neighbors))
-                assert not neighbors.did_buffer_overflow
-            self.state = new_state
-            self.neighbors = neighbors
-            # lg.info(self.state)
+            
+            self.state, self.neighbors = self.step()
             loop_count += 1
+
         self._is_started = False
         lg.info('Run stops')
 
@@ -97,13 +122,14 @@ class Simulator:
         if nested_field == ('simulator_state', 'box_size'):
             self.update_space(self.box_size)
 
-        if nested_field == ('simulator_state', 'box_size') or nested_field == ('simulator_state', 'neighbor_radius'):
-            self.update_neighbor_fn(box_size=self.box_size,
-                                    neighbor_radius=self.neighbor_radius)
+        if nested_field in (('simulator_state', 'box_size'), ('simulator_state', 'neighbor_radius')):
+            self.update_neighbor_fn(box_size=self.box_size, neighbor_radius=self.neighbor_radius)
 
-        if nested_field == ('simulator_state', 'box_size') or nested_field == ('simulator_state', 'dt') or \
-                nested_field == ('simulator_state', 'to_jit'):
+        if nested_field in (('simulator_state', 'box_size'), ('simulator_state', 'dt'), ('simulator_state', 'to_jit')):
             self.update_function_update()
+
+
+    # Functions to start, stop, pause
 
     def start(self):
         self.run(threaded=True)
@@ -119,11 +145,6 @@ class Simulator:
     def is_started(self):
         return self._is_started
 
-    def step(self):
-        assert not self._is_started
-        self.run(threaded=False, num_loops=1)
-        return self.state
-
     @contextmanager
     def pause(self):
         self.stop(blocking=True)
@@ -131,6 +152,9 @@ class Simulator:
             yield self
         finally:
             self.run(threaded=True)
+
+
+    # Other update functions
 
     def update_attr(self, attr, type_):
         lg.info('update_attr')
@@ -159,6 +183,9 @@ class Simulator:
         lg.info('init_state')
         self.state = self.init_fn(state, self.key)
 
+
+    # Neighbor functions
+
     def update_neighbor_fn(self, box_size, neighbor_radius):
         lg.info('update_neighbor_fn')
         self.neighbor_fn = partition.neighbor_list(self.displacement, box_size,
@@ -175,12 +202,16 @@ class Simulator:
         mask = self.state.nve_state.entity_type[self.neighbors.idx[0]] == EntityType.AGENT.value
         self.agent_neighs_idx = self.neighbors.idx[:, mask]
         return self.neighbors
+    
+
+    # Other functions
 
     def get_change_time(self):
         return 0
 
     def get_state(self):
         return self.state
+
 
 
 if __name__ == "__main__":
