@@ -11,9 +11,7 @@ from vivarium.simulator.sim_computation import dynamics_rigid
 from vivarium.controllers.converters import set_state_from_config_dict
 from vivarium.simulator.grpc_server.simulator_server import serve
 
-logging.basicConfig(level=logging.INFO)
 lg = logging.getLogger(__name__)
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Simulator Configuration')
@@ -27,12 +25,15 @@ def parse_args():
     # By default jit compile the code and use normal python loops
     parser.add_argument('--to_jit', action='store_false', help='Whether to use JIT compilation')
     parser.add_argument('--use_fori_loop', action='store_true', help='Whether to use fori loop')
+    parser.add_argument('--log_level', type=str, default='INFO', help='Logging level')
    
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_args()
+
+    logging.basicConfig(level=args.log_level.upper())
 
     simulator_config = SimulatorConfig(
         box_size=args.box_size,
@@ -66,4 +67,3 @@ if __name__ == '__main__':
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
     lg.info('Simulator server started')
     serve(simulator)
-

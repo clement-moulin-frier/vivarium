@@ -20,7 +20,6 @@ import vivarium.simulator.behaviors as behaviors
 from vivarium.simulator.grpc_server.converters import state_to_proto, nve_state_to_proto, agent_state_to_proto, object_state_to_proto
 from vivarium.controllers.converters import set_state_from_config_dict
 
-logging.basicConfig(level=logging.INFO)
 lg = logging.getLogger(__name__)
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty

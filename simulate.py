@@ -1,4 +1,5 @@
 import argparse
+import logging
 
 import numpy as np
 
@@ -8,6 +9,7 @@ from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConf
 from vivarium.controllers import converters
 from vivarium.simulator.simulator import Simulator
 
+lg = logging.getLogger(__name__)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Simulator Configuration')
@@ -24,12 +26,15 @@ def parse_args():
     # By default jit compile the code and use normal python loops
     parser.add_argument('--to_jit', action='store_false', help='Whether to use JIT compilation')
     parser.add_argument('--use_fori_loop', action='store_true', help='Whether to use fori loop')
-   
+    parser.add_argument('--log_level', type=str, default='INFO', help='Logging level')
+
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
+
+    logging.basicConfig(level=args.log_level.upper())
 
     simulator_config = SimulatorConfig(
         box_size=args.box_size,
@@ -70,4 +75,8 @@ if __name__ == "__main__":
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
 
+    lg.info("Running simulation")
+
     simulator.run(threaded=False, num_loops=10)
+
+    lg.info("Simulation complete")

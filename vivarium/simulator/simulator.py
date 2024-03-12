@@ -18,7 +18,6 @@ import threading
 import math
 import logging
 
-logging.basicConfig(level=logging.INFO)
 lg = logging.getLogger(__name__)
 
 class Simulator:
