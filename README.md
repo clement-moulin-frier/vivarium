@@ -66,3 +66,7 @@ pytest
 ```
 
 You can add your own tests in the tests/ subdirector. Make sure that the name or your files and test functions start with "test".
+
+## Tutorials
+
+Several notebooks tutorials can be found in the [notebooks folder](https://github.com/clement-moulin-frier/vivarium/tree/main/notebooks), along with a tutorial for the web interface.
