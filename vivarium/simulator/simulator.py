@@ -1,25 +1,28 @@
-from jax import jit
-from jax import lax
-import jax
-import jax.numpy as jnp
-import numpy as np
-
-from jax_md import space, partition, dataclasses
-
-from contextlib import contextmanager
-
-from vivarium.simulator.sim_computation import dynamics_rigid, EntityType, StateType, SimulatorState
-from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig
-from vivarium.controllers import converters
-import vivarium.simulator.behaviors as behaviors
-
 import time
 import threading
 import math
 import logging
 
+from functools import partial
+from contextlib import contextmanager
+
+import jax
+import jax.numpy as jnp
+import numpy as np
+
+from jax import jit
+from jax import lax
+from jax_md import space, partition, dataclasses
+
+from vivarium.simulator.sim_computation import dynamics_rigid
+from vivarium.simulator.sim_computation import EntityType, StateType, SimulatorState
+from vivarium.controllers import converters
+from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig
+from vivarium.simulator import behaviors
+
 logging.basicConfig(level=logging.INFO)
 lg = logging.getLogger(__name__)
+
 
 class Simulator:
     def __init__(self, state, behavior_bank, dynamics_fn):
@@ -43,71 +46,131 @@ class Simulator:
         self.init_state(state)
         self.update_neighbor_fn(self.box_size, self.neighbor_radius)
         self.allocate_neighbors()
+        # Could maybe find another name : advance simulation ? ... Not that important at the moment
+        self.simulation_loop = self.select_simulation_loop_type()
 
+
+    def classic_simulation_loop(self, state, neighbors, num_iterations):
+        """Update the state and the neighbors on a few iterations with a classic python loop
+
+        :param state: current_state of the simulation
+        :param neighbors: array of neighbors for simulation entities
+        :return: state, neighbors
+        """
+        for i in range(0, num_iterations):
+            state, neighbors = self.update_fn(i, (state, neighbors))
+        return state, neighbors
     
-    def step(self):
-        # TODO : Why do we check that here ?
-        # assert not self._is_started
-        new_state = self.state
-        neighbors = self.neighbors
+    def lax_simulation_loop(self, state, neighbors, num_iterations):
+        """Update the state and the neighbors on a few iterations with lax loop
 
-        # TODO : Is there a reason why we would sometimes use classical loops ? For debugging ? 
-        # TODO : should maybe find a more explicit name than num_steps_lax
+        :param state: current_state of the simulation
+        :param neighbors: array of neighbors for simulation entities
+        :return: state, neighbors
+        """
+        state, neighbors = lax.fori_loop(0, num_iterations, self.update_fn, (state, neighbors))
+        return state, neighbors 
 
+    def select_simulation_loop_type(self):
+        """Choose wether to use a lax or a classic simulation loop in function step
+
+        :return: appropriate simulation loop
+        """
         if self.state.simulator_state.use_fori_loop:
-            new_state, neighbors = lax.fori_loop(0, self.num_steps_lax, self.update_fn, (new_state, neighbors))
+            return self.lax_simulation_loop
         else:
-            for i in range(0, self.num_steps_lax):
-                new_state, neighbors = self.update_fn(i, (new_state, neighbors))
+            return self.classic_simulation_loop
+    
+    def step(self, state, neighbors):
+        """Do a step in the simulation by applying the update function a few iterations on the state and the neighbors
+
+        :param state: current simulation state 
+        :param neighbors: current simulation neighbors array 
+        :return: updated state and neighbors
+        """
+        # Create a copy of the current state in case of neighbor buffer overflow
+        current_state = state
+        # TODO : find a more explicit name than num_steps_lax and modify it in all the pipeline
+        new_state, neighbors = self.simulation_loop(state=current_state, neighbors=neighbors, num_iterations=self.num_steps_lax)
 
         # If the neighbor list can't fit in the allocation, rebuild it but bigger.
         if neighbors.did_buffer_overflow:
-            lg.warning('REBUILDING')
-            neighbors = self.allocate_neighbors(new_state.nve_state.position.center)
-            # TODO : Should we keep the commented line below ? 
-            # new_state, neighbors = lax.fori_loop(0, self.simulation_config.num_lax_loops, self.update_fn, (self.state, neighbors))
-
-            # TODO : Why do we update the state for num_steps_lax if the neigbhors list did buffer overflow ? And should we use lax or normal python loops ? 
-            for i in range(0, self.num_steps_lax):
-                new_state, neighbors = self.update_fn(i, (self.state, neighbors))
-
-            # TODO : linked to comment upward, do we need to update the state and check this ? And what if the neighbor list overflows again ?
-            # Are we not just going to have a new error ?    
+            lg.warning('REBUILDING NEIGHBORS ARRAY')
+            neighbors = self.allocate_neighbors(current_state.nve_state.position.center)
+            # Because there was an error, we need to re-run this simulation loop from the copy of the current_state we created
+            new_state, neighbors = self.simulation_loop(state=current_state, neighbors=neighbors, num_iterations=self.num_steps_lax)
+            # Check that neighbors array is now ok but should be the case (allocate neighbors tries to compute a new list that is large enough according to the simulation state)
             assert not neighbors.did_buffer_overflow
 
         return new_state, neighbors
 
+    def run(self, threaded=False, num_steps=math.inf):
+        """_summary_
 
-    # TODO : See history of threads where we can only run th
-    def run(self, threaded=False, num_loops=math.inf):
+        :param threaded: wether to run the simulation in a thread or not, defaults to False
+        :param num_steps: number of step loops before stopping the simulation run, defaults to math.inf
+        :raises ValueError: raise an error if the simulator is already running 
+        """
+        # Check is the simulator isn't already running
         if self._is_started:
-            raise Exception("Simulator is already started")
-        if threaded:
-            threading.Thread(target=self._run).start()
+            raise ValueError("Simulator is already started")
+        # Else run it either in a thread or not
         else:
-            return self._run(num_loops)
+            if threaded:
+                # Set the num_loops attribute with a partial func to launch _run in a thread
+                _run = partial(self._run, num_steps=num_steps)
+                threading.Thread(target=_run).start()
+            else:
+                self._run(num_steps)
 
-    # TODO : See if not cleaner to do a run that just runs, and if need to run for x timesteps do it with a loop and step ?
-    # Prevents from unsing np.inf, loop_count ..., could potentially take inspiration from 
-    # https://github.com/corentinlger/SimulationSandbox/blob/main/simulationsandbox/simulator_wrapper.py (far from being perfect but seems cleaner and easier to read)
-    def _run(self, num_loops=math.inf):
+    def _run(self, num_steps):
+        """_summary_
+
+        :param num_steps: continuously update the simulation during num_steps steps
+        """
+        # Encode that the simulation is started in the class 
         self._is_started = True
         lg.info('Run starts')
 
         loop_count = 0
-        while loop_count < num_loops:
+        sleep_time = 0
+    
+        # Update the simulation with step for num_steps
+        while loop_count < num_steps:
+            start = time.time()
             if self._to_stop:
                 self._to_stop = False
                 break
-            # TODO : could be nice to have a sleep_time as attribute and update it instead of having if statement here
-            if float(self.freq) > 0.:
-                time.sleep(1. / float(self.freq))
-            
-            self.state, self.neighbors = self.step()
+
+            self.state, self.neighbors = self.step(state=self.state, neighbors=self.neighbors)
             loop_count += 1
+
+            # Sleep for updated sleep_time seconds
+            end = time.time()
+            sleep_time = self.update_sleep_time(frequency=self.freq, elapsed_time=end-start)
+            time.sleep(sleep_time)
+
 
         self._is_started = False
         lg.info('Run stops')
+
+    # TODO : Check the logic of the function, see if we jit it or not (would imply using a jnp.where instead of if / else)
+    # @partial(jit, static_argnums=(0))
+    def update_sleep_time(self, frequency, elapsed_time):
+        """Compute the time we need to sleep to respect the update frequency
+
+        :param frequency: update state frequency
+        :param elapsed_time: time already used to compute the state
+        :return: time needed to sleep in addition to elapsed time to respect the frequency 
+        """
+        # if we use the freq, compute the correct sleep time 
+        if float(frequency) > 0.:
+            perfect_time = 1. / float(frequency)
+            sleep_time = max(perfect_time - elapsed_time, 0)
+        # Else set it to zero
+        else:
+            sleep_time = 0
+        return sleep_time
 
     def set_state(self, nested_field, nve_idx, column_idx, value):
         lg.info(f'set_state {nested_field} {nve_idx} {column_idx} {value}')
@@ -237,6 +300,6 @@ if __name__ == "__main__":
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
 
-    simulator.run(threaded=False, num_loops=10)
+    simulator.run(threaded=False, num_steps=10)
 
 
