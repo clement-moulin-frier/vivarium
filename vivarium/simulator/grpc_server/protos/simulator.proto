@@ -66,6 +66,8 @@ message SimulatorState {
   NDArray neighbor_radius = 8;
   NDArray to_jit = 9;
   NDArray use_fori_loop = 10;
+  NDArray col_eps = 11;
+  NDArray col_alpha = 12;
 }
 
 message NVEState {

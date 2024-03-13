@@ -83,6 +83,8 @@ class SimulatorConfig(Config):
     neighbor_radius = param.Number(100., bounds=(0, None))
     to_jit = param.Boolean(True)
     use_fori_loop = param.Boolean(False)
+    col_eps = param.Number(0.003)
+    col_alpha = param.Number(0.7)
 
     def __init__(self, **params):
         super().__init__(**params)
