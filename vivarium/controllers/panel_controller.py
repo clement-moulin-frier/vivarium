@@ -30,7 +30,7 @@ class PanelObjectConfig(PanelEntityConfig):
 
 
 class PanelSimulatorConfig(Config):
-    hide_non_existing = param.Boolean(False)
+    hide_non_existing = param.Boolean(True)
     config_update = param.Boolean(False)
 
 
