@@ -14,6 +14,9 @@ from vivarium.simulator.grpc_server.simulator_server import serve
 lg = logging.getLogger(__name__)
 
 def parse_args():
+    # TODO : Quick nnote : would be cool to have a separate file to have all the default values 
+    # In fact the best solution might be to use hydra with yaml files instead of argparse, 
+    # Would also be pretty convenient to store positions etcc for different notebook scenes
     parser = argparse.ArgumentParser(description='Simulator Configuration')
     parser.add_argument('--box_size', type=float, default=100.0, help='Size of the simulation box')
     parser.add_argument('--n_agents', type=int, default=10, help='Number of agents')
@@ -26,6 +29,8 @@ def parse_args():
     parser.add_argument('--to_jit', action='store_false', help='Whether to use JIT compilation')
     parser.add_argument('--use_fori_loop', action='store_true', help='Whether to use fori loop')
     parser.add_argument('--log_level', type=str, default='INFO', help='Logging level')
+    parser.add_argument('--col_eps', type=float, required=False, default=0.003)
+    parser.add_argument('--col_alpha', type=float, required=False, default=0.7)
    
     return parser.parse_args()
 
@@ -44,8 +49,14 @@ if __name__ == '__main__':
         freq=args.freq,
         neighbor_radius=args.neighbor_radius,
         to_jit=args.to_jit,
-        use_fori_loop=args.use_fori_loop
+        use_fori_loop=args.use_fori_loop,
+        col_eps=args.col_eps,
+        col_alpha=args.col_alpha
     )
+
+    print(simulator_config)
+    print(simulator_config.col_alpha)
+    print(simulator_config.col_eps)
 
     agent_configs = [AgentConfig(idx=i,
                                  x_position=np.random.rand() * simulator_config.box_size,
@@ -65,5 +76,6 @@ if __name__ == '__main__':
                                         })
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
+
     lg.info('Simulator server started')
     serve(simulator)
