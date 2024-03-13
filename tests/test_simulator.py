@@ -7,7 +7,7 @@ from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConf
 from vivarium.controllers import converters
 
 
-NUM_LOOPS = 50
+NUM_STEPS = 50
 
 
 # First smoke test, we could split it into different parts later (initialization, run, ...)
@@ -41,6 +41,6 @@ def test_simulator_run():
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
 
-    simulator.run(threaded=False, num_loops=NUM_LOOPS)
+    simulator.run(threaded=False, num_steps=NUM_STEPS)
 
     assert simulator
