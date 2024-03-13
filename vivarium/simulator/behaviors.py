@@ -4,7 +4,6 @@ from enum import Enum
 from jax import vmap
 from functools import partial
 
-logging.basicConfig(level=logging.INFO)
 lg = logging.getLogger(__name__)
 
 linear_behavior_enum = Enum('matrices', ['FEAR', 'AGGRESSION', 'LOVE', 'SHY'])
