@@ -54,10 +54,6 @@ if __name__ == '__main__':
         col_alpha=args.col_alpha
     )
 
-    print(simulator_config)
-    print(simulator_config.col_alpha)
-    print(simulator_config.col_eps)
-
     agent_configs = [AgentConfig(idx=i,
                                  x_position=np.random.rand() * simulator_config.box_size,
                                  y_position=np.random.rand() * simulator_config.box_size,
