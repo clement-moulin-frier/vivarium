@@ -297,7 +297,3 @@ class WindowManager(Parameterized):
         self.start_toggle.param.watch(self.start_toggle_cb, "value")
         self.update_switch.param.watch(self.update_switch_cb, "value")
         self.update_timestep.param.watch(self.update_timestep_cb, "value")
-
-# Serve the app
-wm = WindowManager()
-wm.app.servable(title="Vivarium")
