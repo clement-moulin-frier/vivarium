@@ -31,7 +31,8 @@ class PanelObjectConfig(PanelEntityConfig):
 
 
 class PanelSimulatorConfig(Config):
-    pass
+    hide_non_existing = param.Boolean(False)
+    config_update = param.Boolean(False)
 
 
 panel_config_to_stype = {PanelSimulatorConfig: StateType.SIMULATOR, PanelAgentConfig: StateType.AGENT,
@@ -57,6 +58,7 @@ class PanelController(SimulatorController):
         self.panel_configs = {stype: [stype_to_panel_config[stype]() for _ in range(len(configs))]
                               for stype, configs in self.configs.items()}
         self.selected_panel_configs = {EntityType.AGENT: PanelAgentConfig(), EntityType.OBJECT: PanelObjectConfig()}
+        self.panel_simulator_config = PanelSimulatorConfig()
 
         self.update_entity_list()
         for etype, selected in self.selected_entities.items():
