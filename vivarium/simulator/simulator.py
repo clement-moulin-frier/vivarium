@@ -105,7 +105,7 @@ class Simulator:
         return new_state, neighbors
 
     def run(self, threaded=False, num_steps=math.inf):
-        """_summary_
+        """Run the simulator for the desired number of timesteps, either in a separate thread or not 
 
         :param threaded: wether to run the simulation in a thread or not, defaults to False
         :param num_steps: number of step loops before stopping the simulation run, defaults to math.inf
@@ -124,9 +124,9 @@ class Simulator:
                 self._run(num_steps)
 
     def _run(self, num_steps):
-        """_summary_
+        """Function that runs the simulator for the desired number of steps. Used to be called either normally or in a thread.
 
-        :param num_steps: continuously update the simulation during num_steps steps
+        :param num_steps: number of simulation steps
         """
         # Encode that the simulation is started in the class 
         self._is_started = True
