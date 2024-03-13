@@ -167,8 +167,6 @@ def total_collision_energy(positions, diameter, neighbor, displacement, exists_m
     Rb = positions[receivers]
     l_a = diameter[senders]
     l_b = diameter[receivers]
-    # jax.debug.print("eps {epsilon}", epsilon=epsilon)
-    # jax.debug.print("alpha {alpha}", alpha=alpha)
     e = collision_energy(displacement, Ra, Rb, l_a, l_b, epsilon, alpha)
     # Set collision energy to zero if the sender or receiver is non existing
     e = jnp.where(exists_mask[senders] * exists_mask[receivers], e, 0.)
