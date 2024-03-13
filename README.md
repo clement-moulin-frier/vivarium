@@ -37,7 +37,7 @@ python3 scripts/run_server.py
 And launch the web interface from another terminal :
 
 ```bash
-panel serve scrits/run_interface.py --autoreload
+panel serve scripts/run_interface.py --autoreload
 ```
 
 Once this command will have completed, it will output a URL looking like `http://localhost:5006/panel_app`, that you can open in your browser.
