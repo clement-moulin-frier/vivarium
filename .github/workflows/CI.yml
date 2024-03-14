@@ -37,3 +37,10 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+    - name: Test interface
+      run: |
+        python scripts/run_server.py &
+        sleep 10 &&
+        panel serve scripts/run_interface.py &
+        sleep 10 &&
+        kill %1 %2
