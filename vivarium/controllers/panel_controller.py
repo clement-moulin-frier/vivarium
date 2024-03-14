@@ -121,13 +121,13 @@ class PanelController(SimulatorController):
     def push_selected_to_config_list(self, *events):
         lg.info('push_selected_to_config_list %d', len(events))
         for e in events:
-            if isinstance(e.obj, PanelEntityConfig):
+            if isinstance(e.obj, PanelConfig):
                 stype = panel_config_to_stype[type(e.obj)]
             else:
                 stype = config_to_stype[type(e.obj)]
             selected_entities = self.selected_entities[stype.to_entity_type()].selection
             for idx in selected_entities:
-                if isinstance(e.obj, PanelEntityConfig):
+                if isinstance(e.obj, PanelConfig):
                     setattr(self.panel_configs[stype][idx], e.name, e.new)
                 else:
                     setattr(self.configs[stype][idx], e.name, e.new)

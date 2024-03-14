@@ -36,7 +36,7 @@ class EntityManager:
                              onlychanged=True, precedence=0)
         for i, pc in enumerate(self.panel_configs):
             pc.param.watch(self.update_cds_view, pc.param_names(), onlychanged=True)
-            self.config[i].param.watch(self.e, "exists", onlychanged=True)
+            self.config[i].param.watch(self.hide_non_existing, "exists", onlychanged=False)
 
     def drag_cb(self, attr, old, new):
         for i, c in enumerate(self.config):
@@ -68,7 +68,7 @@ class EntityManager:
         n = event.name
         for attr in [n] if n != "visible" else self.panel_configs[0].param_names():
             f = [getattr(pc, attr) and pc.visible for pc in self.panel_configs]
-            self.cds_view[attr].filter.booleans = f
+            self.cds_view[attr].filter = BooleanFilter(f)
 
     def update_selected_plot(self, event):
         self.cds.selected.indices = event.new
@@ -78,10 +78,11 @@ class EntityManager:
             if not self.config[i].exists:
                 pc.visible = not event.new
 
-    def e(self, event):
+    def hide_non_existing(self, event):
         if not self.panel_simulator_config.hide_non_existing:
             return
-        self.panel_configs[event.obj.idx].visible = event.new
+        idx = self.config.index(event.obj)
+        self.panel_configs[idx].visible = event.new
 
 
     def update_selected_simulator(self):
