@@ -7,7 +7,6 @@ import logging
 from vivarium.controllers.simulator_controller import SimulatorController
 from vivarium.simulator.sim_computation import StateType, EntityType
 
-logging.basicConfig(level=logging.INFO)
 lg = logging.getLogger(__name__)
 
 class Entity:
