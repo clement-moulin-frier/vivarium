@@ -7,7 +7,7 @@
 ## How to Test
 Launch the server
 ```
-python3 scripts/_server.py
+python3 scripts/run_server.py
 ```
 Launch the Panel interface
 ```

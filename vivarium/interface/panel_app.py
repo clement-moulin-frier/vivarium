@@ -22,18 +22,21 @@ def normal(array):
 
 
 class EntityManager:
-    def __init__(self, config, panel_configs, selected, etype, state):
+    def __init__(self, config, panel_configs, panel_simulator_config, selected, etype, state):
         self.config = config
         self.panel_configs = panel_configs
+        self.panel_simulator_config = panel_simulator_config
         self.selected = selected
         self.etype = etype
         self.cds = ColumnDataSource(data=self.get_cds_data(state))
         self.cds.on_change('data', self.drag_cb)
         self.cds_view = self.create_cds_view()
+        self.panel_simulator_config.param.watch(self.hide_all_non_existing, "hide_non_existing")
         selected.param.watch(self.update_selected_plot, ['selection'],
                              onlychanged=True, precedence=0)
-        for pc in self.panel_configs:
-            pc.param.watch(self.update_cds_view, pc.param_names())
+        for i, pc in enumerate(self.panel_configs):
+            pc.param.watch(self.update_cds_view, pc.param_names(), onlychanged=True)
+            self.config[i].param.watch(self.hide_non_existing, "exists", onlychanged=False)
 
     def drag_cb(self, attr, old, new):
         for i, c in enumerate(self.config):
@@ -65,11 +68,22 @@ class EntityManager:
         n = event.name
         for attr in [n] if n != "visible" else self.panel_configs[0].param_names():
             f = [getattr(pc, attr) and pc.visible for pc in self.panel_configs]
-            self.cds_view[attr].filter.booleans = f
-
+            self.cds_view[attr].filter = BooleanFilter(f)
 
     def update_selected_plot(self, event):
         self.cds.selected.indices = event.new
+
+    def hide_all_non_existing(self, event):
+        for i, pc in enumerate(self.panel_configs):
+            if not self.config[i].exists:
+                pc.visible = not event.new
+
+    def hide_non_existing(self, event):
+        if not self.panel_simulator_config.hide_non_existing:
+            return
+        idx = self.config.index(event.obj)
+        self.panel_configs[idx].visible = event.new
+
 
     def update_selected_simulator(self):
         indices = self.cds.selected.indices
@@ -188,7 +202,7 @@ class WindowManager(Parameterized):
     entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=config_types,
                                            align="center", value=config_types[1:])
     update_switch = pn.widgets.Switch(name="Update plot", value=True, align="center")
-    update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=10, start=0, end=1000)
+    update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=0, start=0, end=1000)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.entity_manager_classes = {EntityType.AGENT: AgentManager,
@@ -197,6 +211,7 @@ class WindowManager(Parameterized):
             etype: manager_class(
                 config=self.controller.configs[etype.to_state_type()],
                 panel_configs=self.controller.panel_configs[etype.to_state_type()],
+                panel_simulator_config=self.controller.panel_simulator_config,
                 selected=self.controller.selected_entities[etype], etype=etype,
                 state=self.controller.state)
                 for etype, manager_class in self.entity_manager_classes.items()
@@ -227,6 +242,8 @@ class WindowManager(Parameterized):
             em.update_selected_simulator()
         state = self.controller.update_state()
         self.controller.pull_configs()
+        if self.controller.panel_simulator_config.config_update:
+            self.controller.pull_selected_configs()
         for em in self.entity_managers.values():
             with em.no_drag_cb():
                 em.update_cds(state)
@@ -254,6 +271,7 @@ class WindowManager(Parameterized):
         self.config_columns = pn.Row(*
             [pn.Column(
                 pn.pane.Markdown("### SIMULATOR", align="center"),
+                pn.panel(self.controller.panel_simulator_config, name="Visualization configurations"),
                 pn.panel(self.controller.simulator_config, name="Configurations"),
                 visible=False, sizing_mode="scale_height", scroll=True)] +
             [pn.Column(
@@ -274,8 +292,9 @@ class WindowManager(Parameterized):
         return app
 
     def set_callbacks(self):
+        # putting directly the slider value causes bugs on some OS
         self.pcb_plot = pn.state.add_periodic_callback(self.update_plot_cb,
-                                                       self.update_timestep.value)
+                                                       self.update_timestep.value or 0)
         self.entity_toggle.param.watch(self.entity_toggle_cb, "value")
         self.start_toggle.param.watch(self.start_toggle_cb, "value")
         self.update_switch.param.watch(self.update_switch_cb, "value")
