@@ -152,25 +152,58 @@ def switch_fn(fn_list):
 
 # Helper functions for collisions
 
-def collision_energy(displacement_fn, r_a, r_b, l_a, l_b, epsilon, alpha):
+def collision_energy(displacement_fn, r_a, r_b, l_a, l_b, epsilon, alpha, mask):
+    """Compute the collision energy between a pair of particles
+
+    :param displacement_fn: displacement function of jax_md 
+    :param r_a: position of particle a 
+    :param r_b: position of particle b 
+    :param l_a: diameter of particle a 
+    :param l_b: diameter of particle b 
+    :param epsilon: interaction energy scale 
+    :param alpha: interaction stiffness
+    :param mask: set the energy to 0 if one of the particles is masked 
+    :return: collision energy between both particles
+    """
     dist = jnp.linalg.norm(displacement_fn(r_a, r_b))
     sigma = (l_a + l_b) / 2
-    return energy.soft_sphere(dist, sigma=sigma, epsilon=epsilon, alpha=f32(alpha))
+    e = energy.soft_sphere(dist, sigma=sigma, epsilon=epsilon, alpha=f32(alpha))
+    return jnp.where(mask, e, 0.)
 
-collision_energy = vmap(collision_energy, (None, 0, 0, 0, 0, None, None))
+collision_energy = vmap(collision_energy, (None, 0, 0, 0, 0, None, None, 0))
 
 
-def total_collision_energy(positions, diameter, neighbor, displacement, exists_mask, epsilon, alpha, **kwargs):
+def total_collision_energy(positions, diameter, neighbor, displacement, exists_mask, epsilon, alpha):
+    """Compute the collision energy between all neighboring pairs of particles in the system 
+
+    :param positions: positions of all the particles 
+    :param diameter: diameters of all the particles 
+    :param neighbor: neighbor array of the system
+    :param displacement: dipalcement function of jax_md
+    :param exists_mask: mask to specify which particles exist 
+    :param epsilon: interaction energy scale between two particles
+    :param alpha: interaction stiffness between two particles
+    :return: sum of all collisions energies of the system 
+    """
     diameter = lax.stop_gradient(diameter)
     senders, receivers = neighbor.idx
-    Ra = positions[senders]
-    Rb = positions[receivers]
-    l_a = diameter[senders]
-    l_b = diameter[receivers]
-    e = collision_energy(displacement, Ra, Rb, l_a, l_b, epsilon, alpha)
+
+    r_senders = positions[senders]
+    r_receivers = positions[receivers]
+    l_senders = diameter[senders]
+    l_receivers = diameter[receivers]
+
     # Set collision energy to zero if the sender or receiver is non existing
-    e = jnp.where(exists_mask[senders] * exists_mask[receivers], e, 0.)
-    return jnp.sum(e)
+    mask = exists_mask[senders] * exists_mask[receivers]
+    energies = collision_energy(displacement,
+                                 r_senders,
+                                 r_receivers,
+                                 l_senders,
+                                 l_receivers,
+                                 epsilon,
+                                 alpha,
+                                 mask)
+    return jnp.sum(energies)
 
 
 # Helper functions for motor function
@@ -257,7 +290,10 @@ def get_verlet_force_fn(displacement):
 
     def force_fn(state, neighbor, exists_mask):
         mf = motor_force(state, exists_mask)
-        center = collision_force(state, neighbor, exists_mask) + friction_force(state, exists_mask) + mf.center
+        cf = collision_force(state, neighbor, exists_mask)
+        ff = friction_force(state, exists_mask)
+        
+        center = cf + ff + mf.center
         orientation = mf.orientation
         return rigid_body.RigidBody(center=center, orientation=orientation)
 
