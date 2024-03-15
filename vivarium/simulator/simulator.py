@@ -8,18 +8,13 @@ from contextlib import contextmanager
 
 import jax
 import jax.numpy as jnp
-import numpy as np
 
 from jax import jit
 from jax import lax
 from jax_md import space, partition, dataclasses
 
-from vivarium.simulator.sim_computation import dynamics_rigid
-from vivarium.simulator.sim_computation import EntityType, StateType, SimulatorState
+from vivarium.simulator.sim_computation import EntityType, SimulatorState
 from vivarium.controllers import converters
-from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig
-from vivarium.simulator import behaviors
-
 
 lg = logging.getLogger(__name__)
 
@@ -31,7 +26,7 @@ class Simulator:
         self.behavior_bank = behavior_bank
         self.dynamics_fn = dynamics_fn
 
-        # FIXME: explicitely copy the attributes of simulator_state (prevents linting errors and easier to understand which element is an attriute of the class)
+        # TODO: explicitely copy the attributes of simulator_state (prevents linting errors and easier to understand which element is an attriute of the class)
         all_attrs = [f.name for f in dataclasses.fields(SimulatorState)]
         for attr in all_attrs:
             self.update_attr(attr, SimulatorState.get_type(attr))
@@ -40,13 +35,12 @@ class Simulator:
         self._to_stop = False
         self.key = jax.random.PRNGKey(0)
 
-        # FIXME: Define which attributes are affected but these functions
+        # TODO: Define which attributes are affected but these functions
         self.update_space(self.box_size)
         self.update_function_update()
         self.init_state(state)
         self.update_neighbor_fn(self.box_size, self.neighbor_radius)
         self.allocate_neighbors()
-        # Could maybe find another name : advance simulation ? ... Not that important at the moment
         self.simulation_loop = self.select_simulation_loop_type()
 
 
@@ -60,7 +54,7 @@ class Simulator:
         for i in range(0, num_iterations):
             state, neighbors = self.update_fn(i, (state, neighbors))
         return state, neighbors
-    
+
     def lax_simulation_loop(self, state, neighbors, num_iterations):
         """Update the state and the neighbors on a few iterations with lax loop
 
@@ -69,7 +63,7 @@ class Simulator:
         :return: state, neighbors
         """
         state, neighbors = lax.fori_loop(0, num_iterations, self.update_fn, (state, neighbors))
-        return state, neighbors 
+        return state, neighbors
 
     def select_simulation_loop_type(self):
         """Choose wether to use a lax or a classic simulation loop in function step
@@ -115,20 +109,19 @@ class Simulator:
         if self._is_started:
             raise ValueError("Simulator is already started")
         # Else run it either in a thread or not
+        if threaded:
+            # Set the num_loops attribute with a partial func to launch _run in a thread
+            _run = partial(self._run, num_steps=num_steps)
+            threading.Thread(target=_run).start()
         else:
-            if threaded:
-                # Set the num_loops attribute with a partial func to launch _run in a thread
-                _run = partial(self._run, num_steps=num_steps)
-                threading.Thread(target=_run).start()
-            else:
-                self._run(num_steps)
+            self._run(num_steps)
 
     def _run(self, num_steps):
         """Function that runs the simulator for the desired number of steps. Used to be called either normally or in a thread.
 
         :param num_steps: number of simulation steps
         """
-        # Encode that the simulation is started in the class 
+        # Encode that the simulation is started in the class
         self._is_started = True
         lg.info('Run starts')
 
@@ -150,12 +143,10 @@ class Simulator:
             sleep_time = self.update_sleep_time(frequency=self.freq, elapsed_time=end-start)
             time.sleep(sleep_time)
 
-
+        # Encode that the simulation isn't started anymore 
         self._is_started = False
         lg.info('Run stops')
 
-    # TODO : Check the logic of the function, see if we jit it or not (would imply using a jnp.where instead of if / else)
-    # @partial(jit, static_argnums=(0))
     def update_sleep_time(self, frequency, elapsed_time):
         """Compute the time we need to sleep to respect the update frequency
 
@@ -163,7 +154,7 @@ class Simulator:
         :param elapsed_time: time already used to compute the state
         :return: time needed to sleep in addition to elapsed time to respect the frequency 
         """
-        # if we use the freq, compute the correct sleep time 
+        # if we use the freq, compute the correct sleep time
         if float(frequency) > 0.:
             perfect_time = 1. / float(frequency)
             sleep_time = max(perfect_time - elapsed_time, 0)
