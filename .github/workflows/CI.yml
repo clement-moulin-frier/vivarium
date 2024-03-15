@@ -40,7 +40,7 @@ jobs:
     - name: Test interface
       run: |
         python scripts/run_server.py &
-        sleep 10 &&
+        sleep 5 &&
         panel serve scripts/run_interface.py &
-        sleep 10 &&
-        kill %1 %2
+        sleep 5 &&
+        curl -s http://localhost:5006/run_interface | grep "Vivarium"
