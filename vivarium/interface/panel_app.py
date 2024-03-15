@@ -292,8 +292,9 @@ class WindowManager(Parameterized):
         return app
 
     def set_callbacks(self):
+        # putting directly the slider value causes bugs on some OS
         self.pcb_plot = pn.state.add_periodic_callback(self.update_plot_cb,
-                                                       self.update_timestep.value)
+                                                       self.update_timestep.value or 0)
         self.entity_toggle.param.watch(self.entity_toggle_cb, "value")
         self.start_toggle.param.watch(self.start_toggle_cb, "value")
         self.update_switch.param.watch(self.update_switch_cb, "value")
