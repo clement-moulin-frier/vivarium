@@ -1,7 +1,9 @@
+import os
 import time
 import threading
 import math
 import logging
+import pickle
 
 from functools import partial
 from contextlib import contextmanager
@@ -98,7 +100,7 @@ class Simulator:
 
         return new_state, neighbors
 
-    def run(self, threaded=False, num_steps=math.inf):
+    def run(self, threaded=False, num_steps=math.inf, saving_name=None):
         """Run the simulator for the desired number of timesteps, either in a separate thread or not 
 
         :param threaded: wether to run the simulation in a thread or not, defaults to False
@@ -111,12 +113,12 @@ class Simulator:
         # Else run it either in a thread or not
         if threaded:
             # Set the num_loops attribute with a partial func to launch _run in a thread
-            _run = partial(self._run, num_steps=num_steps)
+            _run = partial(self._run, num_steps=num_steps, saving_name=saving_name)
             threading.Thread(target=_run).start()
         else:
-            self._run(num_steps)
+            self._run(num_steps=num_steps, saving_name=saving_name)
 
-    def _run(self, num_steps):
+    def _run(self, num_steps, saving_name):
         """Function that runs the simulator for the desired number of steps. Used to be called either normally or in a thread.
 
         :param num_steps: number of simulation steps
@@ -127,6 +129,15 @@ class Simulator:
 
         loop_count = 0
         sleep_time = 0
+
+        if saving_name:
+            save = True
+            frames = []
+            saving_dir = f"Results/{saving_name}"
+            os.makedirs(saving_dir, exist_ok=True)
+            lg.info(f'Saving directory {saving_dir} created')
+        else:
+            save = False
     
         # Update the simulation with step for num_steps
         while loop_count < num_steps:
@@ -136,6 +147,10 @@ class Simulator:
                 break
 
             self.state, self.neighbors = self.step(state=self.state, neighbors=self.neighbors)
+
+            if save:
+                # TODO : Cannot save the whole state because of the __getattr__ method (weird error when pickling)
+                frames.append(self.state.nve_state)
             loop_count += 1
 
             # Sleep for updated sleep_time seconds
@@ -143,9 +158,21 @@ class Simulator:
             sleep_time = self.update_sleep_time(frequency=self.freq, elapsed_time=end-start)
             time.sleep(sleep_time)
 
-        # Encode that the simulation isn't started anymore 
+        if save:
+            self.save_frames(frames, saving_dir)
+
+        # Encode that the simulation isn't started anymore
         self._is_started = False
         lg.info('Run stops')
+
+    def save_frames(self, frames, saving_dir):
+        print(f"{type(frames) = }")
+        saving_path = f"{saving_dir}/frames.pkl"
+        frames.append(1)
+        print(frames[-1])
+        with open(saving_path, 'wb') as f:
+            pickle.dump(frames, f)
+            lg.info('Simulation frames saved in {saving_path}')
 
     def update_sleep_time(self, frequency, elapsed_time):
         """Compute the time we need to sleep to respect the update frequency

@@ -119,6 +119,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+myvenv/
 
 # Spyder project settings
 .spyderproject
@@ -158,5 +159,6 @@ profiler_stats
 
 .vscode
 .pylintrc
-myvenv/
+    
 test.ipynb
+Results/*

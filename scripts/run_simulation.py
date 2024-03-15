@@ -15,6 +15,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Simulator Configuration')
     # Experiment run arguments
     parser.add_argument('--num_steps', type=int, default=10, help='Number of simulation loops')
+    parser.add_argument('--saving_name', type=str, default='', help='Name of the saving directory')
     # Simulator config arguments
     parser.add_argument('--box_size', type=float, default=100.0, help='Size of the simulation box')
     parser.add_argument('--n_agents', type=int, default=10, help='Number of agents')
@@ -77,6 +78,6 @@ if __name__ == "__main__":
 
     lg.info("Running simulation")
 
-    simulator.run(threaded=False, num_steps=args.num_steps)
+    simulator.run(threaded=False, num_steps=args.num_steps, saving_name=args.saving_name)
 
     lg.info("Simulation complete")
