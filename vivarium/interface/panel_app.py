@@ -275,7 +275,7 @@ class WindowManager(Parameterized):
 
     def set_callbacks(self):
         self.pcb_plot = pn.state.add_periodic_callback(self.update_plot_cb,
-                                                       self.update_timestep.value)
+                                                       1)
         self.entity_toggle.param.watch(self.entity_toggle_cb, "value")
         self.start_toggle.param.watch(self.start_toggle_cb, "value")
         self.update_switch.param.watch(self.update_switch_cb, "value")
