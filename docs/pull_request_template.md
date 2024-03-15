@@ -7,11 +7,11 @@
 ## How to Test
 Launch the server
 ```
-python3 vivarium/simulator/grpc_server/simulator_server.py
+python3 scripts/run_server.py
 ```
 Launch the Panel interface
 ```
-panel serve vivarium/interface/panel_app.py --autoreload
+panel serve scripts/run_interface.py --autoreload
 ```
 <!--- Describe the steps to test the changes made in this pull request -->
 

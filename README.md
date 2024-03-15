@@ -29,7 +29,7 @@ pip install -e .
 Use the following command :
 
 ```bash
-python3 vivarium/simulator/grpc_server/simulator_server.py
+python3 scripts/run_server.py
 ```
 
 ### Interact with it from a web interface
@@ -37,7 +37,7 @@ python3 vivarium/simulator/grpc_server/simulator_server.py
 And launch the web interface from another terminal :
 
 ```bash
-panel serve vivarium/interface/panel_app.py --autoreload
+panel serve scripts/run_interface.py --autoreload
 ```
 
 Once this command will have completed, it will output a URL looking like `http://localhost:5006/panel_app`, that you can open in your browser.
@@ -66,3 +66,7 @@ pytest
 ```
 
 You can add your own tests in the tests/ subdirector. Make sure that the name or your files and test functions start with "test".
+
+## Tutorials
+
+Several notebooks tutorials can be found in the [notebooks folder](https://github.com/clement-moulin-frier/vivarium/tree/main/notebooks), along with a tutorial for the web interface.

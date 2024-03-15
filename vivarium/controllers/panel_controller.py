@@ -10,7 +10,6 @@ from contextlib import contextmanager
 
 import logging
 
-logging.basicConfig(level=logging.INFO)
 lg = logging.getLogger(__name__)
 
 class PanelConfig(Config):
@@ -31,7 +30,8 @@ class PanelObjectConfig(PanelEntityConfig):
 
 
 class PanelSimulatorConfig(Config):
-    pass
+    hide_non_existing = param.Boolean(True)
+    config_update = param.Boolean(False)
 
 
 panel_config_to_stype = {PanelSimulatorConfig: StateType.SIMULATOR, PanelAgentConfig: StateType.AGENT,
@@ -57,6 +57,7 @@ class PanelController(SimulatorController):
         self.panel_configs = {stype: [stype_to_panel_config[stype]() for _ in range(len(configs))]
                               for stype, configs in self.configs.items()}
         self.selected_panel_configs = {EntityType.AGENT: PanelAgentConfig(), EntityType.OBJECT: PanelObjectConfig()}
+        self.panel_simulator_config = PanelSimulatorConfig()
 
         self.update_entity_list()
         for etype, selected in self.selected_entities.items():
@@ -120,13 +121,13 @@ class PanelController(SimulatorController):
     def push_selected_to_config_list(self, *events):
         lg.info('push_selected_to_config_list %d', len(events))
         for e in events:
-            if isinstance(e.obj, PanelEntityConfig):
+            if isinstance(e.obj, PanelConfig):
                 stype = panel_config_to_stype[type(e.obj)]
             else:
                 stype = config_to_stype[type(e.obj)]
             selected_entities = self.selected_entities[stype.to_entity_type()].selection
             for idx in selected_entities:
-                if isinstance(e.obj, PanelEntityConfig):
+                if isinstance(e.obj, PanelConfig):
                     setattr(self.panel_configs[stype][idx], e.name, e.new)
                 else:
                     setattr(self.configs[stype][idx], e.name, e.new)
