@@ -37,10 +37,10 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
-    - name: Test interface
+    - name: Run server
+      run: python scripts/run_server.py &
+    - name: Run interface
       run: |
-        python scripts/run_server.py &
-        sleep 5 &&
-        panel serve scripts/run_interface.py &
+        python scripts/run_interface.py &
         sleep 5 &&
         curl -s http://localhost:5006/run_interface | grep "Vivarium"
