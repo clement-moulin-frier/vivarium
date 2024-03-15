@@ -14,7 +14,7 @@ lg = logging.getLogger(__name__)
 def parse_args():
     parser = argparse.ArgumentParser(description='Simulator Configuration')
     # Experiment run arguments
-    parser.add_argument('--num_loops', type=int, default=10, help='Number of simulation loops')
+    parser.add_argument('--num_steps', type=int, default=10, help='Number of simulation loops')
     # Simulator config arguments
     parser.add_argument('--box_size', type=float, default=100.0, help='Size of the simulation box')
     parser.add_argument('--n_agents', type=int, default=10, help='Number of agents')
@@ -77,6 +77,6 @@ if __name__ == "__main__":
 
     lg.info("Running simulation")
 
-    simulator.run(threaded=False, num_loops=10)
+    simulator.run(threaded=False, num_steps=args.num_steps)
 
     lg.info("Simulation complete")
