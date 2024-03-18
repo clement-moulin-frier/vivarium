@@ -160,3 +160,5 @@ profiler_stats
 .pylintrc
 myvenv/
 test.ipynb
+
+outputs
