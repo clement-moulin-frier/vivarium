@@ -78,14 +78,14 @@ class SimulatorState:
     neighbor_radius: util.Array
     to_jit: util.Array
     use_fori_loop: util.Array
-    col_alpha: util.Array
-    col_eps: util.Array
+    collision_alpha: util.Array
+    collision_eps: util.Array
 
     @staticmethod
     def get_type(attr):
         if attr in ['idx', 'n_agents', 'n_objects', 'num_steps_lax']:
             return int
-        elif attr in ['box_size', 'dt', 'freq', 'neighbor_radius', 'col_alpha', 'col_eps']:
+        elif attr in ['box_size', 'dt', 'freq', 'neighbor_radius', 'collision_alpha', 'collision_eps']:
             return float
         elif attr in ['to_jit', 'use_fori_loop']:
             return bool
@@ -238,8 +238,8 @@ def get_verlet_force_fn(displacement):
             neighbor=neighbor,
             exists_mask=exists_mask,
             diameter=state.nve_state.diameter,
-            epsilon=state.simulator_state.col_eps,
-            alpha=state.simulator_state.col_alpha
+            epsilon=state.simulator_state.collision_eps,
+            alpha=state.simulator_state.collision_alpha
             )
 
     def friction_force(state, exists_mask):
