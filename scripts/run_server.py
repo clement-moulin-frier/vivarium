@@ -1,14 +1,14 @@
 import logging
 import argparse
 
-import numpy as np
-
-import vivarium.simulator.behaviors as behaviors
-from vivarium.controllers.config import SimulatorConfig, AgentConfig, ObjectConfig
-from vivarium.simulator.sim_computation import StateType
+from vivarium.simulator import behaviors
+from vivarium.simulator.states import init_simulator_state
+from vivarium.simulator.states import init_agent_state
+from vivarium.simulator.states import init_object_state
+from vivarium.simulator.states import init_nve_state
+from vivarium.simulator.states import init_state
 from vivarium.simulator.simulator import Simulator
 from vivarium.simulator.sim_computation import dynamics_rigid
-from vivarium.controllers.converters import set_state_from_config_dict
 from vivarium.simulator.grpc_server.simulator_server import serve
 
 lg = logging.getLogger(__name__)
@@ -35,34 +35,34 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.log_level.upper())
 
-    simulator_config = SimulatorConfig(
+    simulator_state = init_simulator_state(
         box_size=args.box_size,
         n_agents=args.n_agents,
         n_objects=args.n_objects,
         num_steps_lax=args.num_steps_lax,
+        neighbor_radius=args.neighbor_radius,
         dt=args.dt,
         freq=args.freq,
-        neighbor_radius=args.neighbor_radius,
         to_jit=args.to_jit,
         use_fori_loop=args.use_fori_loop
     )
 
-    agent_configs = [AgentConfig(idx=i,
-                                 x_position=np.random.rand() * simulator_config.box_size,
-                                 y_position=np.random.rand() * simulator_config.box_size,
-                                 orientation=np.random.rand() * 2. * np.pi)
-                     for i in range(simulator_config.n_agents)]
+    agents_state = init_agent_state(
+        n_agents=args.n_agents,
+    )
 
-    object_configs = [ObjectConfig(idx=simulator_config.n_agents + i,
-                                   x_position=np.random.rand() * simulator_config.box_size,
-                                   y_position=np.random.rand() * simulator_config.box_size,
-                                   orientation=np.random.rand() * 2. * np.pi)
-                      for i in range(simulator_config.n_objects)]
+    objects_state = init_object_state(
+        n_objects=args.n_objects,
+    )
 
-    state = set_state_from_config_dict({StateType.AGENT: agent_configs,
-                                        StateType.OBJECT: object_configs,
-                                        StateType.SIMULATOR: [simulator_config]
-                                        })
+    nve_state = init_nve_state(simulator_state)
+
+    state = init_state(
+        simulator_state=simulator_state,
+        agents_state=agents_state,
+        objects_state=objects_state,
+        nve_state=nve_state
+        )
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
     lg.info('Simulator server started')
