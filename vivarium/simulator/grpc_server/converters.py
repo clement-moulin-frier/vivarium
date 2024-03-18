@@ -1,8 +1,9 @@
 from jax_md.rigid_body import RigidBody
 
-from vivarium.simulator.grpc_server.numproto.numproto import proto_to_ndarray, ndarray_to_proto
-from vivarium.simulator.sim_computation import State, SimulatorState, NVEState, AgentState, ObjectState
 import simulator_pb2
+
+from vivarium.simulator.grpc_server.numproto.numproto import proto_to_ndarray, ndarray_to_proto
+from vivarium.simulator.states import State, SimulatorState, NVEState, AgentState, ObjectState
 
 
 def proto_to_state(state):
