@@ -14,9 +14,6 @@ from vivarium.simulator.grpc_server.simulator_server import serve
 lg = logging.getLogger(__name__)
 
 def parse_args():
-    # TODO : Quick nnote : would be cool to have a separate file to have all the default values 
-    # In fact the best solution might be to use hydra with yaml files instead of argparse, 
-    # Would also be pretty convenient to store positions etcc for different notebook scenes
     parser = argparse.ArgumentParser(description='Simulator Configuration')
     parser.add_argument('--box_size', type=float, default=100.0, help='Size of the simulation box')
     parser.add_argument('--n_agents', type=int, default=10, help='Number of agents')

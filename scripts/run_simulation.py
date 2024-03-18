@@ -13,8 +13,8 @@ lg = logging.getLogger(__name__)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Simulator Configuration')
-    parser.add_argument('--log_level', type=str, default='INFO', help='Logging level')
     # Experiment run arguments
+    parser.add_argument('--log_level', type=str, default='INFO', help='Logging level')
     parser.add_argument('--num_loops', type=int, default=10, help='Number of simulation loops')
     # Simulator config arguments
     parser.add_argument('--box_size', type=float, default=100.0, help='Size of the simulation box')
