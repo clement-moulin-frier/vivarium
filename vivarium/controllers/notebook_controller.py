@@ -1,8 +1,9 @@
 import math
 import threading
 
-import numpy as np
 import logging
+import time
+import numpy as np
 
 from vivarium.controllers.simulator_controller import SimulatorController
 from vivarium.simulator.sim_computation import StateType, EntityType
@@ -101,6 +102,7 @@ class NotebookController(SimulatorController):
         self.configs[StateType.SIMULATOR][0].freq = -1
         self.set_all_user_events()
         self._is_running = False
+        self.client.stop()
 
     def run(self, threaded=False, num_steps=math.inf):
         if self._is_running:
@@ -134,6 +136,9 @@ class NotebookController(SimulatorController):
             for k, v in e.user_events.items():
                 setattr(e.config, k, v)
             e.user_events = {}
+
+    def wait(self, seconds):
+        time.sleep(seconds)
 
 
 if __name__ == "__main__":
