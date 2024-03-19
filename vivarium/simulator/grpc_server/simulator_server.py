@@ -80,10 +80,9 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
                                                    proto_to_ndarray(request.value))
         return Empty()
 
-    # TODO : Clean the function in the future to prevent having self everywhere 
     def Step(self, request, context):
         assert not self.simulator.is_started()
-        self.simulator.state, self.simulator.neighbors = self.simulator.step(self.simulator.state, self.simulator.neighbors)
+        self.simulator.step()
         return state_to_proto(self.simulator.state)
 
 
