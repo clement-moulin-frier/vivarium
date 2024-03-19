@@ -4,6 +4,7 @@ import threading
 import math
 import logging
 import pickle
+import datetime
 
 from functools import partial
 from contextlib import contextmanager
@@ -36,6 +37,11 @@ class Simulator:
         self._is_started = False
         self._to_stop = False
         self.key = jax.random.PRNGKey(0)
+
+        # Attributes to record simulation
+        self.recording = False
+        self.records = []
+        self.saving_dir = None
 
         # TODO: Define which attributes are affected but these functions
         self.update_space(self.box_size)
@@ -74,8 +80,72 @@ class Simulator:
         """
         if self.state.simulator_state.use_fori_loop:
             return self.lax_simulation_loop
+        
+        return self.classic_simulation_loop
+    
+    def start_recording(self, saving_name):
+        """Start the recording of the simulation
+
+        :param saving_name: optional name of the saving file
+        """
+        if self.recording:
+            lg.warning('Already recording')
+        self.recording = True
+
+        # Either create a savinf_dir with the given name or one with the current datetime
+        if saving_name:
+            saving_dir = f"Results/{saving_name}"
         else:
-            return self.classic_simulation_loop
+            current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            saving_dir = f"Results/experiment_{current_time}"
+       
+        self.saving_dir = saving_dir
+        # Create a saving dir if it doesn't exist yet, TODO : Add a warning if risk of overwritting already existing content
+        os.makedirs(self.saving_dir, exist_ok=True)
+        lg.info('Saving directory %s created', self.saving_dir)
+
+    def record(self, data):
+        """Record the desired data during a step
+
+        :param data: saved data (e.g simulator.state)
+        """
+        if not self.recording:
+            lg.warning('Recording not started yet.')
+            return
+        self.records.append(data)
+
+    def save_records(self):
+        """Save the recorded steps in a pickle file"""
+        if not self.records:
+            lg.warning('No records to save.')
+            return
+        
+        saving_path = f"{self.saving_dir}/frames.pkl"
+        with open(saving_path, 'wb') as f:
+            pickle.dump(self.records, f)
+            lg.info('Simulation frames saved in %s', saving_path)
+
+    def stop_recording(self):
+        """Stop the recording, save the recorded steps and reset recording information"""
+        if not self.recording:
+            lg.warning('Recording not started yet.')
+            return
+
+        self.save_records()
+        self.recording = False
+        self.records = []
+
+    def load(self, saving_name):
+        """Load data corresponding to saving_name 
+
+        :param saving_name: name used while saving the data
+        :return: loaded data
+        """
+        saving_path = f"Results/{saving_name}/frames.pkl"
+        with open(saving_path, 'rb') as f:
+            data = pickle.load(f)
+            lg.info('Simulation loaded from %s', saving_path)
+            return data
     
     def step(self, state, neighbors):
         """Do a step in the simulation by applying the update function a few iterations on the state and the neighbors
@@ -97,10 +167,13 @@ class Simulator:
             new_state, neighbors = self.simulation_loop(state=current_state, neighbors=neighbors, num_iterations=self.num_steps_lax)
             # Check that neighbors array is now ok but should be the case (allocate neighbors tries to compute a new list that is large enough according to the simulation state)
             assert not neighbors.did_buffer_overflow
+        
+        if self.recording:
+            self.record(new_state.nve_state)
 
         return new_state, neighbors
 
-    def run(self, threaded=False, num_steps=math.inf, saving_name=None):
+    def run(self, threaded=False, num_steps=math.inf, save=False, saving_name=None):
         """Run the simulator for the desired number of timesteps, either in a separate thread or not 
 
         :param threaded: wether to run the simulation in a thread or not, defaults to False
@@ -113,12 +186,12 @@ class Simulator:
         # Else run it either in a thread or not
         if threaded:
             # Set the num_loops attribute with a partial func to launch _run in a thread
-            _run = partial(self._run, num_steps=num_steps, saving_name=saving_name)
+            _run = partial(self._run, num_steps=num_steps, save=save, saving_name=saving_name)
             threading.Thread(target=_run).start()
         else:
-            self._run(num_steps=num_steps, saving_name=saving_name)
+            self._run(num_steps=num_steps, save=save, saving_name=saving_name)
 
-    def _run(self, num_steps, saving_name):
+    def _run(self, num_steps, save, saving_name):
         """Function that runs the simulator for the desired number of steps. Used to be called either normally or in a thread.
 
         :param num_steps: number of simulation steps
@@ -130,14 +203,8 @@ class Simulator:
         loop_count = 0
         sleep_time = 0
 
-        if saving_name:
-            save = True
-            frames = []
-            saving_dir = f"Results/{saving_name}"
-            os.makedirs(saving_dir, exist_ok=True)
-            lg.info(f'Saving directory {saving_dir} created')
-        else:
-            save = False
+        if save:
+            self.start_recording(saving_name)
     
         # Update the simulation with step for num_steps
         while loop_count < num_steps:
@@ -147,11 +214,7 @@ class Simulator:
                 break
 
             self.state, self.neighbors = self.step(state=self.state, neighbors=self.neighbors)
-
-            if save:
-                # TODO : Cannot save the whole state because of the __getattr__ method (weird error when pickling)
-                frames.append(self.state.nve_state)
-            loop_count += 1
+            loop_count += 1 
 
             # Sleep for updated sleep_time seconds
             end = time.time()
@@ -159,20 +222,11 @@ class Simulator:
             time.sleep(sleep_time)
 
         if save:
-            self.save_frames(frames, saving_dir)
+            self.stop_recording()
 
         # Encode that the simulation isn't started anymore
         self._is_started = False
         lg.info('Run stops')
-
-    def save_frames(self, frames, saving_dir):
-        print(f"{type(frames) = }")
-        saving_path = f"{saving_dir}/frames.pkl"
-        frames.append(1)
-        print(frames[-1])
-        with open(saving_path, 'wb') as f:
-            pickle.dump(frames, f)
-            lg.info('Simulation frames saved in {saving_path}')
 
     def update_sleep_time(self, frequency, elapsed_time):
         """Compute the time we need to sleep to respect the update frequency
