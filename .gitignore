@@ -161,4 +161,5 @@ profiler_stats
 .pylintrc
     
 test.ipynb
+test.py
 Results/*
