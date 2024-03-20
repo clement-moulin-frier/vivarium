@@ -1,0 +1,3 @@
+defaults:
+  - scene@default: default
+  - scene:

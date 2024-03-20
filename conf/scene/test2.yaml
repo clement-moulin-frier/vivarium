@@ -1,0 +1,6 @@
+defaults:
+  - test
+
+simulator:
+  n_objects: 10
+  
