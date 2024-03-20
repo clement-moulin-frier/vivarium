@@ -233,8 +233,9 @@ class WindowManager(Parameterized):
 
 
     def entity_toggle_cb(self, event):
-        for i, t in enumerate(self.config_types):
-            self.config_columns[i].visible = t in event.new
+        self.config_columns[0].visible = "SIMULATOR" in event.new
+        for i, t in enumerate(self.entity_managers.keys()):
+            self.config_columns[i].visible = t.name in event.new
 
     def update_timestep_cb(self, event):
         self.pcb_plot.period = event.new
