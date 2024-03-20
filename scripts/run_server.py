@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument('--use_fori_loop', action='store_true', help='Whether to use fori loop')
     parser.add_argument('--log_level', type=str, default='INFO', help='Logging level')
     parser.add_argument('--collision_eps', type=float, required=False, default=0.3)
-    parser.add_argument('--collision_alpha', type=float, required=False, default=0.7)
+    parser.add_argument('--collision_alpha', type=float, required=False, default=0.4)
    
     return parser.parse_args()
 
