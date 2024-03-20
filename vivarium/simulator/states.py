@@ -176,6 +176,8 @@ def init_nve_state(
         simulator_state: SimulatorState,
         diameter: float = 5.,
         friction: float = 0.1,
+        mass_center: float = 1.,
+        mass_orientation: float = 0.125,
         agents_positions: Optional[Union[List[float], None]] = None,
         objects_positions: Optional[Union[List[float], None]] = None,
         seed: int = 0,
@@ -214,11 +216,11 @@ def init_nve_state(
 
     return NVEState(
         position=RigidBody(center=positions, orientation=orientations),
-        # TODO: Why is momentum set to none ? 
+        # TODO: Why is momentum set to none ?
         momentum=None,
         # Should we indeed set the force and mass to 0 ?
         force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
-        mass=RigidBody(center=jnp.zeros((n_entities, 1)), orientation=jnp.zeros(n_entities)),
+        mass=RigidBody(center=jnp.full((n_entities, 1), mass_center), orientation=jnp.full((n_entities), mass_orientation)),
         entity_type=entity_types,
         entity_idx = jnp.array(list(range(n_agents)) + list(range(n_objects))),
         diameter=jnp.full((n_entities), diameter),
@@ -230,8 +232,8 @@ def init_nve_state(
 
 # Could implement it as a static or class method
 def init_agent_state(
-        n_agents: int,
-        behavior: int = 0,
+        simulator_state: SimulatorState,
+        behavior: int = 1,
         wheel_diameter: float = 2.,
         speed_mul: float = 1.,
         theta_mul: float = 1.,
@@ -242,10 +244,10 @@ def init_agent_state(
     """
     Initialize agent state with given parameters
     """
-
+    n_agents = simulator_state.n_agents[0]
     # TODO : Allow to define custom list of behaviors, wheel_diameters ... (in fact for all parameters)
-    # TODO : if the shape if just 1 value, assign it to all agents 
-    # TODO : else, ensure you are given a list of arguments and transform it into a jax array 
+    # TODO : if the shape if just 1 value, assign it to all agents
+    # TODO : else, ensure you are given a list of arguments of size n_agents and transform it into a jax array
 
     return AgentState(
         nve_idx=jnp.arange(n_agents, dtype=int),
@@ -262,14 +264,17 @@ def init_agent_state(
 
 
 def init_object_state(
-        n_objects: int,
+        simulator_state: SimulatorState,
         color: str = "red"
         ) -> ObjectState:
     """
     Initialize object state with given parameters
     """
+    n_agents, n_objects = simulator_state.n_agents[0], simulator_state.n_objects[0]
+    start_idx, stop_idx = n_agents, n_agents + n_objects
+    objects_nve_idx = jnp.arange(start_idx, stop_idx, dtype=int)
     return  ObjectState(
-        nve_idx=jnp.arange(n_objects, dtype=int),
+        nve_idx=objects_nve_idx,
         color=jnp.tile(_string_to_rgb(color), (n_objects, 1))
     )
 

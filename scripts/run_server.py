@@ -47,15 +47,11 @@ if __name__ == '__main__':
         use_fori_loop=args.use_fori_loop
     )
 
-    agents_state = init_agent_state(
-        n_agents=args.n_agents,
-    )
+    agents_state = init_agent_state(simulator_state=simulator_state)
 
-    objects_state = init_object_state(
-        n_objects=args.n_objects,
-    )
+    objects_state = init_object_state(simulator_state=simulator_state)
 
-    nve_state = init_nve_state(simulator_state)
+    nve_state = init_nve_state(simulator_state=simulator_state)
 
     state = init_state(
         simulator_state=simulator_state,
