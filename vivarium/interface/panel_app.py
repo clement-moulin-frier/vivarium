@@ -32,8 +32,9 @@ class EntityManager:
         self.cds.on_change('data', self.drag_cb)
         self.cds_view = self.create_cds_view()
         self.panel_simulator_config.param.watch(self.hide_all_non_existing, "hide_non_existing")
-        selected.param.watch(self.update_selected_plot, ['selection'],
-                             onlychanged=True, precedence=0)
+        if selected is not None:
+            selected.param.watch(self.update_selected_plot, ['selection'],
+                                 onlychanged=True, precedence=0)
         for i, pc in enumerate(self.panel_configs):
             pc.param.watch(self.update_cds_view, pc.param_names(), onlychanged=True)
             self.config[i].param.watch(self.hide_non_existing, "exists", onlychanged=False)
@@ -58,10 +59,11 @@ class EntityManager:
     def create_cds_view(self):
         # For each attribute in the panel config, create a filter
         # that is a logical AND of the visibility and the attribute
+        params = self.panel_configs[0].param_names() if len(self.panel_configs) else []
         return {
             attr: CDSView(filter=BooleanFilter(
                 [getattr(pc, attr) and pc.visible for pc in self.panel_configs]
-            )) for attr in self.panel_configs[0].param_names()
+            )) for attr in params
         }
 
     def update_cds_view(self, event):
@@ -214,7 +216,7 @@ class WindowManager(Parameterized):
                 panel_simulator_config=self.controller.panel_simulator_config,
                 selected=self.controller.selected_entities[etype], etype=etype,
                 state=self.controller.state)
-                for etype, manager_class in self.entity_manager_classes.items()
+                for etype, manager_class in self.entity_manager_classes.items() if len(self.controller.configs[etype.to_state_type()])
         }
 
         self.plot = self.create_plot()
@@ -262,8 +264,8 @@ class WindowManager(Parameterized):
         p.add_tools(hover)
         p.x_range = Range1d(0, self.controller.simulator_config.box_size)
         p.y_range = Range1d(0, self.controller.simulator_config.box_size)
-        draw_tool = PointDrawTool(renderers=[self.entity_managers[etype].plot(p)
-                                             for etype in EntityType], add=False)
+        draw_tool = PointDrawTool(renderers=[em.plot(p)
+                                             for em in self.entity_managers.values()], add=False)
         p.add_tools(draw_tool)
         return p
 

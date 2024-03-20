@@ -61,12 +61,13 @@ class PanelController(SimulatorController):
 
         self.update_entity_list()
         for etype, selected in self.selected_entities.items():
-            selected.param.watch(self.pull_selected_configs, ['selection'], onlychanged=True, precedence=1)
-            selected.param.watch(self.pull_selected_panel_configs, ['selection'], onlychanged=True)
+            if selected is not None:
+                selected.param.watch(self.pull_selected_configs, ['selection'], onlychanged=True, precedence=1)
+                selected.param.watch(self.pull_selected_panel_configs, ['selection'], onlychanged=True)
 
     def watch_selected_configs(self):
         watchers = {etype: config.param.watch(self.push_selected_to_config_list, config.param_names(), onlychanged=True)
-                    for etype, config in self.selected_configs.items()}
+                    for etype, config in self.selected_configs.items() if config is not None}
         return watchers
 
     def watch_selected_panel_configs(self):
@@ -78,7 +79,8 @@ class PanelController(SimulatorController):
     def dont_push_selected_configs(self):
         if self._selected_configs_watchers is not None:
             for etype, config in self.selected_configs.items():
-                config.param.unwatch(self._selected_configs_watchers[etype])
+                if config is not None:
+                    config.param.unwatch(self._selected_configs_watchers[etype])
         try:
             yield
         finally:
@@ -97,22 +99,30 @@ class PanelController(SimulatorController):
     def update_entity_list(self, *events):
         state = self.state
         for etype, selected in self.selected_entities.items():
-            selected.param.selection.objects = state.entity_idx(etype).tolist()
+            if selected is not None:
+                selected.param.selection.objects = state.entity_idx(etype).tolist()
 
     def pull_selected_configs(self, *events):
         state = self.state
+
+        for etype, config in self.selected_configs.items():
+            if state.field(etype.to_state_type()).nve_idx.shape[0] == 0:
+                self.selected_configs[etype] = None
+                self.selected_entities[etype] = None
         config_dict = {etype.to_state_type(): [config] for etype, config in self.selected_configs.items()}
         with self.dont_push_selected_configs():
             # Todo: check if for loop below is still required
             for etype, selected in self.selected_entities.items():
-                config_dict[etype.to_state_type()][0].idx = int(state.nve_idx(etype.to_state_type(), selected.selection[0]))
+                if selected is not None:
+                    config_dict[etype.to_state_type()][0].idx = int(state.nve_idx(etype.to_state_type(), selected.selection[0]))
             converters.set_configs_from_state(state, config_dict)
         return state
 
     def pull_selected_panel_configs(self, *events):
         with self.dont_push_selected_panel_configs():
             for etype, panel_config in self.selected_panel_configs.items():
-                panel_config.param.update(**self.panel_configs[etype.to_state_type()][self.selected_entities[etype].selection[0]].to_dict())
+                if self.selected_entities[etype] is not None:
+                    panel_config.param.update(**self.panel_configs[etype.to_state_type()][self.selected_entities[etype].selection[0]].to_dict())
 
     def pull_all_data(self):
         self.pull_selected_configs()

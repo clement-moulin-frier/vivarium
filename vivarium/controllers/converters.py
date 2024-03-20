@@ -218,7 +218,7 @@ def set_state_from_config_dict(config_dict, state=None):
     state = state or get_default_state(n_entities_dict)
     e_idx = jnp.zeros(sum(n_entities_dict.values()), dtype=int)
     for stype, configs in config_dict.items():
-        params = configs[0].param_names()
+        params = configs[0].param_names() if len(configs) > 0 else []
         for p in params:
             state_field_info = configs_to_state_dict[stype][p]
             nve_idx = [c.idx for c in configs] if state_field_info.nested_field[0] == 'nve_state' else range(len(configs))
@@ -248,6 +248,8 @@ def set_configs_from_state(state, config_dict=None):
             for f in state_field_info.nested_field:
                 value = getattr(value, f)
             for config in config_dict[stype]:
+                if config is None:
+                    continue
                 t = type(getattr(config, param))
                 row_idx = state.row_idx(state_field_info.nested_field[0], config.idx)
                 if state_field_info.column_idx is None:
