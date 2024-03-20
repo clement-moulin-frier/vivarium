@@ -44,6 +44,9 @@ class Selected(param.Parameterized):
 
     def selection_nve_idx(self, nve_idx):
         return nve_idx[np.array(self.selection)].tolist()
+    
+    def __len__(self):
+        return len(self.selection)
 
 
 class PanelController(SimulatorController):
@@ -57,6 +60,7 @@ class PanelController(SimulatorController):
         self.panel_configs = {stype: [stype_to_panel_config[stype]() for _ in range(len(configs))]
                               for stype, configs in self.configs.items()}
         self.selected_panel_configs = {EntityType.AGENT: PanelAgentConfig(), EntityType.OBJECT: PanelObjectConfig()}
+        self.pull_selected_panel_configs()
         self.panel_simulator_config = PanelSimulatorConfig()
 
         self.update_entity_list()

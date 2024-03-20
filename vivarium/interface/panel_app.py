@@ -37,7 +37,7 @@ class EntityManager:
                                  onlychanged=True, precedence=0)
         for i, pc in enumerate(self.panel_configs):
             pc.param.watch(self.update_cds_view, pc.param_names(), onlychanged=True)
-            self.config[i].param.watch(self.hide_non_existing, "exists", onlychanged=False)
+            self.config[i].param.watch(self.hide_non_existing, "exists", onlychanged=True)
 
     def drag_cb(self, attr, old, new):
         for i, c in enumerate(self.config):
@@ -68,7 +68,7 @@ class EntityManager:
 
     def update_cds_view(self, event):
         n = event.name
-        for attr in [n] if n != "visible" else self.panel_configs[0].param_names():
+        for attr in [n] if n != "visible" else (self.panel_configs[0].param_names() if len(self.panel_configs) else []):
             f = [getattr(pc, attr) and pc.visible for pc in self.panel_configs]
             self.cds_view[attr].filter = BooleanFilter(f)
 
@@ -273,16 +273,16 @@ class WindowManager(Parameterized):
         self.config_columns = pn.Row(*
             [pn.Column(
                 pn.pane.Markdown("### SIMULATOR", align="center"),
-                pn.panel(self.controller.panel_simulator_config, name="Visualization configurations"),
+                pn.panel(self.controller.panel_simulator_config, name="Visualization configuration"),
                 pn.panel(self.controller.simulator_config, name="Configurations"),
                 visible=False, sizing_mode="scale_height", scroll=True)] +
             [pn.Column(
                 pn.pane.Markdown(f"### {etype.name}", align="center"),
                 self.controller.selected_entities[etype],
-                pn.panel(self.controller.selected_panel_configs[etype], name="Visualization configurations"),
-                pn.panel(self.controller.selected_configs[etype], name="State configurations"),
+                pn.panel(self.controller.selected_panel_configs[etype], name="Visualization configuration"),
+                pn.panel(self.controller.selected_configs[etype], name="State configuration"),
                 visible=True, sizing_mode="scale_height", scroll=True)
-            for etype in EntityType])
+            for etype in self.entity_managers.keys()])
 
         app = pn.Row(pn.Column(pn.Row(pn.pane.Markdown("### Start/Stop server", align="center"),
                                       self.start_toggle),
