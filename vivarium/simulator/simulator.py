@@ -75,7 +75,7 @@ class Simulator:
         else:
             return self.classic_simulation_loop
     
-    def step(self, state, neighbors):
+    def _step(self, state, neighbors, num_iterations):
         """Do a step in the simulation by applying the update function a few iterations on the state and the neighbors
 
         :param state: current simulation state 
@@ -85,18 +85,24 @@ class Simulator:
         # Create a copy of the current state in case of neighbor buffer overflow
         current_state = state
         # TODO : find a more explicit name than num_steps_lax and modify it in all the pipeline
-        new_state, neighbors = self.simulation_loop(state=current_state, neighbors=neighbors, num_iterations=self.num_steps_lax)
+        new_state, neighbors = self.simulation_loop(state=current_state, neighbors=neighbors, num_iterations=num_iterations)
 
         # If the neighbor list can't fit in the allocation, rebuild it but bigger.
         if neighbors.did_buffer_overflow:
             lg.warning('REBUILDING NEIGHBORS ARRAY')
             neighbors = self.allocate_neighbors(current_state.nve_state.position.center)
             # Because there was an error, we need to re-run this simulation loop from the copy of the current_state we created
-            new_state, neighbors = self.simulation_loop(state=current_state, neighbors=neighbors, num_iterations=self.num_steps_lax)
+            new_state, neighbors = self.simulation_loop(state=current_state, neighbors=neighbors, num_iterations=num_iterations)
             # Check that neighbors array is now ok but should be the case (allocate neighbors tries to compute a new list that is large enough according to the simulation state)
             assert not neighbors.did_buffer_overflow
 
         return new_state, neighbors
+    
+    def step(self):
+        """Do a step in the simulation by calling _step"""
+        state, neighbors = self.state, self.neighbors
+        num_iterations = self.num_steps_lax
+        self.state, self.neighbors = self._step(state, neighbors, num_iterations)
 
     def run(self, threaded=False, num_steps=math.inf):
         """Run the simulator for the desired number of timesteps, either in a separate thread or not 
@@ -135,7 +141,7 @@ class Simulator:
                 self._to_stop = False
                 break
 
-            self.state, self.neighbors = self.step(state=self.state, neighbors=self.neighbors)
+            self.state, self.neighbors = self._step(state=self.state, neighbors=self.neighbors, num_iterations=self.num_steps_lax)
             loop_count += 1
 
             # Sleep for updated sleep_time seconds
