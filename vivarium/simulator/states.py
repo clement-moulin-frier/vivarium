@@ -237,7 +237,7 @@ def init_agent_state(
         wheel_diameter: float = 2.,
         speed_mul: float = 1.,
         theta_mul: float = 1.,
-        prox_dist_max: float = 100.,
+        prox_dist_max: float = 40.,
         prox_cos_min: float = 0.,
         color: str = "blue"
         ) -> AgentState:
