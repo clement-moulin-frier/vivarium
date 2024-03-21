@@ -161,7 +161,7 @@ def init_simulator_state(
     """
     return SimulatorState(
         idx=jnp.array([0]),
-        box_size=jnp.array([box_size]),                          
+        box_size=jnp.array([box_size]),                       
         n_agents=jnp.array([n_agents]),
         n_objects=jnp.array([n_objects]),
         num_steps_lax=jnp.array([num_steps_lax], dtype=int),
@@ -183,6 +183,16 @@ def _init_positions(key_pos, positions, n_elements, box_size, n_dims=2):
         positions = random.uniform(key_pos, (n_elements, n_dims)) * box_size
     return positions
 
+def _init_existing(n_existing, n_elements):
+    if n_existing:
+        assert n_existing <= n_elements
+        existing_arr = jnp.ones((n_existing))
+        non_existing_arr = jnp.zeros((n_elements - n_existing))
+        exists_array = jnp.concatenate((existing_arr, non_existing_arr))
+    else:
+        exists_array = jnp.ones((n_elements))
+    return exists_array
+
 # TODO : Should also add union float, list[float] for friction, diameter ..
 # Also think it would be easier to only handle the nve state in the physics engine. (if it doesn't make the  simulation run slower)
 # Here it makes a really long function, and it isn't very modular 
@@ -195,6 +205,8 @@ def init_nve_state(
         mass_orientation: float = 0.125,
         agents_positions: Optional[Union[List[float], None]] = None,
         objects_positions: Optional[Union[List[float], None]] = None,
+        existing_agents: Optional[Union[int, List[float], None]] = None,
+        existing_objects: Optional[Union[int, List[float], None]] = None,
         seed: int = 0,
         ) -> NVEState:
     """
@@ -221,19 +233,21 @@ def init_nve_state(
     object_entities = jnp.full(n_objects, EntityType.OBJECT.value)
     entity_types = jnp.concatenate((agents_entities, object_entities), dtype=int)
 
+    existing_agents = _init_existing(existing_agents, n_agents)
+    existing_objects = _init_existing(existing_objects, n_objects)
+    exists = jnp.concatenate((existing_agents, existing_objects), dtype=int)
+
+    # TODO: Why is momentum set to none ?
     return NVEState(
         position=RigidBody(center=positions, orientation=orientations),
-        # TODO: Why is momentum set to none ?
         momentum=None,
-        # Should we indeed set the force and mass to 0 ?
         force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
         mass=RigidBody(center=jnp.full((n_entities, 1), mass_center), orientation=jnp.full((n_entities), mass_orientation)),
         entity_type=entity_types,
         entity_idx = jnp.array(list(range(n_agents)) + list(range(n_objects))),
         diameter=jnp.full((n_entities), diameter),
         friction=jnp.full((n_entities), friction),
-        # Set all the entities to exist by default, but we should add a function to be able to change that
-        exists=jnp.ones(n_entities, dtype=int)
+        exists=exists
         )
 
 

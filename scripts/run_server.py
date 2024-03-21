@@ -18,7 +18,9 @@ def parse_args():
     parser.add_argument('--custom_pos', action='store_true', help='Just a test arg to wether use custom or random pos')
     parser.add_argument('--box_size', type=float, default=100.0, help='Size of the simulation box')
     parser.add_argument('--n_agents', type=int, default=10, help='Number of agents')
+    parser.add_argument('--n_existing_agents', type=int, default=10, help='Number of agents')
     parser.add_argument('--n_objects', type=int, default=2, help='Number of objects')
+    parser.add_argument('--n_existing_objects', type=int, default=2, help='Number of agents')
     parser.add_argument('--num_steps-lax', type=int, default=4, help='Number of lax steps per loop')
     parser.add_argument('--dt', type=float, default=0.1, help='Time step size')
     parser.add_argument('--freq', type=float, default=40.0, help='Frequency parameter')
@@ -63,7 +65,12 @@ if __name__ == '__main__':
 
     objects_state = init_object_state(simulator_state=simulator_state)
 
-    nve_state = init_nve_state(simulator_state=simulator_state, agents_positions=positions)
+    nve_state = init_nve_state(
+        simulator_state=simulator_state, 
+        agents_positions=positions,
+        existing_agents=args.n_existing_agents,
+        existing_objects=args.n_existing_objects,
+        )
 
     state = init_state(
         simulator_state=simulator_state,
