@@ -26,8 +26,8 @@ def parse_args():
     parser.add_argument('--to_jit', action='store_false', help='Whether to use JIT compilation')
     parser.add_argument('--use_fori_loop', action='store_true', help='Whether to use fori loop')
     parser.add_argument('--log_level', type=str, default='INFO', help='Logging level')
-    parser.add_argument('--collision_eps', type=float, required=False, default=0.3)
-    parser.add_argument('--collision_alpha', type=float, required=False, default=0.4)
+    parser.add_argument('--collision_eps', type=float, required=False, default=0.1)
+    parser.add_argument('--collision_alpha', type=float, required=False, default=0.5)
    
     return parser.parse_args()
 
