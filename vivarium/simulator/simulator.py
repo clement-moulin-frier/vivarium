@@ -40,7 +40,7 @@ class Simulator:
 
         # Attributes to record simulation
         self.recording = False
-        self.records = []
+        self.records = None
         self.saving_dir = None
 
         # TODO: Define which attributes are affected but these functions
@@ -91,6 +91,7 @@ class Simulator:
         if self.recording:
             lg.warning('Already recording')
         self.recording = True
+        self.records = []
 
         # Either create a savinf_dir with the given name or one with the current datetime
         if saving_name:
