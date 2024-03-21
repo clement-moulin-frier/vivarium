@@ -1,5 +1,7 @@
 # vivarium
 
+[Preliminary demo video](https://youtu.be/dnO-wo6Ns-8)
+
 ## Installation
 
 1- Get the repository
