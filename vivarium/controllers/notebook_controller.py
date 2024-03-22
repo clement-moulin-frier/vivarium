@@ -52,6 +52,7 @@ class Agent(Entity):
         self.stop_motors()
 
         self.behaviors = {}
+        self.active_behaviors = {}
 
     def sensors(self):
         return [self.config.left_prox, self.config.right_prox]
@@ -60,18 +61,42 @@ class Agent(Entity):
         self.behaviors[name or behavior_fn.__name__] = (behavior_fn, weight)
 
     def detach_behavior(self, name):
-        del self.behaviors[name]
+        n = name.__name__ if hasattr(name, "__name__") else name
+        if n in self.behaviors:
+            del self.behaviors[n]
+        if n in self.active_behaviors:
+            del self.active_behaviors[n]
+
+    def start_behavior(self, name):
+        n = name.__name__ if hasattr(name, "__name__") else name
+        self.active_behaviors[n] = self.behaviors[n]
+
+    def stop_behavior(self, name):
+        n = name.__name__ if hasattr(name, "__name__") else name
+        del self.active_behaviors[n]
 
     def detach_all_behaviors(self):
         self.behaviors = {}
         self.stop_motors()
 
-    def behave(self):
+    def check_behaviors(self):
         if len(self.behaviors) == 0:
+            print("No behaviors attached")
+        else:
+            print(f"available behaviors: {self.behaviors.keys()}")
+    
+    def check_active_behaviors(self):
+        if len(self.active_behaviors) == 0:
+            print("No active behaviors")
+        else:
+            print(f"active behaviors: {self.active_behaviors.keys()}")
+
+    def behave(self):
+        if len(self.active_behaviors) == 0:
             return
         total_weights = 0.
         total_motor = np.zeros(2)
-        for fn, w in self.behaviors.values():
+        for fn, w in self.active_behaviors.values():
             total_motor += w * np.array(fn(self))
             total_weights += w
         motors = total_motor / total_weights
