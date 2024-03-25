@@ -196,7 +196,7 @@ class ObjectManager(EntityManager):
 
 class WindowManager(Parameterized):
     controller = PanelController(client=SimulatorGRPCClient())
-    config_types = [key.name for key in controller.configs.keys()]
+    config_types = [k.name for k, v in controller.configs.items() if v]
     start_toggle = pn.widgets.Toggle(**({"name": "Stop", "value": True} if controller.is_started()
                                         else {"name": "Start", "value": False}),align="center")
     entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=config_types,
