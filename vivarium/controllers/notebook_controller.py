@@ -67,17 +67,20 @@ class Agent(Entity):
         if n in self.active_behaviors:
             del self.active_behaviors[n]
 
+    def detach_all_behaviors(self):
+        self.behaviors = {}
+
     def start_behavior(self, name):
         n = name.__name__ if hasattr(name, "__name__") else name
         self.active_behaviors[n] = self.behaviors[n]
 
+    def start_all_behaviors(self):
+        for n in self.behaviors:
+            self.active_behaviors[n] = self.behaviors[n]
+
     def stop_behavior(self, name):
         n = name.__name__ if hasattr(name, "__name__") else name
         del self.active_behaviors[n]
-
-    def detach_all_behaviors(self):
-        self.behaviors = {}
-        self.stop_motors()
 
     def check_behaviors(self):
         if len(self.behaviors) == 0:
