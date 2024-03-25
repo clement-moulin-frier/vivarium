@@ -1,6 +1,9 @@
 # vivarium
 
-[Preliminary demo video](https://youtu.be/dnO-wo6Ns-8)
+![Vivarium demo](images/viarium_gif.gif)
+
+See the full preliminary demo [here](https://youtu.be/dnO-wo6Ns-8) !
+
 
 ## Installation
 
