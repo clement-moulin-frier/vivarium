@@ -1,7 +1,6 @@
 from contextlib import contextmanager
 
 import logging
-import sys
 import numpy as np
 import panel as pn
 
