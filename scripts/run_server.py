@@ -26,6 +26,8 @@ def parse_args():
     parser.add_argument('--to_jit', action='store_false', help='Whether to use JIT compilation')
     parser.add_argument('--use_fori_loop', action='store_true', help='Whether to use fori loop')
     parser.add_argument('--log_level', type=str, default='INFO', help='Logging level')
+    parser.add_argument('--collision_eps', type=float, required=False, default=0.1)
+    parser.add_argument('--collision_alpha', type=float, required=False, default=0.5)
    
     return parser.parse_args()
 
@@ -44,7 +46,9 @@ if __name__ == '__main__':
         freq=args.freq,
         neighbor_radius=args.neighbor_radius,
         to_jit=args.to_jit,
-        use_fori_loop=args.use_fori_loop
+        use_fori_loop=args.use_fori_loop,
+        collision_eps=args.collision_eps,
+        collision_alpha=args.collision_alpha
     )
 
     agent_configs = [AgentConfig(idx=i,
@@ -65,5 +69,6 @@ if __name__ == '__main__':
                                         })
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
+
     lg.info('Simulator server started')
     serve(simulator)

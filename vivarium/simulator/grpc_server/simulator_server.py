@@ -82,7 +82,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
     def Step(self, request, context):
         assert not self.simulator.is_started()
-        self.simulator.run(threaded=False, num_loops=1)
+        self.simulator.step()
         return state_to_proto(self.simulator.state)
 
 
