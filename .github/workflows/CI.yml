@@ -39,5 +39,6 @@ jobs:
         pytest
     - name: Test interface
       run: |
-        python scripts/run_server.py &&
-        python scripts/run_interface.py
+        python scripts/run_server.py &
+        python scripts/run_interface.py &
+        sleep 5
