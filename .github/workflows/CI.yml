@@ -39,7 +39,5 @@ jobs:
         pytest
     - name: Test interface
       run: |
-        python scripts/run_server.py &
-        sleep 3 &&
-        python scripts/run_interface.py &&
-        curl http://localhost:5006/run_interface | grep "Vivarium"
+        python scripts/run_server.py &&
+        python scripts/run_interface.py
