@@ -116,6 +116,7 @@ celerybeat.pid
 .venv
 env/
 venv/
+myvenv/
 ENV/
 env.bak/
 venv.bak/
@@ -159,7 +160,8 @@ profiler_stats
 
 .vscode
 .pylintrc
-    
+
 test.ipynb
-test.py
-Results/*
+test.py 
+
+Results/
