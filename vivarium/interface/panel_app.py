@@ -36,7 +36,7 @@ class EntityManager:
                              onlychanged=True, precedence=0)
         for i, pc in enumerate(self.panel_configs):
             pc.param.watch(self.update_cds_view, pc.param_names(), onlychanged=True)
-            self.config[i].param.watch(self.hide_non_existing, "exists", onlychanged=False)
+            self.config[i].param.watch(self.hide_non_existing, "exists", onlychanged=True)
 
     def drag_cb(self, attr, old, new):
         for i, c in enumerate(self.config):
