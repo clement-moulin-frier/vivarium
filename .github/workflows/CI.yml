@@ -19,7 +19,15 @@ jobs:
     env:
       OS: ${{ matrix.os }}
       PYTHON: ${{ matrix.python-version }}
-
+    services:
+      server:
+        image: python:${{ matrix.python-version }}
+        options: python scripts/run_server.py
+      interface:
+        image: python:${{ matrix.python-version }}
+        options: panel serve scripts/run_server.py
+        ports:
+          - 5006:5006
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
