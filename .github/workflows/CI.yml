@@ -45,10 +45,5 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
-    - name: Run server
-      run: python scripts/run_server.py &
-        sleep 5
-    - name: Run interface
-      run: python scripts/run_interface.py &
-        sleep 5 &&
-        curl http://localhost:5006 -I
+    - name: Test server
+      run: curl -I http://localhost:5006
