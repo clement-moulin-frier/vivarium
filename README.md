@@ -1,5 +1,10 @@
 # vivarium
 
+![Vivarium demo](images/vivarium.gif)
+
+### [>> See the full preliminary demo here ! <<](https://youtu.be/dnO-wo6Ns-8)
+
+
 ## Installation
 
 1- Get the repository
