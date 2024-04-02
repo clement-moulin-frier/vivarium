@@ -13,16 +13,18 @@ def proto_to_state(state):
 
 
 def proto_to_simulator_state(simulator_state):
-    return SimulatorState(idx=proto_to_ndarray(simulator_state.idx),
-                          box_size=proto_to_ndarray(simulator_state.box_size),
-                          n_agents=proto_to_ndarray(simulator_state.n_agents),
-                          n_objects=proto_to_ndarray(simulator_state.n_objects),
-                          num_steps_lax=proto_to_ndarray(simulator_state.num_steps_lax),
-                          dt=proto_to_ndarray(simulator_state.dt),
-                          freq=proto_to_ndarray(simulator_state.freq),
-                          neighbor_radius=proto_to_ndarray(simulator_state.neighbor_radius),
-                          to_jit=proto_to_ndarray(simulator_state.to_jit),
-                          use_fori_loop=proto_to_ndarray(simulator_state.use_fori_loop)
+    return SimulatorState(idx=proto_to_ndarray(simulator_state.idx).astype(int),
+                          box_size=proto_to_ndarray(simulator_state.box_size).astype(float),
+                          n_agents=proto_to_ndarray(simulator_state.n_agents).astype(int),
+                          n_objects=proto_to_ndarray(simulator_state.n_objects).astype(int),
+                          num_steps_lax=proto_to_ndarray(simulator_state.num_steps_lax).astype(int),
+                          dt=proto_to_ndarray(simulator_state.dt).astype(float),
+                          freq=proto_to_ndarray(simulator_state.freq).astype(float),
+                          neighbor_radius=proto_to_ndarray(simulator_state.neighbor_radius).astype(float),
+                          to_jit=proto_to_ndarray(simulator_state.to_jit).astype(int),
+                          use_fori_loop=proto_to_ndarray(simulator_state.use_fori_loop).astype(int),
+                          collision_eps=proto_to_ndarray(simulator_state.collision_eps).astype(float),
+                          collision_alpha=proto_to_ndarray(simulator_state.collision_alpha).astype(float)
                           )
 
 
@@ -81,7 +83,9 @@ def simulator_state_to_proto(simulator_state):
         freq=ndarray_to_proto(simulator_state.freq),
         neighbor_radius=ndarray_to_proto(simulator_state.neighbor_radius),
         to_jit=ndarray_to_proto(simulator_state.to_jit),
-        use_fori_loop=ndarray_to_proto(simulator_state.use_fori_loop)
+        use_fori_loop=ndarray_to_proto(simulator_state.use_fori_loop),
+        collision_eps=ndarray_to_proto(simulator_state.collision_eps),
+        collision_alpha=ndarray_to_proto(simulator_state.collision_alpha)
     )
 
 
