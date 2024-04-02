@@ -22,7 +22,7 @@ jobs:
     services:
       server:
         image: python:${{ matrix.python-version }}
-        options: scripts/run_server.py
+        options: python:${{ matrix.python-version }} scripts/run_server.py
       interface:
         image: python:${{ matrix.python-version }}
         options: panel serve scripts/run_server.py
