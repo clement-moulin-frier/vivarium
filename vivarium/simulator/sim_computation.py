@@ -4,19 +4,141 @@ import jax
 import jax.numpy as jnp
 
 from jax import ops, vmap, lax
-from jax_md import space, util, rigid_body, simulate, energy, quantity
+from jax_md import space, rigid_body, util, simulate, energy, quantity
+from jax_md.dataclasses import dataclass
 f32 = util.f32
 
 
 # Only work on 2D environments atm 
 SPACE_NDIMS = 2
 
-# TODO : Add documentation to functions below  
+
+class EntityType(Enum):
+    AGENT = 0
+    OBJECT = 1
+
+    def to_state_type(self):
+        return StateType(self.value)
+
+class StateType(Enum):
+    AGENT = 0
+    OBJECT = 1
+    SIMULATOR = 2
+
+    def is_entity(self):
+        return self != StateType.SIMULATOR
+
+    def to_entity_type(self):
+        assert self.is_entity()
+        return EntityType(self.value)
+
+
+
+@dataclass
+class NVEState(simulate.NVEState):
+    entity_type: util.Array
+    entity_idx: util.Array  # idx in XState (e.g. AgentState)
+    diameter: util.Array
+    friction: util.Array
+    exists: util.Array
+
+    @property
+    def velocity(self) -> util.Array:
+        return self.momentum / self.mass
+
+@dataclass
+class AgentState:
+    nve_idx: util.Array  # idx in NVEState
+    prox: util.Array
+    motor: util.Array
+    behavior: util.Array
+    wheel_diameter: util.Array
+    speed_mul: util.Array
+    theta_mul: util.Array
+    proxs_dist_max: util.Array
+    proxs_cos_min: util.Array
+    color: util.Array
+
+
+@dataclass
+class ObjectState:
+    nve_idx: util.Array  # idx in NVEState
+    color: util.Array
+
+@dataclass
+class SimulatorState:
+    idx: util.Array
+    box_size: util.Array
+    n_agents: util.Array
+    n_objects: util.Array
+    num_steps_lax: util.Array
+    dt: util.Array
+    freq: util.Array
+    neighbor_radius: util.Array
+    to_jit: util.Array
+    use_fori_loop: util.Array
+
+    @staticmethod
+    def get_type(attr):
+        if attr in ['idx', 'n_agents', 'n_objects', 'num_steps_lax']:
+            return int
+        elif attr in ['box_size', 'dt', 'freq', 'neighbor_radius']:
+            return float
+        elif attr in ['to_jit', 'use_fori_loop']:
+            return bool
+        else:
+            raise ValueError()
+
+@dataclass
+class State:
+    simulator_state: SimulatorState
+    nve_state: NVEState
+    agent_state: AgentState
+    object_state: ObjectState
+
+    def field(self, stype_or_nested_fields):
+        if isinstance(stype_or_nested_fields, StateType):
+            name = stype_or_nested_fields.name.lower()
+            nested_fields = (f'{name}_state', )
+        else:
+            nested_fields = stype_or_nested_fields
+
+        res = self
+        for f in nested_fields:
+            res = getattr(res, f)
+
+        return res
+
+    # Should we keep this function because it is duplicated below ? 
+    # def nve_idx(self, etype):
+    #     cond = self.e_cond(etype)
+    #     return compress(range(len(cond)), cond)  # https://stackoverflow.com/questions/21448225/getting-indices-of-true-values-in-a-boolean-list
+
+    def nve_idx(self, etype, entity_idx):
+        return self.field(etype).nve_idx[entity_idx]
+
+    def e_idx(self, etype):
+        return self.nve_state.entity_idx[self.nve_state.entity_type == etype.value]
+
+    def e_cond(self, etype):
+        return self.nve_state.entity_type == etype.value
+
+    def row_idx(self, field, nve_idx):
+        return nve_idx if field == 'nve_state' else self.nve_state.entity_idx[jnp.array(nve_idx)]
+
+    def __getattr__(self, name):
+        def wrapper(e_type):
+            value = getattr(self.nve_state, name)
+            if isinstance(value, rigid_body.RigidBody):
+                return rigid_body.RigidBody(center=value.center[self.e_cond(e_type)],
+                                            orientation=value.orientation[self.e_cond(e_type)])
+            else:
+                return value[self.e_cond(e_type)]
+        return wrapper
+
 
 def normal(theta):
     return jnp.array([jnp.cos(theta), jnp.sin(theta)])
-
-normal = vmap(normal)
 
 def switch_fn(fn_list):
     def switch(index, *operands):
@@ -24,30 +146,63 @@ def switch_fn(fn_list):
     return switch
 
 
-""" Helper functions for collisions """
+# Helper functions for collisions
 
-def collision_energy(displacement_fn, r_a, r_b, l_a, l_b, epsilon, alpha):
+def collision_energy(displacement_fn, r_a, r_b, l_a, l_b, epsilon, alpha, mask):
+    """Compute the collision energy between a pair of particles
+
+    :param displacement_fn: displacement function of jax_md 
+    :param r_a: position of particle a 
+    :param r_b: position of particle b 
+    :param l_a: diameter of particle a 
+    :param l_b: diameter of particle b 
+    :param epsilon: interaction energy scale 
+    :param alpha: interaction stiffness
+    :param mask: set the energy to 0 if one of the particles is masked 
+    :return: collision energy between both particles
+    """
     dist = jnp.linalg.norm(displacement_fn(r_a, r_b))
-    sigma = l_a + l_b
-    return energy.soft_sphere(dist, sigma=sigma, epsilon=epsilon, alpha=alpha)
+    sigma = (l_a + l_b) / 2
+    e = energy.soft_sphere(dist, sigma=sigma, epsilon=epsilon, alpha=f32(alpha))
+    return jnp.where(mask, e, 0.)
 
-collision_energy = vmap(collision_energy, (None, 0, 0, 0, 0, None, None))
+collision_energy = vmap(collision_energy, (None, 0, 0, 0, 0, None, None, 0))
 
 
-def total_collision_energy(positions, diameter, neighbor, displacement, exists_mask, epsilon=1e-2, alpha=2, **kwargs):
+def total_collision_energy(positions, diameter, neighbor, displacement, exists_mask, epsilon, alpha):
+    """Compute the collision energy between all neighboring pairs of particles in the system 
+
+    :param positions: positions of all the particles 
+    :param diameter: diameters of all the particles 
+    :param neighbor: neighbor array of the system
+    :param displacement: dipalcement function of jax_md
+    :param exists_mask: mask to specify which particles exist 
+    :param epsilon: interaction energy scale between two particles
+    :param alpha: interaction stiffness between two particles
+    :return: sum of all collisions energies of the system 
+    """
     diameter = lax.stop_gradient(diameter)
     senders, receivers = neighbor.idx
-    Ra = positions[senders]
-    Rb = positions[receivers]
-    l_a = diameter[senders]
-    l_b = diameter[receivers]
-    e = collision_energy(displacement, Ra, Rb, l_a, l_b, epsilon, alpha)
+
+    r_senders = positions[senders]
+    r_receivers = positions[receivers]
+    l_senders = diameter[senders]
+    l_receivers = diameter[receivers]
+
     # Set collision energy to zero if the sender or receiver is non existing
-    e = jnp.where(exists_mask[senders] * exists_mask[receivers], e, 0.) 
-    return jnp.sum(e)
+    mask = exists_mask[senders] * exists_mask[receivers]
+    energies = collision_energy(displacement,
+                                 r_senders,
+                                 r_receivers,
+                                 l_senders,
+                                 l_receivers,
+                                 epsilon,
+                                 alpha,
+                                 mask)
+    return jnp.sum(energies)
 
 
-""" Helper functions for motor function """
+# Helper functions for motor function
 
 def lr_2_fwd_rot(left_spd, right_spd, base_length, wheel_diameter):
     fwd = (wheel_diameter / 4.) * (left_spd + right_spd)
@@ -62,42 +217,57 @@ def fwd_rot_2_lr(fwd, rot, base_length, wheel_diameter):
 
 
 def motor_command(wheel_activation, base_length, wheel_diameter):
-  fwd, rot = lr_2_fwd_rot(wheel_activation[0], wheel_activation[1], base_length, wheel_diameter)
-  return fwd, rot
+    fwd, rot = lr_2_fwd_rot(wheel_activation[0], wheel_activation[1], base_length, wheel_diameter)
+    return fwd, rot
 
 motor_command = vmap(motor_command, (0, 0, 0))
 
 
-""" Functions to compute the verlet force on the whole system"""
+# Functions to compute the verlet force on the whole system
 
 def get_verlet_force_fn(displacement):
-    coll_force_fn = quantity.force(partial(total_collision_energy, displacement=displacement,
-                                           epsilon=10., alpha=12))
+    coll_force_fn = quantity.force(partial(total_collision_energy, displacement=displacement))
 
-    def collision_force(nve_state, neighbor, exists_mask):
-        return coll_force_fn(nve_state.position.center, neighbor=neighbor, exists_mask=exists_mask, diameter=nve_state.diameter)
+    def collision_force(state, neighbor, exists_mask):
+        return coll_force_fn(
+            state.nve_state.position.center,
+            neighbor=neighbor,
+            exists_mask=exists_mask,
+            diameter=state.nve_state.diameter,
+            epsilon=state.simulator_state.collision_eps,
+            alpha=state.simulator_state.collision_alpha
+            )
 
-    def friction_force(nve_state, exists_mask):
-        cur_vel = nve_state.momentum.center / nve_state.mass.center
+    def friction_force(state, exists_mask):
+        cur_vel = state.nve_state.momentum.center / state.nve_state.mass.center
         # stack the mask to give it the same shape as cur_vel (that has 2 rows for forward and angular velocities) 
         mask = jnp.stack([exists_mask] * 2, axis=1) 
         cur_vel = jnp.where(mask, cur_vel, 0.)
-        return - jnp.tile(nve_state.friction, (SPACE_NDIMS, 1)).T * cur_vel
+        return - jnp.tile(state.nve_state.friction, (SPACE_NDIMS, 1)).T * cur_vel
 
     def motor_force(state, exists_mask):
         agent_idx = state.agent_state.nve_idx
-        body = rigid_body.RigidBody(center=state.nve_state.position.center[agent_idx],
-                                    orientation=state.nve_state.position.orientation[agent_idx])
-        fwd, rot = motor_command(state.agent_state.motor,
-                                 state.nve_state.diameter[agent_idx],
-                                 state.agent_state.wheel_diameter)
+
+        body = rigid_body.RigidBody(
+            center=state.nve_state.position.center[agent_idx],
+            orientation=state.nve_state.position.orientation[agent_idx]
+            )
+        
         n = normal(body.orientation)
+
+        fwd, rot = motor_command(
+            state.agent_state.motor,
+            state.nve_state.diameter[agent_idx],
+            state.agent_state.wheel_diameter
+            )
 
         cur_vel = state.nve_state.momentum.center[agent_idx] / state.nve_state.mass.center[agent_idx]
         cur_fwd_vel = vmap(jnp.dot)(cur_vel, n)
         cur_rot_vel = state.nve_state.momentum.orientation[agent_idx] / state.nve_state.mass.orientation[agent_idx]
+        
         fwd_delta = fwd - cur_fwd_vel
         rot_delta = rot - cur_rot_vel
+
         fwd_force = n * jnp.tile(fwd_delta, (SPACE_NDIMS, 1)).T * jnp.tile(state.agent_state.speed_mul, (SPACE_NDIMS, 1)).T
         rot_force = rot_delta * state.agent_state.theta_mul
 
@@ -116,14 +286,17 @@ def get_verlet_force_fn(displacement):
 
     def force_fn(state, neighbor, exists_mask):
         mf = motor_force(state, exists_mask)
-        center = collision_force(state.nve_state, neighbor, exists_mask) + friction_force(state.nve_state, exists_mask) + mf.center
+        cf = collision_force(state, neighbor, exists_mask)
+        ff = friction_force(state, exists_mask)
+        
+        center = cf + ff + mf.center
         orientation = mf.orientation
         return rigid_body.RigidBody(center=center, orientation=orientation)
 
     return force_fn
 
 
-""" Helper functions for sensors """
+# Helper functions for sensors
 
 def dist_theta(displ, theta):
     """
@@ -169,7 +342,7 @@ def sensor(displ, theta, dist_max, cos_min, n_agents, senders, target_exists):
     return proxs
 
 
-""" Functions to compute the dynamics of the whole system """
+# Functions to compute the dynamics of the whole system 
 
 def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
     force_fn = force_fn or get_verlet_force_fn(displacement)

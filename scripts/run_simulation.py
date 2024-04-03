@@ -15,7 +15,8 @@ lg = logging.getLogger(__name__)
 def parse_args():
     parser = argparse.ArgumentParser(description='Simulator Configuration')
     # Experiment run arguments
-    parser.add_argument('--num_steps', type=int, default=10, help='Number of simulation loops')
+    parser.add_argument('--log_level', type=str, default='INFO', help='Logging level')
+    parser.add_argument('--num_steps', type=int, default=10, help='Number of simulation steps')
     # Simulator config arguments
     parser.add_argument('--box_size', type=float, default=100.0, help='Size of the simulation box')
     parser.add_argument('--n_agents', type=int, default=10, help='Number of agents')
@@ -27,7 +28,8 @@ def parse_args():
     # By default jit compile the code and use normal python loops
     parser.add_argument('--to_jit', action='store_false', help='Whether to use JIT compilation')
     parser.add_argument('--use_fori_loop', action='store_true', help='Whether to use fori loop')
-    parser.add_argument('--log_level', type=str, default='INFO', help='Logging level')
+    parser.add_argument('--collision_eps', type=float, required=False, default=0.3)
+    parser.add_argument('--collision_alpha', type=float, required=False, default=0.7)
 
     return parser.parse_args()
 
@@ -46,7 +48,9 @@ if __name__ == "__main__":
         dt=args.dt,
         freq=args.freq,
         to_jit=args.to_jit,
-        use_fori_loop=args.use_fori_loop
+        use_fori_loop=args.use_fori_loop,
+        collision_eps=args.collision_eps,
+        collision_alpha=args.collision_alpha
     )
 
     agents_state = init_agent_state(simulator_state=simulator_state)
