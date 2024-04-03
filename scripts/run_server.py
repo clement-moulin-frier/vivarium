@@ -15,7 +15,6 @@ lg = logging.getLogger(__name__)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Simulator Configuration')
-    parser.add_argument('--custom_pos', action='store_true', help='Just a test arg to wether use custom or random pos')
     parser.add_argument('--box_size', type=float, default=100.0, help='Size of the simulation box')
     parser.add_argument('--n_agents', type=int, default=10, help='Number of agents')
     parser.add_argument('--n_existing_agents', type=int, default=10, help='Number of agents')
@@ -38,17 +37,6 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.log_level.upper())
 
-    # Define a custom list of init agents positions (ugly here but will be done in a yaml file later)
-    if args.custom_pos:
-        coord = 0
-        positions = []
-        # Here all the agents are placed on the box diagonal
-        for i in range(args.n_agents):
-            coord += 10
-            positions.append([coord, coord])
-    else:
-        positions = None
-
     simulator_state = init_simulator_state(
         box_size=args.box_size,
         n_agents=args.n_agents,
@@ -66,8 +54,7 @@ if __name__ == '__main__':
     objects_state = init_object_state(simulator_state=simulator_state)
 
     nve_state = init_nve_state(
-        simulator_state=simulator_state, 
-        agents_positions=positions,
+        simulator_state=simulator_state,
         existing_agents=args.n_existing_agents,
         existing_objects=args.n_existing_objects,
         )
