@@ -252,6 +252,7 @@ class WindowManager(Parameterized):
                                            align="center", value=config_types[1:])
     update_switch = pn.widgets.Switch(name="Update plot", value=True, align="center")
     update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=1, start=1, end=1000)
+    scene_loader = pn.widgets.FileInput(accept=".yml", name="Load scene", align="center")
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.entity_manager_classes = {EntityType.AGENT: AgentManager,
@@ -358,7 +359,9 @@ class WindowManager(Parameterized):
             for etype in EntityType])
 
         app = pn.Row(pn.Column(pn.Row(pn.pane.Markdown("### Start/Stop server", align="center"),
-                                      self.start_toggle),
+                                      self.start_toggle,
+                                      pn.pane.Markdown("### Load scene", align="center"),
+                                      self.scene_loader),
                                pn.Row(pn.pane.Markdown("### Start/Stop update", align="center"),
                                       self.update_switch, self.update_timestep),
                                pn.panel(self.plot)),

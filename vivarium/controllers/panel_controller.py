@@ -58,6 +58,7 @@ class PanelController(SimulatorController):
                               for stype, configs in self.configs.items()}
         self.selected_panel_configs = {EntityType.AGENT: PanelAgentConfig(), EntityType.OBJECT: PanelObjectConfig()}
         self.panel_simulator_config = PanelSimulatorConfig()
+        self.pull_selected_panel_configs()
 
         self.update_entity_list()
         for etype, selected in self.selected_entities.items():
