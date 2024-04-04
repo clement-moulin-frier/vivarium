@@ -29,7 +29,7 @@ service SimulatorServer {
   rpc Step(google.protobuf.Empty) returns (State) {}
 
   rpc GetState(google.protobuf.Empty) returns (State) {}
-  rpc GetNVEState(google.protobuf.Empty) returns (NVEState) {}
+  rpc GetNVEState(google.protobuf.Empty) returns (EntitiesState) {}
   rpc GetAgentState(google.protobuf.Empty) returns (AgentState) {}
   rpc GetObjectState(google.protobuf.Empty) returns (ObjectState) {}
   rpc SetState(StateChange) returns (google.protobuf.Empty) {}
@@ -70,7 +70,7 @@ message SimulatorState {
   NDArray collision_alpha = 12;
 }
 
-message NVEState {
+message EntitiesState {
   RigidBody position = 1;
   RigidBody momentum = 2;
   RigidBody force = 3;
@@ -103,7 +103,7 @@ message ObjectState {
 
 message State {
   SimulatorState simulator_state = 1;
-  NVEState nve_state = 2;
+  EntitiesState entities_state = 2;
   AgentState agent_state = 3;
   ObjectState object_state = 4;
 }

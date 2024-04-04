@@ -13,13 +13,13 @@ def test_init_simulator_no_args():
     simulator_state = init_simulator_state()
     agents_state = init_agent_state(simulator_state=simulator_state)
     objects_state = init_object_state(simulator_state=simulator_state)
-    nve_state = init_nve_state(simulator_state=simulator_state)
+    entities_state = init_nve_state(simulator_state=simulator_state)
 
     state = init_state(
         simulator_state=simulator_state,
         agents_state=agents_state,
         objects_state=objects_state,
-        nve_state=nve_state
+        entities_state=entities_state
         )
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
@@ -52,7 +52,7 @@ def test_init_simulator_args():
         collision_eps=col_eps,
         collision_alpha=col_alpha)
 
-    nve_state = init_nve_state(
+    entities_state = init_nve_state(
         simulator_state,
         diameter=diameter,
         friction=friction)
@@ -74,7 +74,7 @@ def test_init_simulator_args():
         simulator_state=simulator_state,
         agents_state=agent_state,
         objects_state=object_state,
-        nve_state=nve_state)
+        entities_state=entities_state)
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
 

@@ -57,13 +57,13 @@ if __name__ == "__main__":
 
     objects_state = init_object_state(simulator_state=simulator_state)
 
-    nve_state = init_nve_state(simulator_state=simulator_state)
+    entities_state = init_nve_state(simulator_state=simulator_state)
 
     state = init_state(
         simulator_state=simulator_state,
         agents_state=agents_state,
         objects_state=objects_state,
-        nve_state=nve_state
+        entities_state=entities_state
         )
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)

@@ -30,9 +30,9 @@ class StateType(Enum):
         assert self.is_entity()
         return EntityType(self.value)
     
-# No need to define position, momentum, force, and mass (i.e already in simulate.NVEState)
+# No need to define position, momentum, force, and mass (i.e already in simulate.EntitiesState)
 @dataclass
-class NVEState(simulate.NVEState):
+class EntitiesState(simulate.NVEState):
     entity_type: util.Array
     entity_idx: util.Array  # idx in XState (e.g. AgentState)
     diameter: util.Array
@@ -46,7 +46,7 @@ class NVEState(simulate.NVEState):
 
 @dataclass
 class AgentState:
-    nve_idx: util.Array  # idx in NVEState
+    nve_idx: util.Array  # idx in EntitiesState
     prox: util.Array
     motor: util.Array
     behavior: util.Array
@@ -60,7 +60,7 @@ class AgentState:
 
 @dataclass
 class ObjectState:
-    nve_idx: util.Array  # idx in NVEState
+    nve_idx: util.Array  # idx in EntitiesState
     color: util.Array
 
 
@@ -95,7 +95,7 @@ class SimulatorState:
 @dataclass
 class State:
     simulator_state: SimulatorState
-    nve_state: NVEState
+    entities_state: EntitiesState
     agent_state: AgentState
     object_state: ObjectState
 
@@ -121,17 +121,17 @@ class State:
         return self.field(etype).nve_idx[entity_idx]
 
     def e_idx(self, etype):
-        return self.nve_state.entity_idx[self.nve_state.entity_type == etype.value]
+        return self.entities_state.entity_idx[self.entities_state.entity_type == etype.value]
 
     def e_cond(self, etype):
-        return self.nve_state.entity_type == etype.value
+        return self.entities_state.entity_type == etype.value
 
     def row_idx(self, field, nve_idx):
-        return nve_idx if field == 'nve_state' else self.nve_state.entity_idx[jnp.array(nve_idx)]
+        return nve_idx if field == 'entities_state' else self.entities_state.entity_idx[jnp.array(nve_idx)]
 
     def __getattr__(self, name):
         def wrapper(e_type):
-            value = getattr(self.nve_state, name)
+            value = getattr(self.entities_state, name)
             if isinstance(value, rigid_body.RigidBody):
                 return rigid_body.RigidBody(center=value.center[self.e_cond(e_type)],
                                             orientation=value.orientation[self.e_cond(e_type)])
@@ -209,9 +209,9 @@ def init_nve_state(
         existing_agents: Optional[Union[int, List[float], None]] = None,
         existing_objects: Optional[Union[int, List[float], None]] = None,
         seed: int = 0,
-        ) -> NVEState:
+        ) -> EntitiesState:
     """
-    Initialize nve state with given parameters
+    Initialize entities state with given parameters
     """
     max_agents = simulator_state.max_agents[0]
     max_objects = simulator_state.max_objects[0]
@@ -238,7 +238,7 @@ def init_nve_state(
     existing_objects = _init_existing(existing_objects, max_objects)
     exists = jnp.concatenate((existing_agents, existing_objects), dtype=int)
 
-    return NVEState(
+    return EntitiesState(
         position=RigidBody(center=positions, orientation=orientations),
         momentum=None,
         force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
@@ -300,13 +300,13 @@ def init_state(
         simulator_state: SimulatorState,
         agents_state: AgentState,
         objects_state: ObjectState,
-        nve_state: NVEState
+        entities_state: EntitiesState
         ) -> State:
   
     return State(
         simulator_state=simulator_state,
         agent_state=agents_state,
         object_state=objects_state,
-        nve_state=nve_state
+        entities_state=entities_state
     )
     

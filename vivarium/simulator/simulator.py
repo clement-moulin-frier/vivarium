@@ -90,7 +90,7 @@ class Simulator:
         # If the neighbor list can't fit in the allocation, rebuild it but bigger.
         if neighbors.did_buffer_overflow:
             lg.warning('REBUILDING NEIGHBORS ARRAY')
-            neighbors = self.allocate_neighbors(current_state.nve_state.position.center)
+            neighbors = self.allocate_neighbors(current_state.entities_state.position.center)
             # Because there was an error, we need to re-run this simulation loop from the copy of the current_state we created
             new_state, neighbors = self.simulation_loop(state=current_state, neighbors=neighbors, num_iterations=num_iterations)
             # Check that neighbors array is now ok but should be the case (allocate neighbors tries to compute a new list that is large enough according to the simulation state)
@@ -230,7 +230,7 @@ class Simulator:
 
         def update_fn(_, state_and_neighbors):
             state, neighs = state_and_neighbors
-            neighs = neighs.update(state.nve_state.position.center)
+            neighs = neighs.update(state.entities_state.position.center)
             return (self.step_fn(state=state, neighbor=neighs, agent_neighs_idx=self.agent_neighs_idx),
                     neighs)
 
@@ -257,9 +257,9 @@ class Simulator:
 
     def allocate_neighbors(self, position=None):
         lg.info('allocate_neighbors')
-        position = self.state.nve_state.position.center if position is None else position
+        position = self.state.entities_state.position.center if position is None else position
         self.neighbors = self.neighbor_fn.allocate(position)
-        mask = self.state.nve_state.entity_type[self.neighbors.idx[0]] == EntityType.AGENT.value
+        mask = self.state.entities_state.entity_type[self.neighbors.idx[0]] == EntityType.AGENT.value
         self.agent_neighs_idx = self.neighbors.idx[:, mask]
         return self.neighbors
     
