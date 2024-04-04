@@ -1,13 +1,16 @@
+import time
+import threading
+import logging
+
+from contextlib import contextmanager
+
 import param
 
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.controllers.config import SimulatorConfig
-from vivarium.simulator.sim_computation import StateType
+from vivarium.simulator.states import StateType
 from vivarium.controllers import converters
-import time
-import threading
-from contextlib import contextmanager
-import logging
+
 
 lg = logging.getLogger(__name__)
 

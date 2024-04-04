@@ -5,7 +5,7 @@ import numpy as np
 import logging
 
 from vivarium.controllers.simulator_controller import SimulatorController
-from vivarium.simulator.sim_computation import StateType, EntityType
+from vivarium.simulator.states import StateType, EntityType
 
 lg = logging.getLogger(__name__)
 
