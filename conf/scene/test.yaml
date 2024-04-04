@@ -1,9 +1,0 @@
-simulator:
-  box_size: 50.0
-  n_agents: 1
-  n_objects: 1
-
-agents:
-  positions: [0.0,
-              0.0,
-              0.0]
