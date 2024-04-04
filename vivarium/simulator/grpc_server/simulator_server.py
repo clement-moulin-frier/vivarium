@@ -1,24 +1,21 @@
-from collections import defaultdict
-
-from numproto.numproto import proto_to_ndarray
-
-import grpc
-import simulator_pb2_grpc
-import simulator_pb2
-
-import numpy as np
 import logging
+
 from concurrent import futures
 from threading import Lock
 from contextlib import contextmanager
+from collections import defaultdict
 
-from vivarium.controllers.config import SimulatorConfig, AgentConfig, ObjectConfig
-from vivarium.simulator.sim_computation import StateType
-from vivarium.simulator.simulator import Simulator
-from vivarium.simulator.sim_computation import dynamics_rigid
-import vivarium.simulator.behaviors as behaviors
-from vivarium.simulator.grpc_server.converters import state_to_proto, nve_state_to_proto, agent_state_to_proto, object_state_to_proto
-from vivarium.controllers.converters import set_state_from_config_dict
+import grpc
+import simulator_pb2
+import simulator_pb2_grpc
+
+from numproto.numproto import proto_to_ndarray
+
+from vivarium.simulator.grpc_server.converters import state_to_proto
+from vivarium.simulator.grpc_server.converters import nve_state_to_proto
+from vivarium.simulator.grpc_server.converters import agent_state_to_proto
+from vivarium.simulator.grpc_server.converters import object_state_to_proto
+
 
 lg = logging.getLogger(__name__)
 

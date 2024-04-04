@@ -9,7 +9,7 @@ from param import Parameterized
 
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.controllers.panel_controller import PanelController
-from vivarium.simulator.sim_computation import EntityType
+from vivarium.simulator.states import EntityType
 
 
 pn.extension()
@@ -36,7 +36,7 @@ class EntityManager:
                              onlychanged=True, precedence=0)
         for i, pc in enumerate(self.panel_configs):
             pc.param.watch(self.update_cds_view, pc.param_names(), onlychanged=True)
-            self.config[i].param.watch(self.hide_non_existing, "exists", onlychanged=False)
+            self.config[i].param.watch(self.hide_non_existing, "exists", onlychanged=True)
 
     def drag_cb(self, attr, old, new):
         for i, c in enumerate(self.config):
@@ -202,7 +202,7 @@ class WindowManager(Parameterized):
     entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=config_types,
                                            align="center", value=config_types[1:])
     update_switch = pn.widgets.Switch(name="Update plot", value=True, align="center")
-    update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=0, start=0, end=1000)
+    update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=1, start=1, end=1000)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.entity_manager_classes = {EntityType.AGENT: AgentManager,
@@ -296,7 +296,7 @@ class WindowManager(Parameterized):
     def set_callbacks(self):
         # putting directly the slider value causes bugs on some OS
         self.pcb_plot = pn.state.add_periodic_callback(self.update_plot_cb,
-                                                       self.update_timestep.value or 0)
+                                                       self.update_timestep.value)
         self.entity_toggle.param.watch(self.entity_toggle_cb, "value")
         self.start_toggle.param.watch(self.start_toggle_cb, "value")
         self.update_switch.param.watch(self.update_switch_cb, "value")

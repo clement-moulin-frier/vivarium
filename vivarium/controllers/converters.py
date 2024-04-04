@@ -1,19 +1,17 @@
-import jax.numpy as jnp
-import numpy as np
-
-import jax_md
-from jax_md.util import f32
-from jax_md.rigid_body import RigidBody
-
-import dataclasses
 import typing
+import dataclasses
 from collections import namedtuple, defaultdict
 
-from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig, stype_to_config, config_to_stype
-from vivarium.simulator.sim_computation import State, SimulatorState, NVEState, AgentState, ObjectState, EntityType, StateType
-from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
-
+import jax_md
+import jax.numpy as jnp
+import numpy as np
 import matplotlib.colors as mcolors
+
+from jax_md.rigid_body import RigidBody
+
+from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig, stype_to_config, config_to_stype
+from vivarium.simulator.states import State, SimulatorState, NVEState, AgentState, ObjectState, EntityType, StateType
+from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
 
 
 agent_config_fields = AgentConfig.param.objects().keys()
