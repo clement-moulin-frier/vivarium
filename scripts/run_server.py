@@ -1,6 +1,5 @@
 import logging
 import hydra
-import numpy as np
 
 from omegaconf import DictConfig, OmegaConf
 
@@ -17,9 +16,11 @@ from vivarium.simulator.grpc_server.simulator_server import serve
 lg = logging.getLogger(__name__)
 
 @hydra.main(version_base=None, config_path="../conf", config_name="config")
-def main(cfg: DictConfig) -> None:
+def main(cfg: DictConfig = None) -> None:
+    logging.basicConfig(level=cfg.log_level)
+
     args = OmegaConf.merge(cfg.default, cfg.scene)
-    
+
     simulator_state = init_simulator_state(**args.simulator)
 
     agents_state = init_agent_state(simulator_state=simulator_state, **args.agents)
@@ -39,4 +40,4 @@ def main(cfg: DictConfig) -> None:
     serve(simulator)
 
 if __name__ == '__main__':
-    main(None)
+    main()
