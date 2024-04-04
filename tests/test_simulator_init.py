@@ -32,6 +32,8 @@ def test_init_simulator_args():
     box_size = 100.0
     n_agents = 10
     n_objects = 2
+    col_eps = 0.1
+    col_alpha = 0.5
 
     diameter = 5.0
     friction = 0.1
@@ -45,13 +47,15 @@ def test_init_simulator_args():
 
     simulator_state = init_simulator_state(
         box_size=box_size,
-          n_agents=n_agents,
-          n_objects=n_objects)
+        n_agents=n_agents,
+        n_objects=n_objects,
+        collision_eps=col_eps,
+        collision_alpha=col_alpha)
 
     nve_state = init_nve_state(
         simulator_state,
-          diameter=diameter,
-          friction=friction)
+        diameter=diameter,
+        friction=friction)
 
     agent_state = init_agent_state(
         simulator_state,
@@ -63,15 +67,14 @@ def test_init_simulator_args():
         prox_cos_min=prox_cos_min)
 
     object_state = init_object_state(
-        simulator_state, 
+        simulator_state,
         color=color)
 
     state = init_state(
         simulator_state=simulator_state,
         agents_state=agent_state,
         objects_state=object_state,
-        nve_state=nve_state
-        )
+        nve_state=nve_state)
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
 

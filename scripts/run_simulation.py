@@ -28,8 +28,8 @@ def parse_args():
     # By default jit compile the code and use normal python loops
     parser.add_argument('--to_jit', action='store_false', help='Whether to use JIT compilation')
     parser.add_argument('--use_fori_loop', action='store_true', help='Whether to use fori loop')
-    parser.add_argument('--collision_eps', type=float, required=False, default=0.3)
-    parser.add_argument('--collision_alpha', type=float, required=False, default=0.7)
+    parser.add_argument('--collision_eps', type=float, required=False, default=0.1)
+    parser.add_argument('--collision_alpha', type=float, required=False, default=0.5)
 
     return parser.parse_args()
 

@@ -9,9 +9,7 @@ from vivarium.simulator.sim_computation import dynamics_rigid
 
 NUM_STEPS = 50
 
-# First smoke test, we could split it into different parts later (initialization, run, ...)
 def test_simulator_run():
-    
     simulator_state = init_simulator_state()
 
     agents_state = init_agent_state(simulator_state=simulator_state)
