@@ -69,8 +69,8 @@ class ObjectState:
 class SimulatorState:
     idx: util.Array
     box_size: util.Array
-    n_agents: util.Array
-    n_objects: util.Array
+    max_agents: util.Array
+    max_objects: util.Array
     num_steps_lax: util.Array
     dt: util.Array
     freq: util.Array
@@ -82,7 +82,7 @@ class SimulatorState:
 
     @staticmethod
     def get_type(attr):
-        if attr in ['idx', 'n_agents', 'n_objects', 'num_steps_lax']:
+        if attr in ['idx', 'max_agents', 'max_objects', 'num_steps_lax']:
             return int
         elif attr in ['box_size', 'dt', 'freq', 'neighbor_radius', 'collision_alpha', 'collision_eps']:
             return float
@@ -147,8 +147,8 @@ def _string_to_rgb(color_str):
 
 def init_simulator_state(
         box_size: float = 100.,
-        n_agents: int = 10,
-        n_objects: int = 2,
+        max_agents: int = 10,
+        max_objects: int = 2,
         num_steps_lax: int = 4,
         dt: float = 0.1,
         freq: float = 40.,
@@ -164,8 +164,8 @@ def init_simulator_state(
     return SimulatorState(
         idx=jnp.array([0]),
         box_size=jnp.array([box_size]),                       
-        n_agents=jnp.array([n_agents]),
-        n_objects=jnp.array([n_objects]),
+        max_agents=jnp.array([max_agents]),
+        max_objects=jnp.array([max_objects]),
         num_steps_lax=jnp.array([num_steps_lax], dtype=int),
         dt=jnp.array([dt], dtype=float),
         freq=jnp.array([freq], dtype=float),
@@ -213,29 +213,29 @@ def init_nve_state(
     """
     Initialize nve state with given parameters
     """
-    n_agents = simulator_state.n_agents[0]
-    n_objects = simulator_state.n_objects[0]
-    n_entities = n_agents + n_objects
+    max_agents = simulator_state.max_agents[0]
+    max_objects = simulator_state.max_objects[0]
+    n_entities = max_agents + max_objects
 
     key = random.PRNGKey(seed)
     key_pos, key_or = random.split(key)
     key_ag, key_obj = random.split(key_pos)
 
     # If we have a list of agents or objects positions, transform it into a jax array, else initialize random positions
-    agents_positions = _init_positions(key_ag, agents_positions, n_agents, simulator_state.box_size)
-    objects_positions = _init_positions(key_obj, objects_positions, n_objects, simulator_state.box_size)
+    agents_positions = _init_positions(key_ag, agents_positions, max_agents, simulator_state.box_size)
+    objects_positions = _init_positions(key_obj, objects_positions, max_objects, simulator_state.box_size)
     # Assign their positions to each entities
     positions = jnp.concatenate((agents_positions, objects_positions))
 
     # Assign random orientations between 0 and 2*pi
     orientations = random.uniform(key_or, (n_entities,)) * 2 * jnp.pi
 
-    agents_entities = jnp.full(n_agents, EntityType.AGENT.value)
-    object_entities = jnp.full(n_objects, EntityType.OBJECT.value)
+    agents_entities = jnp.full(max_agents, EntityType.AGENT.value)
+    object_entities = jnp.full(max_objects, EntityType.OBJECT.value)
     entity_types = jnp.concatenate((agents_entities, object_entities), dtype=int)
 
-    existing_agents = _init_existing(existing_agents, n_agents)
-    existing_objects = _init_existing(existing_objects, n_objects)
+    existing_agents = _init_existing(existing_agents, max_agents)
+    existing_objects = _init_existing(existing_objects, max_objects)
     exists = jnp.concatenate((existing_agents, existing_objects), dtype=int)
 
     return NVEState(
@@ -244,7 +244,7 @@ def init_nve_state(
         force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
         mass=RigidBody(center=jnp.full((n_entities, 1), mass_center), orientation=jnp.full((n_entities), mass_orientation)),
         entity_type=entity_types,
-        entity_idx = jnp.array(list(range(n_agents)) + list(range(n_objects))),
+        entity_idx = jnp.array(list(range(max_agents)) + list(range(max_objects))),
         diameter=jnp.full((n_entities), diameter),
         friction=jnp.full((n_entities), friction),
         exists=exists
@@ -264,19 +264,19 @@ def init_agent_state(
     """
     Initialize agent state with given parameters
     """
-    n_agents = simulator_state.n_agents[0]
+    max_agents = simulator_state.max_agents[0]
 
     return AgentState(
-        nve_idx=jnp.arange(n_agents, dtype=int),
-        prox=jnp.zeros((n_agents, 2)),
-        motor=jnp.zeros((n_agents, 2)),
-        behavior=jnp.full((n_agents), behavior),
-        wheel_diameter=jnp.full((n_agents), wheel_diameter),
-        speed_mul=jnp.full((n_agents), speed_mul),
-        theta_mul=jnp.full((n_agents), theta_mul),
-        proxs_dist_max=jnp.full((n_agents), prox_dist_max),
-        proxs_cos_min=jnp.full((n_agents), prox_cos_min),
-        color=jnp.tile(_string_to_rgb(color), (n_agents, 1))
+        nve_idx=jnp.arange(max_agents, dtype=int),
+        prox=jnp.zeros((max_agents, 2)),
+        motor=jnp.zeros((max_agents, 2)),
+        behavior=jnp.full((max_agents), behavior),
+        wheel_diameter=jnp.full((max_agents), wheel_diameter),
+        speed_mul=jnp.full((max_agents), speed_mul),
+        theta_mul=jnp.full((max_agents), theta_mul),
+        proxs_dist_max=jnp.full((max_agents), prox_dist_max),
+        proxs_cos_min=jnp.full((max_agents), prox_cos_min),
+        color=jnp.tile(_string_to_rgb(color), (max_agents, 1))
     )
 
 
@@ -287,12 +287,12 @@ def init_object_state(
     """
     Initialize object state with given parameters
     """
-    n_agents, n_objects = simulator_state.n_agents[0], simulator_state.n_objects[0]
-    start_idx, stop_idx = n_agents, n_agents + n_objects
+    max_agents, max_objects = simulator_state.max_agents[0], simulator_state.max_objects[0]
+    start_idx, stop_idx = max_agents, max_agents + max_objects
     objects_nve_idx = jnp.arange(start_idx, stop_idx, dtype=int)
     return  ObjectState(
         nve_idx=objects_nve_idx,
-        color=jnp.tile(_string_to_rgb(color), (n_objects, 1))
+        color=jnp.tile(_string_to_rgb(color), (max_objects, 1))
     )
 
 

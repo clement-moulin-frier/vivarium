@@ -16,8 +16,8 @@ def proto_to_state(state):
 def proto_to_simulator_state(simulator_state):
     return SimulatorState(idx=proto_to_ndarray(simulator_state.idx).astype(int),
                           box_size=proto_to_ndarray(simulator_state.box_size).astype(float),
-                          n_agents=proto_to_ndarray(simulator_state.n_agents).astype(int),
-                          n_objects=proto_to_ndarray(simulator_state.n_objects).astype(int),
+                          max_agents=proto_to_ndarray(simulator_state.max_agents).astype(int),
+                          max_objects=proto_to_ndarray(simulator_state.max_objects).astype(int),
                           num_steps_lax=proto_to_ndarray(simulator_state.num_steps_lax).astype(int),
                           dt=proto_to_ndarray(simulator_state.dt).astype(float),
                           freq=proto_to_ndarray(simulator_state.freq).astype(float),
@@ -77,8 +77,8 @@ def simulator_state_to_proto(simulator_state):
     return simulator_pb2.SimulatorState(
         idx=ndarray_to_proto(simulator_state.idx),
         box_size=ndarray_to_proto(simulator_state.box_size),
-        n_agents=ndarray_to_proto(simulator_state.n_agents),
-        n_objects=ndarray_to_proto(simulator_state.n_objects),
+        max_agents=ndarray_to_proto(simulator_state.max_agents),
+        max_objects=ndarray_to_proto(simulator_state.max_objects),
         num_steps_lax=ndarray_to_proto(simulator_state.num_steps_lax),
         dt=ndarray_to_proto(simulator_state.dt),
         freq=ndarray_to_proto(simulator_state.freq),

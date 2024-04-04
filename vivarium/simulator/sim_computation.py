@@ -210,10 +210,10 @@ def sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists):
 sensor_fn = vmap(sensor_fn, (0, 0, 0, 0, 0))
 
 
-def sensor(displ, theta, dist_max, cos_min, n_agents, senders, target_exists):
+def sensor(displ, theta, dist_max, cos_min, max_agents, senders, target_exists):
     dist, relative_theta = proximity_map(displ, theta)
     proxs = ops.segment_max(sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists),
-                            senders, n_agents)
+                            senders, max_agents)
     return proxs
 
 

@@ -97,11 +97,11 @@ configs_to_state_dict = {StateType.AGENT: agent_configs_to_state_dict,
 
 
 def get_default_state(n_entities_dict):
-    n_agents = n_entities_dict[StateType.AGENT]
-    n_objects = n_entities_dict[StateType.OBJECT]
+    max_agents = n_entities_dict[StateType.AGENT]
+    max_objects = n_entities_dict[StateType.OBJECT]
     n_entities = sum(n_entities_dict.values())
     return State(simulator_state=SimulatorState(idx=jnp.array([0]), box_size=jnp.array([100.]),
-                                                n_agents=jnp.array([n_agents]), n_objects=jnp.array([n_objects]),
+                                                max_agents=jnp.array([max_agents]), max_objects=jnp.array([max_objects]),
                                                 num_steps_lax=jnp.array([1]), dt=jnp.array([1.]), freq=jnp.array([1.]),
                                                 neighbor_radius=jnp.array([1.]),
                                                 to_jit= jnp.array([1]), use_fori_loop=jnp.array([0]),
@@ -111,23 +111,23 @@ def get_default_state(n_entities_dict):
                                     momentum=None,
                                     force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
                                     mass=RigidBody(center=jnp.zeros((n_entities, 1)), orientation=jnp.zeros(n_entities)),
-                                    entity_type=jnp.array([EntityType.AGENT.value] * n_agents + [EntityType.OBJECT.value] * n_objects, dtype=int),
-                                    entity_idx = jnp.array(list(range(n_agents)) + list(range(n_objects))),
+                                    entity_type=jnp.array([EntityType.AGENT.value] * max_agents + [EntityType.OBJECT.value] * max_objects, dtype=int),
+                                    entity_idx = jnp.array(list(range(max_agents)) + list(range(max_objects))),
                                     diameter=jnp.zeros(n_entities),
                                     friction=jnp.zeros(n_entities),
                                     exists=jnp.ones(n_entities, dtype=int)
                                     ),
-                 agent_state=AgentState(nve_idx=jnp.zeros(n_agents, dtype=int),
-                                        prox=jnp.zeros((n_agents, 2)),
-                                        motor=jnp.zeros((n_agents, 2)),
-                                        behavior=jnp.zeros(n_agents, dtype=int),
-                                        wheel_diameter=jnp.zeros(n_agents),
-                                        speed_mul=jnp.zeros(n_agents),
-                                        theta_mul=jnp.zeros(n_agents),
-                                        proxs_dist_max=jnp.zeros(n_agents),
-                                        proxs_cos_min=jnp.zeros(n_agents),
-                                        color=jnp.zeros((n_agents, 3))),
-                 object_state=ObjectState(nve_idx=jnp.zeros(n_objects, dtype=int), color=jnp.zeros((n_objects, 3))))
+                 agent_state=AgentState(nve_idx=jnp.zeros(max_agents, dtype=int),
+                                        prox=jnp.zeros((max_agents, 2)),
+                                        motor=jnp.zeros((max_agents, 2)),
+                                        behavior=jnp.zeros(max_agents, dtype=int),
+                                        wheel_diameter=jnp.zeros(max_agents),
+                                        speed_mul=jnp.zeros(max_agents),
+                                        theta_mul=jnp.zeros(max_agents),
+                                        proxs_dist_max=jnp.zeros(max_agents),
+                                        proxs_cos_min=jnp.zeros(max_agents),
+                                        color=jnp.zeros((max_agents, 3))),
+                 object_state=ObjectState(nve_idx=jnp.zeros(max_objects, dtype=int), color=jnp.zeros((max_objects, 3))))
 
 
 NVETuple = namedtuple('NVETuple', ['idx', 'col', 'val'])

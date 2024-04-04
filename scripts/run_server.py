@@ -16,9 +16,9 @@ lg = logging.getLogger(__name__)
 def parse_args():
     parser = argparse.ArgumentParser(description='Simulator Configuration')
     parser.add_argument('--box_size', type=float, default=100.0, help='Size of the simulation box')
-    parser.add_argument('--n_agents', type=int, default=10, help='Number of agents')
+    parser.add_argument('--max_agents', type=int, default=10, help='Number of agents')
     parser.add_argument('--n_existing_agents', type=int, default=10, help='Number of agents')
-    parser.add_argument('--n_objects', type=int, default=2, help='Number of objects')
+    parser.add_argument('--max_objects', type=int, default=2, help='Number of objects')
     parser.add_argument('--n_existing_objects', type=int, default=2, help='Number of agents')
     parser.add_argument('--num_steps-lax', type=int, default=4, help='Number of lax steps per loop')
     parser.add_argument('--dt', type=float, default=0.1, help='Time step size')
@@ -41,8 +41,8 @@ if __name__ == '__main__':
 
     simulator_state = init_simulator_state(
         box_size=args.box_size,
-        n_agents=args.n_agents,
-        n_objects=args.n_objects,
+        max_agents=args.max_agents,
+        max_objects=args.max_objects,
         num_steps_lax=args.num_steps_lax,
         neighbor_radius=args.neighbor_radius,
         dt=args.dt,
