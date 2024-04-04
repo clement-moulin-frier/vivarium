@@ -2,7 +2,7 @@ import param
 from param import Parameterized
 
 import vivarium.simulator.behaviors as behaviors
-from vivarium.simulator.sim_computation import StateType
+from vivarium.simulator.states import StateType
 
 from jax_md.rigid_body import monomer
 
@@ -65,7 +65,7 @@ class ObjectConfig(Config):
     mass_orientation = param.Number(mass_orientation)
     diameter = param.Number(5.)
     color = param.Color('red')
-    friction = param.Number(10.)
+    friction = param.Number(0.1)
     exists = param.Boolean(True)
 
     def __init__(self, **params):
@@ -83,6 +83,8 @@ class SimulatorConfig(Config):
     neighbor_radius = param.Number(100., bounds=(0, None))
     to_jit = param.Boolean(True)
     use_fori_loop = param.Boolean(False)
+    collision_eps = param.Number(0.1)
+    collision_alpha = param.Number(0.5)
 
     def __init__(self, **params):
         super().__init__(**params)

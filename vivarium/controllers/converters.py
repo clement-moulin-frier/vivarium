@@ -1,19 +1,17 @@
-import jax.numpy as jnp
-import numpy as np
-
-import jax_md
-from jax_md.util import f32
-from jax_md.rigid_body import RigidBody
-
-import dataclasses
 import typing
+import dataclasses
 from collections import namedtuple, defaultdict
 
-from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig, stype_to_config, config_to_stype
-from vivarium.simulator.sim_computation import State, SimulatorState, NVEState, AgentState, ObjectState, EntityType, StateType
-from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
-
+import jax_md
+import jax.numpy as jnp
+import numpy as np
 import matplotlib.colors as mcolors
+
+from jax_md.rigid_body import RigidBody
+
+from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig, stype_to_config, config_to_stype
+from vivarium.simulator.states import State, SimulatorState, NVEState, AgentState, ObjectState, EntityType, StateType
+from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
 
 
 agent_config_fields = AgentConfig.param.objects().keys()
@@ -25,7 +23,7 @@ object_config_fields = ObjectConfig.param.objects().keys()
 object_state_fields = [f.name for f in jax_md.dataclasses.fields(ObjectState)]
 
 object_common_fields = [f for f in object_config_fields if f in object_state_fields]
-#
+
 simulator_config_fields = SimulatorConfig.param.objects().keys()
 simulator_state_fields = [f.name for f in jax_md.dataclasses.fields(SimulatorState)]
 
@@ -106,7 +104,9 @@ def get_default_state(n_entities_dict):
                                                 n_agents=jnp.array([n_agents]), n_objects=jnp.array([n_objects]),
                                                 num_steps_lax=jnp.array([1]), dt=jnp.array([1.]), freq=jnp.array([1.]),
                                                 neighbor_radius=jnp.array([1.]),
-                                                to_jit= jnp.array([1]), use_fori_loop=jnp.array([0])),
+                                                to_jit= jnp.array([1]), use_fori_loop=jnp.array([0]),
+                                                collision_alpha=jnp.array([0.]),
+                                                collision_eps=jnp.array([0.])),
                  nve_state=NVEState(position=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
                                     momentum=None,
                                     force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
