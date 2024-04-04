@@ -2,7 +2,7 @@ from typing import Optional, List, Union
 from enum import Enum
 
 import matplotlib.colors as mcolors
-import jax.numpy as jnp 
+import jax.numpy as jnp
 
 from jax import random
 from jax_md import util, simulate, rigid_body
@@ -112,7 +112,7 @@ class State:
 
         return res
 
-    # TODO : Should we keep this function because it is duplicated below ? 
+    # TODO : Should we keep this function because it is duplicated below ?
     # def nve_idx(self, etype):
     #     cond = self.e_cond(etype)
     #     return compress(range(len(cond)), cond)  # https://stackoverflow.com/questions/21448225/getting-indices-of-true-values-in-a-boolean-list
@@ -218,17 +218,16 @@ def init_nve_state(
     n_entities = max_agents + max_objects
 
     key = random.PRNGKey(seed)
-    key_pos, key_or = random.split(key)
-    key_ag, key_obj = random.split(key_pos)
+    key, key_agents_pos, key_objects_pos, key_orientations = random.split(key, 4)
 
     # If we have a list of agents or objects positions, transform it into a jax array, else initialize random positions
-    agents_positions = _init_positions(key_ag, agents_positions, max_agents, simulator_state.box_size)
-    objects_positions = _init_positions(key_obj, objects_positions, max_objects, simulator_state.box_size)
+    agents_positions = _init_positions(key_agents_pos, agents_positions, max_agents, simulator_state.box_size)
+    objects_positions = _init_positions(key_objects_pos, objects_positions, max_objects, simulator_state.box_size)
     # Assign their positions to each entities
     positions = jnp.concatenate((agents_positions, objects_positions))
 
     # Assign random orientations between 0 and 2*pi
-    orientations = random.uniform(key_or, (n_entities,)) * 2 * jnp.pi
+    orientations = random.uniform(key_orientations, (n_entities,)) * 2 * jnp.pi
 
     agents_entities = jnp.full(max_agents, EntityType.AGENT.value)
     object_entities = jnp.full(max_objects, EntityType.OBJECT.value)
