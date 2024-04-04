@@ -13,8 +13,8 @@ from jax import jit
 from jax import lax
 from jax_md import space, partition, dataclasses
 
-from vivarium.simulator.sim_computation import EntityType, SimulatorState
 from vivarium.controllers import converters
+from vivarium.simulator.states import EntityType, SimulatorState
 
 lg = logging.getLogger(__name__)
 
@@ -271,3 +271,4 @@ class Simulator:
 
     def get_state(self):
         return self.state
+    
