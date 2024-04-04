@@ -1,7 +1,7 @@
 from vivarium.controllers import converters
 from vivarium.controllers.config import AgentConfig, ObjectConfig, config_to_stype, Config
 from vivarium.controllers.simulator_controller import SimulatorController
-from vivarium.simulator.sim_computation import EntityType, StateType
+from vivarium.simulator.states import EntityType, StateType
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 
 import param
