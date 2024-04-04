@@ -10,7 +10,7 @@ from param import Parameterized
 
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.controllers.panel_controller import PanelController
-from vivarium.simulator.sim_computation import EntityType
+from vivarium.simulator.states import EntityType
 
 lg = logging.getLogger(__name__)
 
