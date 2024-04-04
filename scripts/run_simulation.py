@@ -37,7 +37,7 @@ def main(cfg: DictConfig = None) -> None:
 
     lg.info("Running simulation")
 
-    simulator.run(threaded=False, num_steps=args.num_steps)
+    simulator.run(threaded=False, num_steps=cfg.num_steps)
 
     lg.info("Simulation complete")
 

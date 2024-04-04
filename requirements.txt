@@ -16,3 +16,6 @@ grpcio-tools
 # Tests and code formatting
 pytest==8.0.0
 black
+
+# Configurations
+hydra-core

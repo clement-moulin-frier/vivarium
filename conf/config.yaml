@@ -4,3 +4,4 @@ defaults:
   - scene: default
 
 log_level: INFO
+num_steps: 10
