@@ -37,6 +37,16 @@ Use the following command :
 python3 scripts/run_server.py
 ```
 
+#### Using scenes files
+Scenes files are located in `conf/scene`.
+
+To use a scene file, use the above command with a `scene=<scene_file_name>` option.
+
+Example:
+```
+python3 scripts/run_server.py scene=session_1
+```
+
 ### Interact with it from a web interface
 
 And launch the web interface from another terminal :
