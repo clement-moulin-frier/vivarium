@@ -40,6 +40,7 @@ jobs:
       run: python scripts/run_server.py &
     - name: Test interface
       run: |
+        set -e
         panel serve scripts/run_interface.py --port 5006 --allow-websocket-origin=localhost:5006 &
         sleep 5 &&
         curl -I http://localhost:5006
