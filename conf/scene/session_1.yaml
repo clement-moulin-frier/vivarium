@@ -1,0 +1,3 @@
+simulator:
+  n_agents: 1
+  n_objects: 1
