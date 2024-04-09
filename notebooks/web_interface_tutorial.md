@@ -49,7 +49,7 @@ Now to try and use the interface, we can start with a simple scenario with preda
 Before modifying the attributes, stop the server with the **Start/Stop server** button.
 
 1. First, select a few agents either with the **Selected** list or by selecting them on the plot.
-2. Now search for `Behavior` attribute in the **State configurations** part, click on the dropdown menu and select `FEAR`. Agents with a `FEAR` behavior will move away from others.
+2. Now search for `Behavior` attribute in the **AgentConfig** part, click on the dropdown menu and select `FEAR`. Agents with a `FEAR` behavior will move away from others.
 3. Find the `Diameter` attribute and reduce it, to 3 for example. You can directly observe the change of size on the selected agents in the simulator plot.
 4. Set the `Speed mul` value to 2. This will make the selected agents move twice faster as the other (i.e. preys will move faster than predators).
 5. Go down to find the `Color` attribute and set a color that you think fits the `FEAR` behavior, such as blue or green.
