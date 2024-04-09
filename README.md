@@ -31,31 +31,36 @@ pip install -e .
 
 ### Run the simulation in a server
 
-Use the following command :
+To run the simulation in a server, use the following command:
 
 ```bash
 python3 scripts/run_server.py
 ```
 
-#### Using scenes files
-Scenes files are located in `conf/scene`.
+By default, the simulation will use the parameters specified in the `default.yaml` scene file located in the `conf/scene` directory.
 
-To use a scene file, use the above command with a `scene=<scene_file_name>` option.
+#### Using custom scene files
 
-Example:
-```
+You can customize the initial simulation parameters by creating your own scene files in YAML format and placing them in the `conf/scene` directory. Scene files can specify parameters such as the number of objects, their size, or the colors, positions, and behaviors of agents for example.
+
+To use a custom scene file in your simulation, pass the `scene` option followed by the name of the scene file (without the `.yaml` extension) to the `run_server.py` script. For example, to run the `session_1` scene, use the following command:
+
+```bash
 python3 scripts/run_server.py scene=session_1
 ```
 
+Any parameters not specified in the custom scene file will be inherited from the `default.yaml` scene.
+
 ### Interact with it from a web interface
 
-And launch the web interface from another terminal :
+When the server is started, you can launch a web interface from another terminal to interact with the simulation:
 
 ```bash
 panel serve scripts/run_interface.py --autoreload
 ```
 
-Once this command will have completed, it will output a URL looking like `http://localhost:5006/panel_app`, that you can open in your browser.
+Once this command will have completed, it will output a URL looking like `http://localhost:5006/run_interface`, that you can open in your browser.
+
 
 ### Interact with it from a jupyter notebook
 
