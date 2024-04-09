@@ -46,8 +46,6 @@ class Agent(Entity):
         self.config.behavior = 'manual'
         self.etype = EntityType.AGENT
 
-        self.stop_motors()
-
         self.behaviors = {}
 
     def sensors(self):
@@ -61,23 +59,19 @@ class Agent(Entity):
 
     def detach_all_behaviors(self):
         self.behaviors = {}
-        self.stop_motors()
 
     def behave(self):
-        if len(self.behaviors) != 0:
+        if len(self.behaviors) == 0:
+            motors = [0., 0.]
+        else:
             total_weights = 0.
             total_motor = np.zeros(2)
             for fn, w in self.behaviors.values():
                 total_motor += w * np.array(fn(self))
                 total_weights += w
             motors = total_motor / total_weights
-            self.left_motor, self.right_motor = motors
-        else:
-            pass
+        self.left_motor, self.right_motor = motors
 
-    def stop_motors(self):
-        self.left_motor = 0
-        self.right_motor = 0
 
 class Object(Entity):
     def __init__(self, config):
@@ -102,7 +96,7 @@ class NotebookController(SimulatorController):
 
     def run(self, threaded=False, num_steps=math.inf):
         if self.is_started():
-            raise RuntimeError("Simulator is already started")
+            raise Exception("Simulator is already started")
         self._is_running = True
         if threaded:
             threading.Thread(target=self._run).start()
