@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 
+import logging
 import numpy as np
 import panel as pn
 
@@ -11,6 +12,7 @@ from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.controllers.panel_controller import PanelController
 from vivarium.simulator.states import EntityType
 
+lg = logging.getLogger(__name__)
 
 pn.extension()
 
