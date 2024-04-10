@@ -89,10 +89,11 @@ message AgentState {
   NDArray behavior = 4;
   NDArray wheel_diameter = 5;
   NDArray speed_mul = 6;
-  NDArray theta_mul = 7;
-  NDArray proxs_dist_max = 8;
-  NDArray proxs_cos_min = 9;
-  NDArray color = 10;
+  NDArray max_speed = 7;
+  NDArray theta_mul = 8;
+  NDArray proxs_dist_max = 9;
+  NDArray proxs_cos_min = 10;
+  NDArray color = 11;
 }
 
 message ObjectState {

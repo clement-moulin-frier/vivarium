@@ -77,13 +77,14 @@ class NVEState(_message.Message):
     def __init__(self, position: _Optional[_Union[RigidBody, _Mapping]] = ..., momentum: _Optional[_Union[RigidBody, _Mapping]] = ..., force: _Optional[_Union[RigidBody, _Mapping]] = ..., mass: _Optional[_Union[RigidBody, _Mapping]] = ..., diameter: _Optional[_Union[NDArray, _Mapping]] = ..., entity_type: _Optional[_Union[NDArray, _Mapping]] = ..., entity_idx: _Optional[_Union[NDArray, _Mapping]] = ..., friction: _Optional[_Union[NDArray, _Mapping]] = ..., exists: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class AgentState(_message.Message):
-    __slots__ = ("nve_idx", "prox", "motor", "behavior", "wheel_diameter", "speed_mul", "theta_mul", "proxs_dist_max", "proxs_cos_min", "color")
+    __slots__ = ("nve_idx", "prox", "motor", "behavior", "wheel_diameter", "speed_mul", "max_speed", "theta_mul", "proxs_dist_max", "proxs_cos_min", "color")
     NVE_IDX_FIELD_NUMBER: _ClassVar[int]
     PROX_FIELD_NUMBER: _ClassVar[int]
     MOTOR_FIELD_NUMBER: _ClassVar[int]
     BEHAVIOR_FIELD_NUMBER: _ClassVar[int]
     WHEEL_DIAMETER_FIELD_NUMBER: _ClassVar[int]
     SPEED_MUL_FIELD_NUMBER: _ClassVar[int]
+    MAX_SPEED_FIELD_NUMBER: _ClassVar[int]
     THETA_MUL_FIELD_NUMBER: _ClassVar[int]
     PROXS_DIST_MAX_FIELD_NUMBER: _ClassVar[int]
     PROXS_COS_MIN_FIELD_NUMBER: _ClassVar[int]
@@ -94,11 +95,12 @@ class AgentState(_message.Message):
     behavior: NDArray
     wheel_diameter: NDArray
     speed_mul: NDArray
+    max_speed: NDArray
     theta_mul: NDArray
     proxs_dist_max: NDArray
     proxs_cos_min: NDArray
     color: NDArray
-    def __init__(self, nve_idx: _Optional[_Union[NDArray, _Mapping]] = ..., prox: _Optional[_Union[NDArray, _Mapping]] = ..., motor: _Optional[_Union[NDArray, _Mapping]] = ..., behavior: _Optional[_Union[NDArray, _Mapping]] = ..., wheel_diameter: _Optional[_Union[NDArray, _Mapping]] = ..., speed_mul: _Optional[_Union[NDArray, _Mapping]] = ..., theta_mul: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_dist_max: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_cos_min: _Optional[_Union[NDArray, _Mapping]] = ..., color: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
+    def __init__(self, nve_idx: _Optional[_Union[NDArray, _Mapping]] = ..., prox: _Optional[_Union[NDArray, _Mapping]] = ..., motor: _Optional[_Union[NDArray, _Mapping]] = ..., behavior: _Optional[_Union[NDArray, _Mapping]] = ..., wheel_diameter: _Optional[_Union[NDArray, _Mapping]] = ..., speed_mul: _Optional[_Union[NDArray, _Mapping]] = ..., max_speed: _Optional[_Union[NDArray, _Mapping]] = ..., theta_mul: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_dist_max: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_cos_min: _Optional[_Union[NDArray, _Mapping]] = ..., color: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class ObjectState(_message.Message):
     __slots__ = ("nve_idx", "custom_field", "color")

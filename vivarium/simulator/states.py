@@ -52,6 +52,7 @@ class AgentState:
     behavior: util.Array
     wheel_diameter: util.Array
     speed_mul: util.Array
+    max_speed: util.Array
     theta_mul: util.Array
     proxs_dist_max: util.Array
     proxs_cos_min: util.Array
@@ -256,6 +257,7 @@ def init_agent_state(
         behavior: int = 1,
         wheel_diameter: float = 2.,
         speed_mul: float = 1.,
+        max_speed: float = 10.,
         theta_mul: float = 1.,
         prox_dist_max: float = 40.,
         prox_cos_min: float = 0.,
@@ -273,6 +275,7 @@ def init_agent_state(
         behavior=jnp.full((n_agents), behavior),
         wheel_diameter=jnp.full((n_agents), wheel_diameter),
         speed_mul=jnp.full((n_agents), speed_mul),
+        max_speed=jnp.full((n_agents), max_speed),
         theta_mul=jnp.full((n_agents), theta_mul),
         proxs_dist_max=jnp.full((n_agents), prox_dist_max),
         proxs_cos_min=jnp.full((n_agents), prox_cos_min),

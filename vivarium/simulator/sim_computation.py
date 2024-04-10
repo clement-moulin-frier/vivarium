@@ -138,6 +138,8 @@ def get_verlet_force_fn(displacement):
 
         cur_vel = state.nve_state.momentum.center[agent_idx] / state.nve_state.mass.center[agent_idx]
         cur_fwd_vel = vmap(jnp.dot)(cur_vel, n)
+        # `a_max` arg is deprecated in recent versions of jax, replaced by `max`
+        cur_fwd_vel = jnp.clip(cur_fwd_vel, a_max=state.agent_state.max_speed)
         cur_rot_vel = state.nve_state.momentum.orientation[agent_idx] / state.nve_state.mass.orientation[agent_idx]
         
         fwd_delta = fwd - cur_fwd_vel
