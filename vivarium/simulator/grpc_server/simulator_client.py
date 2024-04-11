@@ -40,8 +40,8 @@ class SimulatorGRPCClient(SimulatorClient):
         return proto_to_state(state)
 
     def get_nve_state(self):
-        nve_state = self.stub.GetNVEState(Empty())
-        return proto_to_nve_state(nve_state)
+        entities_state = self.stub.GetNVEState(Empty())
+        return proto_to_nve_state(entities_state)
 
     def get_agent_state(self):
         agent_state = self.stub.GetAgentState(Empty())

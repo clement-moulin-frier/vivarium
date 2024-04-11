@@ -29,7 +29,7 @@ service SimulatorServer {
   rpc Step(google.protobuf.Empty) returns (State) {}
 
   rpc GetState(google.protobuf.Empty) returns (State) {}
-  rpc GetNVEState(google.protobuf.Empty) returns (NVEState) {}
+  rpc GetNVEState(google.protobuf.Empty) returns (EntitiesState) {}
   rpc GetAgentState(google.protobuf.Empty) returns (AgentState) {}
   rpc GetObjectState(google.protobuf.Empty) returns (ObjectState) {}
   rpc SetState(StateChange) returns (google.protobuf.Empty) {}
@@ -58,8 +58,8 @@ message RigidBody {
 message SimulatorState {
   NDArray idx = 1;
   NDArray box_size = 2;
-  NDArray n_agents = 3;
-  NDArray n_objects = 4;
+  NDArray max_agents = 3;
+  NDArray max_objects = 4;
   NDArray num_steps_lax = 5;
   NDArray dt = 6;
   NDArray freq = 7;
@@ -70,7 +70,7 @@ message SimulatorState {
   NDArray collision_alpha = 12;
 }
 
-message NVEState {
+message EntitiesState {
   RigidBody position = 1;
   RigidBody momentum = 2;
   RigidBody force = 3;
@@ -104,7 +104,7 @@ message ObjectState {
 
 message State {
   SimulatorState simulator_state = 1;
-  NVEState nve_state = 2;
+  EntitiesState entities_state = 2;
   AgentState agent_state = 3;
   ObjectState object_state = 4;
 }
@@ -117,7 +117,7 @@ message StateChange {
 }
 
 message AddAgentInput {
-  int32 n_agents = 1;
+  int32 max_agents = 1;
   string serialized_config =2;
 }
 
