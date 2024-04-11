@@ -1,0 +1,35 @@
+simulator:
+  n_agents: 10
+  n_objects: 2
+  box_size: 100.0
+  num_steps_lax: 4
+  dt: 0.1
+  freq: 40
+  neighbor_radius: 100.0
+  to_jit: True
+  use_fori_loop: False
+  collision_eps: 0.1
+  collision_alpha: 0.5
+
+nve:
+  diameter: 5.
+  friction: 0.1
+  mass_center: 1.
+  mass_orientation: 0.125
+  agents_positions:
+  objects_positions:
+  existing_agents:
+  existing_objects:
+  seed: 42
+
+agents:
+  behavior: 1
+  wheel_diameter: 2.
+  speed_mul: 1.
+  theta_mul: 1.
+  prox_dist_max: 40.
+  prox_cos_min: 0.
+  color: "blue"
+
+objects:
+  color: "red"
