@@ -5,7 +5,7 @@ from vivarium.simulator.states import init_object_state
 from vivarium.simulator.states import init_entities_state
 from vivarium.simulator.states import init_state
 from vivarium.simulator.simulator import Simulator
-from vivarium.simulator.sim_computation import dynamics_rigid
+from vivarium.simulator.physics_engine import dynamics_rigid
 
 NUM_STEPS = 50
 
