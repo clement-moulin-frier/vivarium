@@ -1,5 +1,5 @@
-import hydra
 import logging
+import hydra
 
 from omegaconf import DictConfig, OmegaConf
 
@@ -26,7 +26,7 @@ def main(cfg: DictConfig = None) -> None:
 
     objects_state = init_object_state(simulator_state=simulator_state, **args.objects)
 
-    entities_state = init_nve_state(simulator_state=simulator_state)
+    entities_state = init_nve_state(simulator_state=simulator_state, **args.entities)
 
     state = init_state(
         simulator_state=simulator_state,

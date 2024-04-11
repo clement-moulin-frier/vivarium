@@ -10,7 +10,7 @@ from vivarium.simulator.states import init_object_state
 from vivarium.simulator.states import init_nve_state
 from vivarium.simulator.states import init_state
 from vivarium.simulator.simulator import Simulator
-from vivarium.simulator.sim_computation import dynamics_rigid
+from vivarium.simulator.physics_engine import dynamics_rigid
 from vivarium.simulator.grpc_server.simulator_server import serve
 
 lg = logging.getLogger(__name__)
@@ -27,12 +27,7 @@ def main(cfg: DictConfig = None) -> None:
 
     objects_state = init_object_state(simulator_state=simulator_state, **args.objects)
 
-    nve_state = init_nve_state(simulator_state=simulator_state, **args.nve)
-    entities_state = init_nve_state(
-        simulator_state=simulator_state,
-        existing_agents=args.n_existing_agents,
-        existing_objects=args.n_existing_objects,
-        )
+    entities_state = init_nve_state(simulator_state=simulator_state, **args.entities)
 
     state = init_state(
         simulator_state=simulator_state,
