@@ -10,7 +10,6 @@ from jax_md.dataclasses import dataclass
 from jax_md.rigid_body import RigidBody
 
 
-# TODO : Add documentation on these classes
 class EntityType(Enum):
     AGENT = 0
     OBJECT = 1
@@ -29,7 +28,8 @@ class StateType(Enum):
     def to_entity_type(self):
         assert self.is_entity()
         return EntityType(self.value)
-    
+
+
 # No need to define position, momentum, force, and mass (i.e already in simulate.EntitiesState)
 @dataclass
 class EntitiesState(simulate.NVEState):
@@ -64,7 +64,6 @@ class ObjectState:
     color: util.Array
 
 
-# TODO : I think it would make more sense to have max_agents, max_objects here instead of n_***
 @dataclass
 class SimulatorState:
     idx: util.Array
@@ -111,11 +110,6 @@ class State:
             res = getattr(res, f)
 
         return res
-
-    # TODO : Should we keep this function because it is duplicated below ?
-    # def nve_idx(self, etype):
-    #     cond = self.e_cond(etype)
-    #     return compress(range(len(cond)), cond)  # https://stackoverflow.com/questions/21448225/getting-indices-of-true-values-in-a-boolean-list
 
     def nve_idx(self, etype, entity_idx):
         return self.field(etype).nve_idx[entity_idx]
@@ -198,6 +192,7 @@ def _init_existing(n_existing, n_entities):
     return exists_array
 
 
+# TODO : Add options to have either 1 value or a list for parameters such as diameter, friction ...
 def init_nve_state(
         simulator_state: SimulatorState,
         diameter: float = 5.,
