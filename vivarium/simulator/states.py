@@ -158,7 +158,7 @@ def init_simulator_state(
     """
     return SimulatorState(
         idx=jnp.array([0]),
-        box_size=jnp.array([box_size]),                       
+        box_size=jnp.array([box_size]),              
         max_agents=jnp.array([max_agents]),
         max_objects=jnp.array([max_objects]),
         num_steps_lax=jnp.array([num_steps_lax], dtype=int),

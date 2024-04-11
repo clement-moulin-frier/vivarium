@@ -117,18 +117,18 @@ def get_default_state(n_entities_dict):
                                     friction=jnp.zeros(n_entities),
                                     exists=jnp.ones(n_entities, dtype=int)
                                     ),
-                 agent_state=AgentState(nve_idx=jnp.zeros(n_agents, dtype=int),
-                                        prox=jnp.zeros((n_agents, 2)),
-                                        motor=jnp.zeros((n_agents, 2)),
-                                        behavior=jnp.zeros(n_agents, dtype=int),
-                                        wheel_diameter=jnp.zeros(n_agents),
-                                        speed_mul=jnp.zeros(n_agents),
-                                        max_speed=jnp.zeros(n_agents),
-                                        theta_mul=jnp.zeros(n_agents),
-                                        proxs_dist_max=jnp.zeros(n_agents),
-                                        proxs_cos_min=jnp.zeros(n_agents),
-                                        color=jnp.zeros((n_agents, 3))),
-                 object_state=ObjectState(nve_idx=jnp.zeros(n_objects, dtype=int), color=jnp.zeros((n_objects, 3))))
+                 agent_state=AgentState(nve_idx=jnp.zeros(max_agents, dtype=int),
+                                        prox=jnp.zeros((max_agents, 2)),
+                                        motor=jnp.zeros((max_agents, 2)),
+                                        behavior=jnp.zeros(max_agents, dtype=int),
+                                        wheel_diameter=jnp.zeros(max_agents),
+                                        speed_mul=jnp.zeros(max_agents),
+                                        max_speed=jnp.zeros(max_agents),
+                                        theta_mul=jnp.zeros(max_agents),
+                                        proxs_dist_max=jnp.zeros(max_agents),
+                                        proxs_cos_min=jnp.zeros(max_agents),
+                                        color=jnp.zeros((max_agents, 3))),
+                 object_state=ObjectState(nve_idx=jnp.zeros(max_objects, dtype=int), color=jnp.zeros((max_objects, 3))))
 
 
 EntitiesTuple = namedtuple('EntitiesTuple', ['idx', 'col', 'val'])
