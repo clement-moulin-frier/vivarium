@@ -193,7 +193,7 @@ def _init_existing(n_existing, n_entities):
 
 
 # TODO : Add options to have either 1 value or a list for parameters such as diameter, friction ...
-def init_nve_state(
+def init_entities_state(
         simulator_state: SimulatorState,
         diameter: float = 5.,
         friction: float = 0.1,
