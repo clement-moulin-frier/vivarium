@@ -45,6 +45,7 @@ class AgentConfig(Config):
     wheel_diameter = param.Number(2.)
     diameter = param.Number(5.)
     speed_mul = param.Number(1.)
+    max_speed = param.Number(10.)
     theta_mul = param.Number(1.)
     proxs_dist_max = param.Number(100., bounds=(0, None))
     proxs_cos_min = param.Number(0., bounds=(-1., 1.))

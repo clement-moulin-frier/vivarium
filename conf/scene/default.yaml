@@ -26,6 +26,7 @@ agents:
   behavior: 1
   wheel_diameter: 2.
   speed_mul: 1.
+  max_speed: 10.
   theta_mul: 1.
   prox_dist_max: 40.
   prox_cos_min: 0.

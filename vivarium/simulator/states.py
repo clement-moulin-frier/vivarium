@@ -52,6 +52,7 @@ class AgentState:
     behavior: util.Array
     wheel_diameter: util.Array
     speed_mul: util.Array
+    max_speed: util.Array
     theta_mul: util.Array
     proxs_dist_max: util.Array
     proxs_cos_min: util.Array
@@ -157,7 +158,7 @@ def init_simulator_state(
     """
     return SimulatorState(
         idx=jnp.array([0]),
-        box_size=jnp.array([box_size]),                       
+        box_size=jnp.array([box_size]),              
         max_agents=jnp.array([max_agents]),
         max_objects=jnp.array([max_objects]),
         num_steps_lax=jnp.array([num_steps_lax], dtype=int),
@@ -250,6 +251,7 @@ def init_agent_state(
         behavior: int = 1,
         wheel_diameter: float = 2.,
         speed_mul: float = 1.,
+        max_speed: float = 10.,
         theta_mul: float = 1.,
         prox_dist_max: float = 40.,
         prox_cos_min: float = 0.,
@@ -267,6 +269,7 @@ def init_agent_state(
         behavior=jnp.full((max_agents), behavior),
         wheel_diameter=jnp.full((max_agents), wheel_diameter),
         speed_mul=jnp.full((max_agents), speed_mul),
+        max_speed=jnp.full((max_agents), max_speed),
         theta_mul=jnp.full((max_agents), theta_mul),
         proxs_dist_max=jnp.full((max_agents), prox_dist_max),
         proxs_cos_min=jnp.full((max_agents), prox_cos_min),

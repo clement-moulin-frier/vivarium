@@ -123,6 +123,7 @@ def get_default_state(n_entities_dict):
                                         behavior=jnp.zeros(max_agents, dtype=int),
                                         wheel_diameter=jnp.zeros(max_agents),
                                         speed_mul=jnp.zeros(max_agents),
+                                        max_speed=jnp.zeros(max_agents),
                                         theta_mul=jnp.zeros(max_agents),
                                         proxs_dist_max=jnp.zeros(max_agents),
                                         proxs_cos_min=jnp.zeros(max_agents),

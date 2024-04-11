@@ -135,6 +135,8 @@ def get_verlet_force_fn(displacement):
             state.entities_state.diameter[agent_idx],
             state.agent_state.wheel_diameter
             )
+        # `a_max` arg is deprecated in recent versions of jax, replaced by `max`
+        fwd = jnp.clip(fwd, a_max=state.agent_state.max_speed)
 
         cur_vel = state.entities_state.momentum.center[agent_idx] / state.entities_state.mass.center[agent_idx]
         cur_fwd_vel = vmap(jnp.dot)(cur_vel, n)

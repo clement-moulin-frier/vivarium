@@ -5,7 +5,7 @@ from vivarium.simulator.states import init_object_state
 from vivarium.simulator.states import init_entities_state
 from vivarium.simulator.states import init_state
 from vivarium.simulator.simulator import Simulator
-from vivarium.simulator.sim_computation import dynamics_rigid
+from vivarium.simulator.physics_engine import dynamics_rigid
 
 
 def test_init_simulator_no_args():
@@ -40,6 +40,7 @@ def test_init_simulator_args():
     behavior = 1
     wheel_diameter = 2.0
     speed_mul = 1.0
+    max_speed = 10.0
     theta_mul = 1.0
     prox_dist_max = 20.0
     prox_cos_min = 0.0
@@ -62,6 +63,7 @@ def test_init_simulator_args():
         behavior=behavior,
         wheel_diameter=wheel_diameter,
         speed_mul=speed_mul,
+        max_speed=max_speed,
         theta_mul=theta_mul, 
         prox_dist_max=prox_dist_max,
         prox_cos_min=prox_cos_min)
