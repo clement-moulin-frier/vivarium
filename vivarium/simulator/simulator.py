@@ -243,6 +243,9 @@ class Simulator:
         lg.info('init_state')
         self.state = self.init_fn(state, self.key)
 
+    def load_state(self, state):
+        lg.info('load_state')
+        self.__init__(state, self.behavior_bank, self.dynamics_fn)
 
     # Neighbor functions
 
