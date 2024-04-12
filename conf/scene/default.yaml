@@ -10,6 +10,8 @@ agents:
 
 entities:
   agents_positions: null
+  collision_alpha: 0.5
+  collision_eps: 0.1
   diameter: 5.0
   existing_agents: null
   existing_objects: null
@@ -24,8 +26,6 @@ objects:
 
 simulator:
   box_size: 100.0
-  collision_alpha: 0.5
-  collision_eps: 0.1
   dt: 0.1
   freq: 40.0
   max_agents: 10

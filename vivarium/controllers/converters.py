@@ -67,7 +67,9 @@ agent_configs_to_state_dict = {'x_position': StateFieldInfo(('entities_state', '
                                'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
                                'color': StateFieldInfo(('agent_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
                                'idx': StateFieldInfo(('agent_state', 'nve_idx',), None, identity_s_to_c, identity_c_to_s),
-                               'exists': StateFieldInfo(('entities_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
+                               'exists': StateFieldInfo(('entities_state', 'exists'), None, identity_s_to_c, exists_c_to_s),
+                               'collision_eps': StateFieldInfo(('entities_state', 'collision_eps'), None, identity_s_to_c, exists_c_to_s),
+                               'collision_alpha': StateFieldInfo(('entities_state', 'collision_alpha'), None, identity_s_to_c, exists_c_to_s)
                                }
 
 agent_configs_to_state_dict.update({f: StateFieldInfo(('agent_state', f,), None, identity_s_to_c, identity_c_to_s) for f in agent_common_fields if f not in agent_configs_to_state_dict})
@@ -81,8 +83,9 @@ object_configs_to_state_dict = {'x_position': StateFieldInfo(('entities_state', 
                                 'friction': StateFieldInfo(('entities_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
                                 'color': StateFieldInfo(('object_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
                                 'idx': StateFieldInfo(('object_state', 'nve_idx',), None, identity_s_to_c, identity_c_to_s),
-                                'exists': StateFieldInfo(('entities_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
-
+                                'exists': StateFieldInfo(('entities_state', 'exists'), None, identity_s_to_c, exists_c_to_s),
+                                'collision_eps': StateFieldInfo(('entities_state', 'collision_eps'), None, identity_s_to_c, exists_c_to_s),
+                                'collision_alpha': StateFieldInfo(('entities_state', 'collision_alpha'), None, identity_s_to_c, exists_c_to_s)
                                 }
 
 object_configs_to_state_dict.update({f: StateFieldInfo(('object_state', f,), None, identity_s_to_c, identity_c_to_s) for f in object_common_fields if f not in object_configs_to_state_dict})
@@ -96,39 +99,40 @@ configs_to_state_dict = {StateType.AGENT: agent_configs_to_state_dict,
                          }
 
 
-def get_default_state(n_entities_dict):
-    max_agents = n_entities_dict[StateType.AGENT]
-    max_objects = n_entities_dict[StateType.OBJECT]
-    n_entities = sum(n_entities_dict.values())
-    return State(simulator_state=SimulatorState(idx=jnp.array([0]), box_size=jnp.array([100.]),
-                                                max_agents=jnp.array([max_agents]), max_objects=jnp.array([max_objects]),
-                                                num_steps_lax=jnp.array([1]), dt=jnp.array([1.]), freq=jnp.array([1.]),
-                                                neighbor_radius=jnp.array([1.]),
-                                                to_jit= jnp.array([1]), use_fori_loop=jnp.array([0]),
-                                                collision_alpha=jnp.array([0.]),
-                                                collision_eps=jnp.array([0.])),
-                 entities_state=EntitiesState(position=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
-                                    momentum=None,
-                                    force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
-                                    mass=RigidBody(center=jnp.zeros((n_entities, 1)), orientation=jnp.zeros(n_entities)),
-                                    entity_type=jnp.array([EntityType.AGENT.value] * max_agents + [EntityType.OBJECT.value] * max_objects, dtype=int),
-                                    entity_idx = jnp.array(list(range(max_agents)) + list(range(max_objects))),
-                                    diameter=jnp.zeros(n_entities),
-                                    friction=jnp.zeros(n_entities),
-                                    exists=jnp.ones(n_entities, dtype=int)
-                                    ),
-                 agent_state=AgentState(nve_idx=jnp.zeros(max_agents, dtype=int),
-                                        prox=jnp.zeros((max_agents, 2)),
-                                        motor=jnp.zeros((max_agents, 2)),
-                                        behavior=jnp.zeros(max_agents, dtype=int),
-                                        wheel_diameter=jnp.zeros(max_agents),
-                                        speed_mul=jnp.zeros(max_agents),
-                                        max_speed=jnp.zeros(max_agents),
-                                        theta_mul=jnp.zeros(max_agents),
-                                        proxs_dist_max=jnp.zeros(max_agents),
-                                        proxs_cos_min=jnp.zeros(max_agents),
-                                        color=jnp.zeros((max_agents, 3))),
-                 object_state=ObjectState(nve_idx=jnp.zeros(max_objects, dtype=int), color=jnp.zeros((max_objects, 3))))
+# def get_default_state(n_entities_dict):
+#     max_agents = n_entities_dict[StateType.AGENT]
+#     max_objects = n_entities_dict[StateType.OBJECT]
+#     n_entities = sum(n_entities_dict.values())
+#     return State(simulator_state=SimulatorState(idx=jnp.array([0]), box_size=jnp.array([100.]),
+#                                                 max_agents=jnp.array([max_agents]), max_objects=jnp.array([max_objects]),
+#                                                 num_steps_lax=jnp.array([1]), dt=jnp.array([1.]), freq=jnp.array([1.]),
+#                                                 neighbor_radius=jnp.array([1.]),
+#                                                 to_jit= jnp.array([1]), use_fori_loop=jnp.array([0])
+#                                                 ),
+#                  entities_state=EntitiesState(position=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
+#                                     momentum=None,
+#                                     force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
+#                                     mass=RigidBody(center=jnp.zeros((n_entities, 1)), orientation=jnp.zeros(n_entities)),
+#                                     entity_type=jnp.array([EntityType.AGENT.value] * max_agents + [EntityType.OBJECT.value] * max_objects, dtype=int),
+#                                     entity_idx = jnp.array(list(range(max_agents)) + list(range(max_objects))),
+#                                     diameter=jnp.zeros(n_entities),
+#                                     friction=jnp.zeros(n_entities),
+#                                     exists=jnp.ones(n_entities, dtype=int),
+#                                     collision_alpha=jnp.array([0.]),
+#                                     collision_eps=jnp.array([0.])
+#                                     ),
+#                  agent_state=AgentState(nve_idx=jnp.zeros(max_agents, dtype=int),
+#                                         prox=jnp.zeros((max_agents, 2)),
+#                                         motor=jnp.zeros((max_agents, 2)),
+#                                         behavior=jnp.zeros(max_agents, dtype=int),
+#                                         wheel_diameter=jnp.zeros(max_agents),
+#                                         speed_mul=jnp.zeros(max_agents),
+#                                         max_speed=jnp.zeros(max_agents),
+#                                         theta_mul=jnp.zeros(max_agents),
+#                                         proxs_dist_max=jnp.zeros(max_agents),
+#                                         proxs_cos_min=jnp.zeros(max_agents),
+#                                         color=jnp.zeros((max_agents, 3))),
+#                  object_state=ObjectState(nve_idx=jnp.zeros(max_objects, dtype=int), color=jnp.zeros((max_objects, 3))))
 
 
 EntitiesTuple = namedtuple('EntitiesTuple', ['idx', 'col', 'val'])

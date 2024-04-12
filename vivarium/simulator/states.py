@@ -1,6 +1,5 @@
 from enum import Enum
 from typing import Optional, List, Union
-from collections import OrderedDict
 
 import inspect
 import yaml
@@ -41,6 +40,8 @@ class EntitiesState(simulate.NVEState):
     diameter: util.Array
     friction: util.Array
     exists: util.Array
+    collision_alpha: util.Array
+    collision_eps: util.Array
 
     @property
     def velocity(self) -> util.Array:
@@ -80,14 +81,12 @@ class SimulatorState:
     neighbor_radius: util.Array
     to_jit: util.Array
     use_fori_loop: util.Array
-    collision_alpha: util.Array
-    collision_eps: util.Array
 
     @staticmethod
     def get_type(attr):
         if attr in ['idx', 'max_agents', 'max_objects', 'num_steps_lax']:
             return int
-        elif attr in ['box_size', 'dt', 'freq', 'neighbor_radius', 'collision_alpha', 'collision_eps']:
+        elif attr in ['box_size', 'dt', 'freq', 'neighbor_radius']:
             return float
         elif attr in ['to_jit', 'use_fori_loop']:
             return bool
@@ -153,8 +152,6 @@ def init_simulator_state(
         neighbor_radius: float = 100.,
         to_jit: bool = True,
         use_fori_loop: bool = False,
-        collision_alpha: float = 0.5,
-        collision_eps: float = 0.1
         ) -> SimulatorState:
     """
     Initialize simulator state with given parameters
@@ -170,9 +167,7 @@ def init_simulator_state(
         neighbor_radius=jnp.array([neighbor_radius], dtype=float),
         # Use 1*bool to transform True to 1 and False to 0
         to_jit= jnp.array([1*to_jit]),
-        use_fori_loop=jnp.array([1*use_fori_loop]),
-        collision_alpha=jnp.array([collision_alpha]),
-        collision_eps=jnp.array([collision_eps]))
+        use_fori_loop=jnp.array([1*use_fori_loop]))
 
 
 def _init_positions(key_pos, positions, n_entities, box_size, n_dims=2):
@@ -207,6 +202,8 @@ def init_entities_state(
         objects_positions: Optional[Union[List[float], None]] = None,
         existing_agents: Optional[Union[int, List[float], None]] = None,
         existing_objects: Optional[Union[int, List[float], None]] = None,
+        collision_alpha: float = 0.5,
+        collision_eps: float = 0.1,
         seed: int = 0,
         ) -> EntitiesState:
     """
@@ -236,6 +233,9 @@ def init_entities_state(
     existing_objects = _init_existing(existing_objects, max_objects)
     exists = jnp.concatenate((existing_agents, existing_objects), dtype=int)
 
+    collision_alpha = jnp.full((n_entities), collision_alpha)
+    collision_eps = jnp.full((n_entities), collision_eps)
+
     return EntitiesState(
         position=RigidBody(center=positions, orientation=orientations),
         momentum=None,
@@ -245,7 +245,9 @@ def init_entities_state(
         entity_idx = jnp.array(list(range(max_agents)) + list(range(max_objects))),
         diameter=jnp.full((n_entities), diameter),
         friction=jnp.full((n_entities), friction),
-        exists=exists
+        exists=exists,
+        collision_alpha=collision_alpha,
+        collision_eps=collision_eps
         )
 
 

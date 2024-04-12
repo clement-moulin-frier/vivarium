@@ -23,9 +23,7 @@ def proto_to_simulator_state(simulator_state):
                           freq=proto_to_ndarray(simulator_state.freq).astype(float),
                           neighbor_radius=proto_to_ndarray(simulator_state.neighbor_radius).astype(float),
                           to_jit=proto_to_ndarray(simulator_state.to_jit).astype(int),
-                          use_fori_loop=proto_to_ndarray(simulator_state.use_fori_loop).astype(int),
-                          collision_eps=proto_to_ndarray(simulator_state.collision_eps).astype(float),
-                          collision_alpha=proto_to_ndarray(simulator_state.collision_alpha).astype(float)
+                          use_fori_loop=proto_to_ndarray(simulator_state.use_fori_loop).astype(int)
                           )
 
 
@@ -42,7 +40,9 @@ def proto_to_nve_state(entities_state):
                     entity_idx=proto_to_ndarray(entities_state.entity_idx).astype(int),
                     diameter=proto_to_ndarray(entities_state.diameter).astype(float),
                     friction=proto_to_ndarray(entities_state.friction).astype(float),
-                    exists=proto_to_ndarray(entities_state.exists).astype(int)
+                    exists=proto_to_ndarray(entities_state.exists).astype(int),
+                    collision_eps=proto_to_ndarray(entities_state.collision_eps).astype(float),
+                    collision_alpha=proto_to_ndarray(entities_state.collision_alpha).astype(float)
                     )
 
 
@@ -85,9 +85,7 @@ def simulator_state_to_proto(simulator_state):
         freq=ndarray_to_proto(simulator_state.freq),
         neighbor_radius=ndarray_to_proto(simulator_state.neighbor_radius),
         to_jit=ndarray_to_proto(simulator_state.to_jit),
-        use_fori_loop=ndarray_to_proto(simulator_state.use_fori_loop),
-        collision_eps=ndarray_to_proto(simulator_state.collision_eps),
-        collision_alpha=ndarray_to_proto(simulator_state.collision_alpha)
+        use_fori_loop=ndarray_to_proto(simulator_state.use_fori_loop)
     )
 
 
@@ -104,7 +102,9 @@ def nve_state_to_proto(entities_state):
                                   entity_idx=ndarray_to_proto(entities_state.entity_idx),
                                   diameter=ndarray_to_proto(entities_state.diameter),
                                   friction=ndarray_to_proto(entities_state.friction),
-                                  exists=ndarray_to_proto(entities_state.exists)
+                                  exists=ndarray_to_proto(entities_state.exists),
+                                  collision_eps=ndarray_to_proto(entities_state.collision_eps),
+                                  collision_alpha=ndarray_to_proto(entities_state.collision_alpha)
                                   )
 
 

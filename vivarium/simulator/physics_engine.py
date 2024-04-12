@@ -44,11 +44,11 @@ def collision_energy(displacement_fn, r_a, r_b, l_a, l_b, epsilon, alpha, mask):
 collision_energy = vmap(collision_energy, (None, 0, 0, 0, 0, None, None, 0))
 
 
-def total_collision_energy(positions, diameter, neighbor, displacement, exists_mask, epsilon, alpha):
+def total_collision_energy(positions, diameters, epsilons, alphas, neighbor, displacement, exists_mask):
     """Compute the collision energy between all neighboring pairs of particles in the system 
 
     :param positions: positions of all the particles 
-    :param diameter: diameters of all the particles 
+    :param diameters: diameters of all the particles 
     :param neighbor: neighbor array of the system
     :param displacement: dipalcement function of jax_md
     :param exists_mask: mask to specify which particles exist 
@@ -56,13 +56,15 @@ def total_collision_energy(positions, diameter, neighbor, displacement, exists_m
     :param alpha: interaction stiffness between two particles
     :return: sum of all collisions energies of the system 
     """
-    diameter = lax.stop_gradient(diameter)
+    diameters = lax.stop_gradient(diameters)
     senders, receivers = neighbor.idx
 
     r_senders = positions[senders]
     r_receivers = positions[receivers]
-    l_senders = diameter[senders]
-    l_receivers = diameter[receivers]
+    l_senders = diameters[senders]
+    l_receivers = diameters[receivers]
+    eps = epsilons[receivers]
+    alph = alphas[receivers]
 
     # Set collision energy to zero if the sender or receiver is non existing
     mask = exists_mask[senders] * exists_mask[receivers]
@@ -71,8 +73,8 @@ def total_collision_energy(positions, diameter, neighbor, displacement, exists_m
                                  r_receivers,
                                  l_senders,
                                  l_receivers,
-                                 epsilon,
-                                 alpha,
+                                 eps,
+                                 alph,
                                  mask)
     return jnp.sum(energies)
 
@@ -108,15 +110,15 @@ def get_verlet_force_fn(displacement):
             state.entities_state.position.center,
             neighbor=neighbor,
             exists_mask=exists_mask,
-            diameter=state.entities_state.diameter,
-            epsilon=state.simulator_state.collision_eps,
-            alpha=state.simulator_state.collision_alpha
+            diameters=state.entities_state.diameter,
+            epsilons=state.entities_state.collision_eps,
+            alphas=state.entities_state.collision_alpha
             )
 
     def friction_force(state, exists_mask):
         cur_vel = state.entities_state.momentum.center / state.entities_state.mass.center
-        # stack the mask to give it the same shape as cur_vel (that has 2 rows for forward and angular velocities) 
-        mask = jnp.stack([exists_mask] * 2, axis=1) 
+        # stack the mask to give it the same shape as cur_vel (that has 2 rows for forward and angular velocities)
+        mask = jnp.stack([exists_mask] * 2, axis=1)
         cur_vel = jnp.where(mask, cur_vel, 0.)
         return - jnp.tile(state.entities_state.friction, (SPACE_NDIMS, 1)).T * cur_vel
 

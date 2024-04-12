@@ -49,14 +49,14 @@ def test_init_simulator_args():
     simulator_state = init_simulator_state(
         box_size=box_size,
         max_agents=max_agents,
-        max_objects=max_objects,
-        collision_eps=col_eps,
-        collision_alpha=col_alpha)
+        max_objects=max_objects)
 
     entities_state = init_entities_state(
         simulator_state,
         diameter=diameter,
-        friction=friction)
+        friction=friction,
+        collision_eps=col_eps,
+        collision_alpha=col_alpha)
 
     agent_state = init_agent_state(
         simulator_state,

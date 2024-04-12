@@ -52,6 +52,8 @@ class AgentConfig(Config):
     color = param.Color('blue')
     friction = param.Number(1e-1)
     exists = param.Boolean(True)
+    collision_eps = param.Number(0.1)
+    collision_alpha = param.Number(0.5)
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -68,6 +70,8 @@ class ObjectConfig(Config):
     color = param.Color('red')
     friction = param.Number(0.1)
     exists = param.Boolean(True)
+    collision_eps = param.Number(0.1)
+    collision_alpha = param.Number(0.5)
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -84,8 +88,7 @@ class SimulatorConfig(Config):
     neighbor_radius = param.Number(100., bounds=(0, None))
     to_jit = param.Boolean(True)
     use_fori_loop = param.Boolean(False)
-    collision_eps = param.Number(0.1)
-    collision_alpha = param.Number(0.5)
+
 
     def __init__(self, **params):
         super().__init__(**params)
