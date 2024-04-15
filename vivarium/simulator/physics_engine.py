@@ -36,12 +36,13 @@ def collision_energy(displacement_fn, r_a, r_b, l_a, l_b, epsilon, alpha, mask):
     :param mask: set the energy to 0 if one of the particles is masked 
     :return: collision energy between both particles
     """
+    # Now epsilon is the epsilon applied on the current enity, not the one being applied on other entities
     dist = jnp.linalg.norm(displacement_fn(r_a, r_b))
     sigma = (l_a + l_b) / 2
     e = energy.soft_sphere(dist, sigma=sigma, epsilon=epsilon, alpha=f32(alpha))
     return jnp.where(mask, e, 0.)
 
-collision_energy = vmap(collision_energy, (None, 0, 0, 0, 0, None, None, 0))
+collision_energy = vmap(collision_energy, (None, 0, 0, 0, 0, 0, 0, 0))
 
 
 def total_collision_energy(positions, diameters, epsilons, alphas, neighbor, displacement, exists_mask):
