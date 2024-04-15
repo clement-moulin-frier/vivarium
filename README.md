@@ -68,8 +68,19 @@ You will find explanations of the web interface and how to control the simulator
 
 ## Development
 
-### grpc
+### Default scene generation
 
+If you wish to make changes to the state of the simulation and change the init functions in `vivarium/simulator/states.py`, 
+you can automatically generate a default yaml config file from the default parameters of the functions. 
+
+To do so, just run : 
+
+```bash
+python3 scripts/generate_default_config.py 
+```
+
+
+### grpc
 
 grpc compilation command line (normally only needed if modifying the .proto file for communication between server and controllers, e.g. the web interface):
 

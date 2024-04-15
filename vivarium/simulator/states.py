@@ -1,6 +1,9 @@
-from typing import Optional, List, Union
 from enum import Enum
+from typing import Optional, List, Union
+from collections import OrderedDict
 
+import inspect
+import yaml
 import matplotlib.colors as mcolors
 import jax.numpy as jnp
 
@@ -306,4 +309,36 @@ def init_state(
         object_state=objects_state,
         entities_state=entities_state
     )
-    
+
+
+def generate_default_config_files():
+    """
+    Generate a default yaml file with all the default arguments in the init_params_fns (see dict below)
+    """
+    init_params_fns = {
+        'simulator': init_simulator_state,
+        'entities': init_entities_state,
+        'agents': init_agent_state,
+        'objects': init_object_state
+    }
+
+    # TODO : Find a way to keep the order in the config_dict (atm ordered by alphebetical order in the yaml file)
+    config_dict = {}
+    for parameter_name, init_parameter_fn in init_params_fns.items():
+        func_sig = inspect.signature(init_parameter_fn)
+        default_args = {param.name: param.default for param in func_sig.parameters.values() if param.default is not inspect._empty}
+        config_dict[parameter_name] = default_args
+
+    # Add a blank line dumper to have a cleaner yaml file
+    class BlankLineDumper(yaml.SafeDumper):
+        # inspired by https://stackoverflow.com/a/44284819/3786245
+        def write_line_break(self, data=None):
+            super().write_line_break(data)
+
+            if len(self.indents) == 1:
+                super().write_line_break()
+
+    yaml_str = yaml.dump(config_dict, Dumper=BlankLineDumper, default_flow_style=False)
+
+    with open('conf/scene/default.yaml', 'w') as f:
+        f.write(yaml_str)
