@@ -29,7 +29,7 @@ service SimulatorServer {
   rpc Step(google.protobuf.Empty) returns (State) {}
 
   rpc GetState(google.protobuf.Empty) returns (State) {}
-  rpc GetNVEState(google.protobuf.Empty) returns (NVEState) {}
+  rpc GetNVEState(google.protobuf.Empty) returns (EntitiesState) {}
   rpc GetAgentState(google.protobuf.Empty) returns (AgentState) {}
   rpc GetObjectState(google.protobuf.Empty) returns (ObjectState) {}
   rpc SetState(StateChange) returns (google.protobuf.Empty) {}
@@ -58,17 +58,19 @@ message RigidBody {
 message SimulatorState {
   NDArray idx = 1;
   NDArray box_size = 2;
-  NDArray n_agents = 3;
-  NDArray n_objects = 4;
+  NDArray max_agents = 3;
+  NDArray max_objects = 4;
   NDArray num_steps_lax = 5;
   NDArray dt = 6;
   NDArray freq = 7;
   NDArray neighbor_radius = 8;
   NDArray to_jit = 9;
   NDArray use_fori_loop = 10;
+  NDArray collision_eps = 11;
+  NDArray collision_alpha = 12;
 }
 
-message NVEState {
+message EntitiesState {
   RigidBody position = 1;
   RigidBody momentum = 2;
   RigidBody force = 3;
@@ -87,12 +89,13 @@ message AgentState {
   NDArray behavior = 4;
   NDArray wheel_diameter = 5;
   NDArray speed_mul = 6;
-  NDArray theta_mul = 7;
-  NDArray proxs_dist_max = 8;
-  NDArray proxs_cos_min = 9;
-  NDArray color = 10;
-  NDArray neighbor_map_dist = 11;
-  NDArray neighbor_map_theta = 12;
+  NDArray max_speed = 7;
+  NDArray theta_mul = 8;
+  NDArray proxs_dist_max = 9;
+  NDArray proxs_cos_min = 10;
+  NDArray color = 11;
+  NDArray neighbor_map_dist = 12;
+  NDArray neighbor_map_theta = 13;
 }
 
 message ObjectState {
@@ -103,7 +106,7 @@ message ObjectState {
 
 message State {
   SimulatorState simulator_state = 1;
-  NVEState nve_state = 2;
+  EntitiesState entities_state = 2;
   AgentState agent_state = 3;
   ObjectState object_state = 4;
 }
@@ -116,7 +119,7 @@ message StateChange {
 }
 
 message AddAgentInput {
-  int32 n_agents = 1;
+  int32 max_agents = 1;
   string serialized_config =2;
 }
 

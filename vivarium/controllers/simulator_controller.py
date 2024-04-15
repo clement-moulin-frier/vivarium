@@ -1,12 +1,18 @@
+import time
+import threading
+import logging
+
+from contextlib import contextmanager
+
 import param
 
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.controllers.config import SimulatorConfig
-from vivarium.simulator.sim_computation import StateType
+from vivarium.simulator.states import StateType
 from vivarium.controllers import converters
-import time
-import threading
-from contextlib import contextmanager
+
+
+lg = logging.getLogger(__name__)
 
 param.Dynamic.time_dependent = True
 
@@ -43,8 +49,8 @@ class SimulatorController(param.Parameterized):
         if self._in_batch:
             self._event_list.extend(events)
             return
-        print('push_state', len(events))
-        # print(converters.events_to_state_changes(events))
+        lg.info('push_state %d', len(events))
+        # lg.info(converters.events_to_state_changes(events))
 
         state_changes = converters.events_to_state_changes(events, self.state)
         for sc in state_changes:
@@ -103,6 +109,6 @@ if __name__ == "__main__":
 
     controller = SimulatorController()
     controller.configs[StateType.AGENT][2].x_position = 1.
-    print(controller.client.get_state())
+    lg.info(controller.client.get_state())
 
-    print('Done')
+    lg.info('Done')

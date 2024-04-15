@@ -2,10 +2,12 @@ import math
 import threading
 
 import numpy as np
+import logging
 
 from vivarium.controllers.simulator_controller import SimulatorController
-from vivarium.simulator.sim_computation import StateType, EntityType
+from vivarium.simulator.states import StateType, EntityType
 
+lg = logging.getLogger(__name__)
 
 class Entity:
     def __init__(self, config):
@@ -141,4 +143,4 @@ if __name__ == "__main__":
             obj.color = 'grey'
             obj.orientation = random() * 2. * pi
 
-    print('Done')
+    lg.info('Done')

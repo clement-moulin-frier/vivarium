@@ -1,7 +1,10 @@
 import jax.numpy as jnp
+import logging
 from enum import Enum
 from jax import vmap
 from functools import partial
+
+lg = logging.getLogger(__name__)
 
 linear_behavior_enum = Enum('matrices', ['FEAR', 'AGGRESSION', 'LOVE', 'SHY'])
 
@@ -32,6 +35,6 @@ behavior_name_map = {beh.name: i for i, beh in enumerate(linear_behavior_enum)}
 behavior_name_map['manual'] = len(behavior_bank) - 2
 behavior_name_map['noop'] = len(behavior_bank) - 1
 
-print(behavior_name_map)
+lg.info(behavior_name_map)
 
 reversed_behavior_name_map = {i: name for name, i in behavior_name_map.items()}

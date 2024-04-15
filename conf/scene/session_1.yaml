@@ -1,0 +1,3 @@
+simulator:
+  max_agents: 1
+  max_objects: 1

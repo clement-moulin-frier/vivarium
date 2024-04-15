@@ -1,24 +1,23 @@
-from collections import defaultdict
-
-from numproto.numproto import proto_to_ndarray
-
-import grpc
-import simulator_pb2_grpc
-import simulator_pb2
-
-import numpy as np
 import logging
+
 from concurrent import futures
 from threading import Lock
 from contextlib import contextmanager
+from collections import defaultdict
 
-from vivarium.controllers.config import SimulatorConfig, AgentConfig, ObjectConfig
-from vivarium.simulator.sim_computation import StateType
-from vivarium.simulator.simulator import Simulator
-from vivarium.simulator.sim_computation import dynamics_rigid
-import vivarium.simulator.behaviors as behaviors
-from vivarium.simulator.grpc_server.converters import state_to_proto, nve_state_to_proto, agent_state_to_proto, object_state_to_proto
-from vivarium.controllers.converters import set_state_from_config_dict
+import grpc
+import simulator_pb2
+import simulator_pb2_grpc
+
+from numproto.numproto import proto_to_ndarray
+
+from vivarium.simulator.grpc_server.converters import state_to_proto
+from vivarium.simulator.grpc_server.converters import nve_state_to_proto
+from vivarium.simulator.grpc_server.converters import agent_state_to_proto
+from vivarium.simulator.grpc_server.converters import object_state_to_proto
+
+
+lg = logging.getLogger(__name__)
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
@@ -46,8 +45,8 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return state_to_proto(state)
 
     def GetNVEState(self, request, context):
-        nve_state = self.simulator.state.nve_state
-        return nve_state_to_proto(nve_state)
+        entities_state = self.simulator.state.entities_state
+        return nve_state_to_proto(entities_state)
 
     def GetAgentState(self, request, context):
         agent_state = self.simulator.state.agent_state
@@ -80,7 +79,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
     def Step(self, request, context):
         assert not self.simulator.is_started()
-        self.simulator.run(threaded=False, num_loops=1)
+        self.simulator.step()
         return state_to_proto(self.simulator.state)
 
 
@@ -91,33 +90,3 @@ def serve(simulator):
     server.add_insecure_port('[::]:50051')
     server.start()
     server.wait_for_termination()
-
-
-if __name__ == '__main__':
-
-    simulator_config = SimulatorConfig(to_jit=True)
-
-    agent_configs = [AgentConfig(idx=i,
-                                 x_position=np.random.rand() * simulator_config.box_size,
-                                 y_position=np.random.rand() * simulator_config.box_size,
-                                 orientation=np.random.rand() * 2. * np.pi)
-                     for i in range(simulator_config.n_agents)]
-
-    object_configs = [ObjectConfig(idx=simulator_config.n_agents + i,
-                                   x_position=np.random.rand() * simulator_config.box_size,
-                                   y_position=np.random.rand() * simulator_config.box_size,
-                                   orientation=np.random.rand() * 2. * np.pi)
-                      for i in range(simulator_config.n_objects)]
-
-    state = set_state_from_config_dict({StateType.AGENT: agent_configs,
-                                        StateType.OBJECT: object_configs,
-                                        StateType.SIMULATOR: [simulator_config]
-                                        })
-
-    simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
-    print('Simulator server started')
-    logging.basicConfig()
-    serve(simulator)
-
-
-

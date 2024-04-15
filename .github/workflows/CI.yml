@@ -19,7 +19,6 @@ jobs:
     env:
       OS: ${{ matrix.os }}
       PYTHON: ${{ matrix.python-version }}
-
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
@@ -37,3 +36,11 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+    - name: Run server
+      run: python scripts/run_server.py &
+    - name: Test interface
+      run: |
+        set -e
+        panel serve scripts/run_interface.py --port 5006 --allow-websocket-origin=localhost:5006 &
+        sleep 5 &&
+        curl -I http://localhost:5006

@@ -1,13 +1,16 @@
 from vivarium.controllers import converters
 from vivarium.controllers.config import AgentConfig, ObjectConfig, config_to_stype, Config
 from vivarium.controllers.simulator_controller import SimulatorController
-from vivarium.simulator.sim_computation import EntityType, StateType
+from vivarium.simulator.states import EntityType, StateType
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 
 import param
 import numpy as np
 from contextlib import contextmanager
 
+import logging
+
+lg = logging.getLogger(__name__)
 
 class PanelConfig(Config):
     pass
@@ -27,7 +30,8 @@ class PanelObjectConfig(PanelEntityConfig):
 
 
 class PanelSimulatorConfig(Config):
-    pass
+    hide_non_existing = param.Boolean(True)
+    config_update = param.Boolean(False)
 
 
 panel_config_to_stype = {PanelSimulatorConfig: StateType.SIMULATOR, PanelAgentConfig: StateType.AGENT,
@@ -41,6 +45,8 @@ class Selected(param.Parameterized):
     def selection_nve_idx(self, nve_idx):
         return nve_idx[np.array(self.selection)].tolist()
 
+    def __len__(self):
+        return len(self.selection)
 
 class PanelController(SimulatorController):
 
@@ -53,9 +59,11 @@ class PanelController(SimulatorController):
         self.panel_configs = {stype: [stype_to_panel_config[stype]() for _ in range(len(configs))]
                               for stype, configs in self.configs.items()}
         self.selected_panel_configs = {EntityType.AGENT: PanelAgentConfig(), EntityType.OBJECT: PanelObjectConfig()}
+        self.panel_simulator_config = PanelSimulatorConfig()
+        self.pull_selected_panel_configs()
 
         self.update_entity_list()
-        for etype, selected in self.selected_entities.items():
+        for selected in self.selected_entities.values():
             selected.param.watch(self.pull_selected_configs, ['selection'], onlychanged=True, precedence=1)
             selected.param.watch(self.pull_selected_panel_configs, ['selection'], onlychanged=True)
 
@@ -114,15 +122,15 @@ class PanelController(SimulatorController):
         self.pull_configs({StateType.SIMULATOR: self.configs[StateType.SIMULATOR]})
 
     def push_selected_to_config_list(self, *events):
-        print('push_selected_to_config_list', len(events))
+        lg.info('push_selected_to_config_list %d', len(events))
         for e in events:
-            if isinstance(e.obj, PanelEntityConfig):
+            if isinstance(e.obj, PanelConfig):
                 stype = panel_config_to_stype[type(e.obj)]
             else:
                 stype = config_to_stype[type(e.obj)]
             selected_entities = self.selected_entities[stype.to_entity_type()].selection
             for idx in selected_entities:
-                if isinstance(e.obj, PanelEntityConfig):
+                if isinstance(e.obj, PanelConfig):
                     setattr(self.panel_configs[stype][idx], e.name, e.new)
                 else:
                     setattr(self.configs[stype][idx], e.name, e.new)
@@ -130,5 +138,5 @@ class PanelController(SimulatorController):
 
 if __name__ == '__main__':
     simulator = PanelController(client=SimulatorGRPCClient())
-    print('Done')
+    lg.info('Done')
     

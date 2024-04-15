@@ -2,6 +2,7 @@
 jax==0.4.23
 jaxlib==0.4.23
 jax-md==0.2.8
+scipy==1.12.0
 
 # Interface
 panel==1.3.8
@@ -9,8 +10,12 @@ param==2.0.2
 matplotlib==3.8.2
 
 # Client-server communication
-grpcio==1.60.0
+grpcio
+grpcio-tools
 
 # Tests and code formatting
 pytest==8.0.0
 black
+
+# Configurations
+hydra-core
