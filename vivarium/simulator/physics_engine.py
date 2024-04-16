@@ -271,7 +271,20 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
         :return:
         """
         body = state.entities_state.position
-        mask = target_exists_mask[agent_neighs_idx[1, :]]
+        existing_entities_mask = target_exists_mask[agent_neighs_idx[1, :]]
+
+        # Implement a custom color mask here:
+        agents_colors, objects_colors = state.agent_state.color, state.object_state.color
+        colors = jnp.concatenate((agents_colors, objects_colors), axis=0)
+        # Here imagine that our agents only sense red entities (agents or objects)
+        sensed_color = jnp.array([1., 0., 0.])
+        perceived_entities = jnp.all(colors == sensed_color, axis=1)
+        # Pass from shape (n_entities) to (n_agents * n_entities - 1)
+        perceived_entities_mask = perceived_entities[agent_neighs_idx[1, :]]
+        
+        # We combine the existing and perceived entities masks (agent only sees existing entities w right color)
+        mask = existing_entities_mask * perceived_entities_mask
+
         senders, receivers = agent_neighs_idx
         Ra = body.center[senders]
         Rb = body.center[receivers]
@@ -286,6 +299,8 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
 
     def step_fn(state, neighbor, agent_neighs_idx):
         exists_mask = (state.entities_state.exists == 1)  # Only existing entities have effect on others
+        print('step fn')
+        print(f"{exists_mask.shape = }")
         state = state.set(agent_state=compute_prox(state, agent_neighs_idx, target_exists_mask=exists_mask))
         state = state.set(agent_state=sensorimotor(state.agent_state))
         force = force_fn(state, neighbor, exists_mask)
