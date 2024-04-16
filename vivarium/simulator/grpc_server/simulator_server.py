@@ -62,6 +62,11 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
     def IsStarted(self, request, context):
         return simulator_pb2.IsStartedState(is_started=self.simulator.is_started())
+    
+    def LoadScene(self, request, context):
+        with self._lock:
+            self.simulator.load_scene(request.scene)
+        return Empty()
 
     def Stop(self, request, context):
         self.simulator.stop()

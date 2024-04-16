@@ -1,6 +1,5 @@
 from enum import Enum
 from typing import Optional, List, Union
-from collections import OrderedDict
 
 import inspect
 import yaml
@@ -309,6 +308,21 @@ def init_state(
         object_state=objects_state,
         entities_state=entities_state
     )
+
+
+def init_state_from_dict(dictionary: dict):
+    simulator_state = init_simulator_state(**dictionary.simulator)
+
+    agents_state = init_agent_state(simulator_state=simulator_state, **dictionary.agents)
+
+    objects_state = init_object_state(simulator_state=simulator_state, **dictionary.objects)
+
+    entities_state = init_entities_state(simulator_state=simulator_state, **dictionary.entities)
+
+    return init_state(simulator_state = simulator_state,
+                      agents_state = agents_state,
+                      objects_state = objects_state,
+                      entities_state = entities_state)
 
 
 def generate_default_config_files():

@@ -57,3 +57,7 @@ class SimulatorGRPCClient(SimulatorClient):
 
     def is_started(self):
         return self.stub.IsStarted(Empty()).is_started
+
+    def load_scene(self, scene):
+        message = simulator_pb2.Scene(scene=scene)
+        return self.stub.LoadScene(message)

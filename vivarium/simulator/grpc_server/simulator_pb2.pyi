@@ -149,3 +149,9 @@ class IsStartedState(_message.Message):
     IS_STARTED_FIELD_NUMBER: _ClassVar[int]
     is_started: bool
     def __init__(self, is_started: bool = ...) -> None: ...
+
+class Scene(_message.Message):
+    __slots__ = ("scene",)
+    SCENE_FIELD_NUMBER: _ClassVar[int]
+    scene: str
+    def __init__(self, scene: _Optional[str] = ...) -> None: ...

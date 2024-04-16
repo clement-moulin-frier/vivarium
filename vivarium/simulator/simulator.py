@@ -13,8 +13,11 @@ from jax import jit
 from jax import lax
 from jax_md import space, partition, dataclasses
 
+from hydra import compose, initialize
+from omegaconf import OmegaConf
+
 from vivarium.controllers import converters
-from vivarium.simulator.states import EntityType, SimulatorState
+from vivarium.simulator.states import EntityType, SimulatorState, init_state_from_dict
 
 lg = logging.getLogger(__name__)
 
@@ -188,6 +191,14 @@ class Simulator:
         if nested_field in (('simulator_state', 'box_size'), ('simulator_state', 'dt'), ('simulator_state', 'to_jit')):
             self.update_function_update()
 
+    def load_scene(self, scene):
+        with initialize(version_base=None, config_path="../../conf"):
+            args = compose(config_name="config", overrides=[f"scene={scene}"])
+        
+        args = OmegaConf.merge(args.default, args.scene)
+        state = init_state_from_dict(args)
+        self. __init__(state, self.behavior_bank, self.dynamics_fn)
+
 
     # Functions to start, stop, pause
 
@@ -245,7 +256,9 @@ class Simulator:
 
     def load_state(self, state):
         lg.info('load_state')
-        self.__init__(state, self.behavior_bank, self.dynamics_fn)
+        # the pause may be unnecessary
+        with self.pause():
+            self.__init__(state, self.behavior_bank, self.dynamics_fn)
 
     # Neighbor functions
 
