@@ -139,8 +139,12 @@ class State:
 
 
 # Helper function to transform a color string into rgb with matplotlib colors
-def _string_to_rgb(color_str):
-    return jnp.array(list(mcolors.to_rgb(color_str)))
+# TODO : Maybe change the color of the function but not important atm
+def _string_to_rgb_list(color_str):
+    if isinstance(color_str, str):
+        return list(mcolors.to_rgb(color_str))
+    else:
+        return [list(mcolors.to_rgb(color)) for color in color_str]
 
 
 def init_simulator_state(
@@ -258,12 +262,14 @@ def init_agent_state(
         theta_mul: float = 1.,
         prox_dist_max: float = 40.,
         prox_cos_min: float = 0.,
-        color: str = "blue"
+        color: Optional[Union[str, List[str]]] = "blue"
         ) -> AgentState:
     """
     Initialize agent state with given parameters
     """
     max_agents = simulator_state.max_agents[0]
+    rgb_color = _string_to_rgb_list(color)
+    color = jnp.array(rgb_color) if not isinstance(color, list) else jnp.tile(jnp.array(rgb_color), (max_agents, 1))
 
     return AgentState(
         nve_idx=jnp.arange(max_agents, dtype=int),
@@ -276,8 +282,8 @@ def init_agent_state(
         theta_mul=jnp.full((max_agents), theta_mul),
         proxs_dist_max=jnp.full((max_agents), prox_dist_max),
         proxs_cos_min=jnp.full((max_agents), prox_cos_min),
-        color=jnp.tile(_string_to_rgb(color), (max_agents, 1))
-    )
+        color=color
+        )
 
 
 def init_object_state(
@@ -292,7 +298,7 @@ def init_object_state(
     objects_nve_idx = jnp.arange(start_idx, stop_idx, dtype=int)
     return  ObjectState(
         nve_idx=objects_nve_idx,
-        color=jnp.tile(_string_to_rgb(color), (max_objects, 1))
+        color=jnp.tile(jnp.array(_string_to_rgb_list(color)), (max_objects, 1))
     )
 
 
