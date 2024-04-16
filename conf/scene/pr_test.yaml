@@ -1,0 +1,7 @@
+entities:
+  existing_agents: 8
+  existing_objects: 1
+
+agents:
+  color: ['red', 'red', 'red', 'blue', 'blue', 'blue', 'blue', 'blue', 'black', 'black']
+  prox_dist_max: 100.

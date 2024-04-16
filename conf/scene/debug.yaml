@@ -1,0 +1,7 @@
+entities:
+  existing_agents: 5
+  existing_objects: 1
+
+simulator:
+  to_jit: false
+  use_fori_loop: false
