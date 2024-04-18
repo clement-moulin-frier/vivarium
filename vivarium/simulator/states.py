@@ -269,7 +269,7 @@ def init_agent_state(
     """
     max_agents = simulator_state.max_agents[0]
     rgb_color = _string_to_rgb_list(color)
-    color = jnp.array(rgb_color) if not isinstance(color, list) else jnp.tile(jnp.array(rgb_color), (max_agents, 1))
+    color = jnp.array(rgb_color) if not isinstance(color, str) else jnp.tile(jnp.array(rgb_color), (max_agents, 1))
 
     return AgentState(
         nve_idx=jnp.arange(max_agents, dtype=int),

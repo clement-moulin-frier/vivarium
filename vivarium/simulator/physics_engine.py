@@ -299,8 +299,6 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
 
     def step_fn(state, neighbor, agent_neighs_idx):
         exists_mask = (state.entities_state.exists == 1)  # Only existing entities have effect on others
-        print('step fn')
-        print(f"{exists_mask.shape = }")
         state = state.set(agent_state=compute_prox(state, agent_neighs_idx, target_exists_mask=exists_mask))
         state = state.set(agent_state=sensorimotor(state.agent_state))
         force = force_fn(state, neighbor, exists_mask)
