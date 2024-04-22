@@ -45,6 +45,7 @@ class AgentConfig(Config):
     wheel_diameter = param.Number(2.)
     diameter = param.Number(5.)
     speed_mul = param.Number(1.)
+    max_speed = param.Number(10.)
     theta_mul = param.Number(1.)
     proxs_dist_max = param.Number(100., bounds=(0, None))
     proxs_cos_min = param.Number(0., bounds=(-1., 1.))
@@ -75,8 +76,8 @@ class ObjectConfig(Config):
 class SimulatorConfig(Config):
     idx = param.Integer(0, constant=True)
     box_size = param.Number(100., bounds=(0, None))
-    n_agents = param.Integer(10)
-    n_objects = param.Integer(2)
+    max_agents = param.Integer(10)
+    max_objects = param.Integer(2)
     num_steps_lax = param.Integer(4)
     dt = param.Number(0.1)
     freq = param.Number(40., allow_None=True)

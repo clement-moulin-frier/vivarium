@@ -1,8 +1,11 @@
-from typing import Optional, List, Union
 from enum import Enum
+from typing import Optional, List, Union
+from collections import OrderedDict
 
+import inspect
+import yaml
 import matplotlib.colors as mcolors
-import jax.numpy as jnp 
+import jax.numpy as jnp
 
 from jax import random
 from jax_md import util, simulate, rigid_body
@@ -10,7 +13,6 @@ from jax_md.dataclasses import dataclass
 from jax_md.rigid_body import RigidBody
 
 
-# TODO : Add documentation on these classes
 class EntityType(Enum):
     AGENT = 0
     OBJECT = 1
@@ -29,10 +31,11 @@ class StateType(Enum):
     def to_entity_type(self):
         assert self.is_entity()
         return EntityType(self.value)
-    
-# No need to define position, momentum, force, and mass (i.e already in simulate.NVEState)
+
+
+# No need to define position, momentum, force, and mass (i.e already in simulate.EntitiesState)
 @dataclass
-class NVEState(simulate.NVEState):
+class EntitiesState(simulate.NVEState):
     entity_type: util.Array
     entity_idx: util.Array  # idx in XState (e.g. AgentState)
     diameter: util.Array
@@ -46,12 +49,13 @@ class NVEState(simulate.NVEState):
 
 @dataclass
 class AgentState:
-    nve_idx: util.Array  # idx in NVEState
+    nve_idx: util.Array  # idx in EntitiesState
     prox: util.Array
     motor: util.Array
     behavior: util.Array
     wheel_diameter: util.Array
     speed_mul: util.Array
+    max_speed: util.Array
     theta_mul: util.Array
     proxs_dist_max: util.Array
     proxs_cos_min: util.Array
@@ -60,17 +64,16 @@ class AgentState:
 
 @dataclass
 class ObjectState:
-    nve_idx: util.Array  # idx in NVEState
+    nve_idx: util.Array  # idx in EntitiesState
     color: util.Array
 
 
-# TODO : I think it would make more sense to have max_agents, max_objects here instead of n_***
 @dataclass
 class SimulatorState:
     idx: util.Array
     box_size: util.Array
-    n_agents: util.Array
-    n_objects: util.Array
+    max_agents: util.Array
+    max_objects: util.Array
     num_steps_lax: util.Array
     dt: util.Array
     freq: util.Array
@@ -82,7 +85,7 @@ class SimulatorState:
 
     @staticmethod
     def get_type(attr):
-        if attr in ['idx', 'n_agents', 'n_objects', 'num_steps_lax']:
+        if attr in ['idx', 'max_agents', 'max_objects', 'num_steps_lax']:
             return int
         elif attr in ['box_size', 'dt', 'freq', 'neighbor_radius', 'collision_alpha', 'collision_eps']:
             return float
@@ -95,7 +98,7 @@ class SimulatorState:
 @dataclass
 class State:
     simulator_state: SimulatorState
-    nve_state: NVEState
+    entities_state: EntitiesState
     agent_state: AgentState
     object_state: ObjectState
 
@@ -112,26 +115,21 @@ class State:
 
         return res
 
-    # TODO : Should we keep this function because it is duplicated below ? 
-    # def nve_idx(self, etype):
-    #     cond = self.e_cond(etype)
-    #     return compress(range(len(cond)), cond)  # https://stackoverflow.com/questions/21448225/getting-indices-of-true-values-in-a-boolean-list
-
     def nve_idx(self, etype, entity_idx):
         return self.field(etype).nve_idx[entity_idx]
 
     def e_idx(self, etype):
-        return self.nve_state.entity_idx[self.nve_state.entity_type == etype.value]
+        return self.entities_state.entity_idx[self.entities_state.entity_type == etype.value]
 
     def e_cond(self, etype):
-        return self.nve_state.entity_type == etype.value
+        return self.entities_state.entity_type == etype.value
 
     def row_idx(self, field, nve_idx):
-        return nve_idx if field == 'nve_state' else self.nve_state.entity_idx[jnp.array(nve_idx)]
+        return nve_idx if field == 'entities_state' else self.entities_state.entity_idx[jnp.array(nve_idx)]
 
     def __getattr__(self, name):
         def wrapper(e_type):
-            value = getattr(self.nve_state, name)
+            value = getattr(self.entities_state, name)
             if isinstance(value, rigid_body.RigidBody):
                 return rigid_body.RigidBody(center=value.center[self.e_cond(e_type)],
                                             orientation=value.orientation[self.e_cond(e_type)])
@@ -147,8 +145,8 @@ def _string_to_rgb(color_str):
 
 def init_simulator_state(
         box_size: float = 100.,
-        n_agents: int = 10,
-        n_objects: int = 2,
+        max_agents: int = 10,
+        max_objects: int = 2,
         num_steps_lax: int = 4,
         dt: float = 0.1,
         freq: float = 40.,
@@ -163,9 +161,9 @@ def init_simulator_state(
     """
     return SimulatorState(
         idx=jnp.array([0]),
-        box_size=jnp.array([box_size]),                       
-        n_agents=jnp.array([n_agents]),
-        n_objects=jnp.array([n_objects]),
+        box_size=jnp.array([box_size]),              
+        max_agents=jnp.array([max_agents]),
+        max_objects=jnp.array([max_objects]),
         num_steps_lax=jnp.array([num_steps_lax], dtype=int),
         dt=jnp.array([dt], dtype=float),
         freq=jnp.array([freq], dtype=float),
@@ -198,7 +196,8 @@ def _init_existing(n_existing, n_entities):
     return exists_array
 
 
-def init_nve_state(
+# TODO : Add options to have either 1 value or a list for parameters such as diameter, friction ...
+def init_entities_state(
         simulator_state: SimulatorState,
         diameter: float = 5.,
         friction: float = 0.1,
@@ -209,42 +208,41 @@ def init_nve_state(
         existing_agents: Optional[Union[int, List[float], None]] = None,
         existing_objects: Optional[Union[int, List[float], None]] = None,
         seed: int = 0,
-        ) -> NVEState:
+        ) -> EntitiesState:
     """
-    Initialize nve state with given parameters
+    Initialize entities state with given parameters
     """
-    n_agents = simulator_state.n_agents[0]
-    n_objects = simulator_state.n_objects[0]
-    n_entities = n_agents + n_objects
+    max_agents = simulator_state.max_agents[0]
+    max_objects = simulator_state.max_objects[0]
+    n_entities = max_agents + max_objects
 
     key = random.PRNGKey(seed)
-    key_pos, key_or = random.split(key)
-    key_ag, key_obj = random.split(key_pos)
+    key, key_agents_pos, key_objects_pos, key_orientations = random.split(key, 4)
 
     # If we have a list of agents or objects positions, transform it into a jax array, else initialize random positions
-    agents_positions = _init_positions(key_ag, agents_positions, n_agents, simulator_state.box_size)
-    objects_positions = _init_positions(key_obj, objects_positions, n_objects, simulator_state.box_size)
+    agents_positions = _init_positions(key_agents_pos, agents_positions, max_agents, simulator_state.box_size)
+    objects_positions = _init_positions(key_objects_pos, objects_positions, max_objects, simulator_state.box_size)
     # Assign their positions to each entities
     positions = jnp.concatenate((agents_positions, objects_positions))
 
     # Assign random orientations between 0 and 2*pi
-    orientations = random.uniform(key_or, (n_entities,)) * 2 * jnp.pi
+    orientations = random.uniform(key_orientations, (n_entities,)) * 2 * jnp.pi
 
-    agents_entities = jnp.full(n_agents, EntityType.AGENT.value)
-    object_entities = jnp.full(n_objects, EntityType.OBJECT.value)
+    agents_entities = jnp.full(max_agents, EntityType.AGENT.value)
+    object_entities = jnp.full(max_objects, EntityType.OBJECT.value)
     entity_types = jnp.concatenate((agents_entities, object_entities), dtype=int)
 
-    existing_agents = _init_existing(existing_agents, n_agents)
-    existing_objects = _init_existing(existing_objects, n_objects)
+    existing_agents = _init_existing(existing_agents, max_agents)
+    existing_objects = _init_existing(existing_objects, max_objects)
     exists = jnp.concatenate((existing_agents, existing_objects), dtype=int)
 
-    return NVEState(
+    return EntitiesState(
         position=RigidBody(center=positions, orientation=orientations),
         momentum=None,
         force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
         mass=RigidBody(center=jnp.full((n_entities, 1), mass_center), orientation=jnp.full((n_entities), mass_orientation)),
         entity_type=entity_types,
-        entity_idx = jnp.array(list(range(n_agents)) + list(range(n_objects))),
+        entity_idx = jnp.array(list(range(max_agents)) + list(range(max_objects))),
         diameter=jnp.full((n_entities), diameter),
         friction=jnp.full((n_entities), friction),
         exists=exists
@@ -256,6 +254,7 @@ def init_agent_state(
         behavior: int = 1,
         wheel_diameter: float = 2.,
         speed_mul: float = 1.,
+        max_speed: float = 10.,
         theta_mul: float = 1.,
         prox_dist_max: float = 40.,
         prox_cos_min: float = 0.,
@@ -264,19 +263,20 @@ def init_agent_state(
     """
     Initialize agent state with given parameters
     """
-    n_agents = simulator_state.n_agents[0]
+    max_agents = simulator_state.max_agents[0]
 
     return AgentState(
-        nve_idx=jnp.arange(n_agents, dtype=int),
-        prox=jnp.zeros((n_agents, 2)),
-        motor=jnp.zeros((n_agents, 2)),
-        behavior=jnp.full((n_agents), behavior),
-        wheel_diameter=jnp.full((n_agents), wheel_diameter),
-        speed_mul=jnp.full((n_agents), speed_mul),
-        theta_mul=jnp.full((n_agents), theta_mul),
-        proxs_dist_max=jnp.full((n_agents), prox_dist_max),
-        proxs_cos_min=jnp.full((n_agents), prox_cos_min),
-        color=jnp.tile(_string_to_rgb(color), (n_agents, 1))
+        nve_idx=jnp.arange(max_agents, dtype=int),
+        prox=jnp.zeros((max_agents, 2)),
+        motor=jnp.zeros((max_agents, 2)),
+        behavior=jnp.full((max_agents), behavior),
+        wheel_diameter=jnp.full((max_agents), wheel_diameter),
+        speed_mul=jnp.full((max_agents), speed_mul),
+        max_speed=jnp.full((max_agents), max_speed),
+        theta_mul=jnp.full((max_agents), theta_mul),
+        proxs_dist_max=jnp.full((max_agents), prox_dist_max),
+        proxs_cos_min=jnp.full((max_agents), prox_cos_min),
+        color=jnp.tile(_string_to_rgb(color), (max_agents, 1))
     )
 
 
@@ -287,12 +287,12 @@ def init_object_state(
     """
     Initialize object state with given parameters
     """
-    n_agents, n_objects = simulator_state.n_agents[0], simulator_state.n_objects[0]
-    start_idx, stop_idx = n_agents, n_agents + n_objects
+    max_agents, max_objects = simulator_state.max_agents[0], simulator_state.max_objects[0]
+    start_idx, stop_idx = max_agents, max_agents + max_objects
     objects_nve_idx = jnp.arange(start_idx, stop_idx, dtype=int)
     return  ObjectState(
         nve_idx=objects_nve_idx,
-        color=jnp.tile(_string_to_rgb(color), (n_objects, 1))
+        color=jnp.tile(_string_to_rgb(color), (max_objects, 1))
     )
 
 
@@ -300,13 +300,45 @@ def init_state(
         simulator_state: SimulatorState,
         agents_state: AgentState,
         objects_state: ObjectState,
-        nve_state: NVEState
+        entities_state: EntitiesState
         ) -> State:
   
     return State(
         simulator_state=simulator_state,
         agent_state=agents_state,
         object_state=objects_state,
-        nve_state=nve_state
+        entities_state=entities_state
     )
-    
+
+
+def generate_default_config_files():
+    """
+    Generate a default yaml file with all the default arguments in the init_params_fns (see dict below)
+    """
+    init_params_fns = {
+        'simulator': init_simulator_state,
+        'entities': init_entities_state,
+        'agents': init_agent_state,
+        'objects': init_object_state
+    }
+
+    # TODO : Find a way to keep the order in the config_dict (atm ordered by alphebetical order in the yaml file)
+    config_dict = {}
+    for parameter_name, init_parameter_fn in init_params_fns.items():
+        func_sig = inspect.signature(init_parameter_fn)
+        default_args = {param.name: param.default for param in func_sig.parameters.values() if param.default is not inspect._empty}
+        config_dict[parameter_name] = default_args
+
+    # Add a blank line dumper to have a cleaner yaml file
+    class BlankLineDumper(yaml.SafeDumper):
+        # inspired by https://stackoverflow.com/a/44284819/3786245
+        def write_line_break(self, data=None):
+            super().write_line_break(data)
+
+            if len(self.indents) == 1:
+                super().write_line_break()
+
+    yaml_str = yaml.dump(config_dict, Dumper=BlankLineDumper, default_flow_style=False)
+
+    with open('conf/scene/default.yaml', 'w') as f:
+        f.write(yaml_str)

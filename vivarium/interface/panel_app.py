@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 
+import logging
 import numpy as np
 import panel as pn
 
@@ -11,6 +12,7 @@ from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.controllers.panel_controller import PanelController
 from vivarium.simulator.states import EntityType
 
+lg = logging.getLogger(__name__)
 
 pn.extension()
 
@@ -245,7 +247,7 @@ class ObjectManager(EntityManager):
 
 class WindowManager(Parameterized):
     controller = PanelController(client=SimulatorGRPCClient())
-    config_types = [key.name for key in controller.configs.keys()]
+    config_types = [k.name for k, v in controller.configs.items() if v]
     start_toggle = pn.widgets.Toggle(**({"name": "Stop", "value": True} if controller.is_started()
                                         else {"name": "Start", "value": False}),align="center")
     entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=config_types,
@@ -264,7 +266,7 @@ class WindowManager(Parameterized):
                 panel_simulator_config=self.controller.panel_simulator_config,
                 selected=self.controller.selected_entities[etype], etype=etype,
                 state=self.controller.state)
-                for etype, manager_class in self.entity_manager_classes.items()
+                for etype, manager_class in self.entity_manager_classes.items() if len(self.controller.configs[etype.to_state_type()])
         }
 
         self.plot = self.create_plot()
@@ -285,12 +287,8 @@ class WindowManager(Parameterized):
 
 
     def entity_toggle_cb(self, event):
-        """Callback for displaying the configurations columns
-
-        :param event: The event containing the columns to display
-        """
-        for i, t in enumerate(self.config_types):
-            self.config_columns[i].visible = t in event.new
+        for cc in self.config_columns:
+            cc.visible = cc.name in event.new
 
     def update_timestep_cb(self, event):
         """Callback for the timestep of the plot update
@@ -347,16 +345,18 @@ class WindowManager(Parameterized):
         self.config_columns = pn.Row(*
             [pn.Column(
                 pn.pane.Markdown("### SIMULATOR", align="center"),
-                pn.panel(self.controller.panel_simulator_config, name="Visualization configurations"),
-                pn.panel(self.controller.simulator_config, name="Configurations"),
-                visible=False, sizing_mode="scale_height", scroll=True)] +
+                pn.panel(self.controller.panel_simulator_config, name="Visualization configuration"),
+                pn.panel(self.controller.simulator_config, name="Configuration"),
+                visible=False, sizing_mode="scale_height", scroll=True,
+                name="SIMULATOR")] +
             [pn.Column(
                 pn.pane.Markdown(f"### {etype.name}", align="center"),
                 self.controller.selected_entities[etype],
-                pn.panel(self.controller.selected_panel_configs[etype], name="Visualization configurations"),
-                pn.panel(self.controller.selected_configs[etype], name="State configurations"),
-                visible=True, sizing_mode="scale_height", scroll=True)
-            for etype in EntityType])
+                pn.panel(self.controller.selected_panel_configs[etype], name="Visualization configuration"),
+                pn.panel(self.controller.selected_configs[etype], name="State configuration"),
+                visible=True, sizing_mode="scale_height", scroll=True,
+                name=etype.name)
+            for etype in self.entity_managers.keys()])
 
         app = pn.Row(pn.Column(pn.Row(pn.pane.Markdown("### Start/Stop server", align="center"),
                                       self.start_toggle,

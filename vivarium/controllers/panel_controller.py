@@ -45,6 +45,8 @@ class Selected(param.Parameterized):
     def selection_nve_idx(self, nve_idx):
         return nve_idx[np.array(self.selection)].tolist()
 
+    def __len__(self):
+        return len(self.selection)
 
 class PanelController(SimulatorController):
 
@@ -61,7 +63,7 @@ class PanelController(SimulatorController):
         self.pull_selected_panel_configs()
 
         self.update_entity_list()
-        for etype, selected in self.selected_entities.items():
+        for selected in self.selected_entities.values():
             selected.param.watch(self.pull_selected_configs, ['selection'], onlychanged=True, precedence=1)
             selected.param.watch(self.pull_selected_panel_configs, ['selection'], onlychanged=True)
 

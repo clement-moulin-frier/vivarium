@@ -1,0 +1,7 @@
+defaults:
+  - _self_
+  - scene@default: default
+  - scene: default
+
+log_level: INFO
+num_steps: 10

@@ -1,0 +1,36 @@
+agents:
+  behavior: 1
+  color: blue
+  max_speed: 10.0
+  prox_cos_min: 0.0
+  prox_dist_max: 40.0
+  speed_mul: 1.0
+  theta_mul: 1.0
+  wheel_diameter: 2.0
+
+entities:
+  agents_positions: null
+  diameter: 5.0
+  existing_agents: null
+  existing_objects: null
+  friction: 0.1
+  mass_center: 1.0
+  mass_orientation: 0.125
+  objects_positions: null
+  seed: 0
+
+objects:
+  color: red
+
+simulator:
+  box_size: 100.0
+  collision_alpha: 0.5
+  collision_eps: 0.1
+  dt: 0.1
+  freq: 40.0
+  max_agents: 10
+  max_objects: 2
+  neighbor_radius: 100.0
+  num_steps_lax: 4
+  to_jit: true
+  use_fori_loop: false
