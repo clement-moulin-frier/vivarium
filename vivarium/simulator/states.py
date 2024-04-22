@@ -81,6 +81,7 @@ class SimulatorState:
     use_fori_loop: util.Array
     collision_alpha: util.Array
     collision_eps: util.Array
+    has_changed: util.Array
 
     @staticmethod
     def get_type(attr):
@@ -88,7 +89,7 @@ class SimulatorState:
             return int
         elif attr in ['box_size', 'dt', 'freq', 'neighbor_radius', 'collision_alpha', 'collision_eps']:
             return float
-        elif attr in ['to_jit', 'use_fori_loop']:
+        elif attr in ['to_jit', 'use_fori_loop', 'has_changed']:
             return bool
         else:
             raise ValueError(f"Unknown attribute {attr}")
@@ -153,7 +154,8 @@ def init_simulator_state(
         to_jit: bool = True,
         use_fori_loop: bool = False,
         collision_alpha: float = 0.5,
-        collision_eps: float = 0.1
+        collision_eps: float = 0.1,
+        has_changed: bool = False
         ) -> SimulatorState:
     """
     Initialize simulator state with given parameters
@@ -171,7 +173,8 @@ def init_simulator_state(
         to_jit= jnp.array([1*to_jit]),
         use_fori_loop=jnp.array([1*use_fori_loop]),
         collision_alpha=jnp.array([collision_alpha]),
-        collision_eps=jnp.array([collision_eps]))
+        collision_eps=jnp.array([collision_eps]),
+        has_changed=jnp.array([1*has_changed]))
 
 
 def _init_positions(key_pos, positions, n_entities, box_size, n_dims=2):

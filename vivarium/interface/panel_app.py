@@ -243,6 +243,12 @@ class WindowManager(Parameterized):
         for em in self.entity_managers.values():
             em.update_selected_simulator()
         state = self.controller.update_state()
+        if state.simulator_state.has_changed:
+            self = WindowManager()
+            self.controller.update_entity_list()
+            self.plot = self.create_plot()
+            self.app = self.create_app()
+            self.controller.simulator_config.has_changed = False
         self.controller.pull_configs()
         if self.controller.panel_simulator_config.config_update:
             self.controller.pull_selected_configs()

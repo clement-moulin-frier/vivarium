@@ -41,7 +41,8 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         self._lock = Lock()
 
     def GetState(self, request, context):
-        state = self.simulator.state
+        with self._lock:
+            state = self.simulator.state
         return state_to_proto(state)
 
     def GetNVEState(self, request, context):

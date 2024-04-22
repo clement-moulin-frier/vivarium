@@ -29,7 +29,7 @@ class Simulator:
         self.behavior_bank = behavior_bank
         self.dynamics_fn = dynamics_fn
 
-        # TODO: explicitely copy the attributes of simulator_state (prevents linting errors and easier to understand which element is an attriute of the class)
+        # TODO: explicitly copy the attributes of simulator_state (prevents linting errors and easier to understand which element is an attribute of the class)
         all_attrs = [f.name for f in dataclasses.fields(SimulatorState)]
         for attr in all_attrs:
             self.update_attr(attr, SimulatorState.get_type(attr))
@@ -198,6 +198,7 @@ class Simulator:
         args = OmegaConf.merge(args.default, args.scene)
         state = init_state_from_dict(args)
         self. __init__(state, self.behavior_bank, self.dynamics_fn)
+        self.set_state(("simulator_state", "has_changed"), [0], None, jnp.array([True]))
 
 
     # Functions to start, stop, pause

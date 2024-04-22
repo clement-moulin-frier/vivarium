@@ -86,6 +86,8 @@ class SimulatorConfig(Config):
     use_fori_loop = param.Boolean(False)
     collision_eps = param.Number(0.1)
     collision_alpha = param.Number(0.5)
+    has_changed = param.Boolean(False)
+    
 
     def __init__(self, **params):
         super().__init__(**params)

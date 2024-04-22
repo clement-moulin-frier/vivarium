@@ -25,7 +25,8 @@ def proto_to_simulator_state(simulator_state):
                           to_jit=proto_to_ndarray(simulator_state.to_jit).astype(int),
                           use_fori_loop=proto_to_ndarray(simulator_state.use_fori_loop).astype(int),
                           collision_eps=proto_to_ndarray(simulator_state.collision_eps).astype(float),
-                          collision_alpha=proto_to_ndarray(simulator_state.collision_alpha).astype(float)
+                          collision_alpha=proto_to_ndarray(simulator_state.collision_alpha).astype(float),
+                          has_changed=proto_to_ndarray(simulator_state.has_changed).astype(int)
                           )
 
 
@@ -87,7 +88,8 @@ def simulator_state_to_proto(simulator_state):
         to_jit=ndarray_to_proto(simulator_state.to_jit),
         use_fori_loop=ndarray_to_proto(simulator_state.use_fori_loop),
         collision_eps=ndarray_to_proto(simulator_state.collision_eps),
-        collision_alpha=ndarray_to_proto(simulator_state.collision_alpha)
+        collision_alpha=ndarray_to_proto(simulator_state.collision_alpha),
+        has_changed=ndarray_to_proto(simulator_state.has_changed)
     )
 
 

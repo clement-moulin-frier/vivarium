@@ -69,6 +69,7 @@ message SimulatorState {
   NDArray use_fori_loop = 10;
   NDArray collision_eps = 11;
   NDArray collision_alpha = 12;
+  NDArray has_changed = 13;
 }
 
 message EntitiesState {

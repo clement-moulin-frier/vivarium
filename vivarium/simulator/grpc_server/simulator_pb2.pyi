@@ -27,7 +27,7 @@ class RigidBody(_message.Message):
     def __init__(self, center: _Optional[_Union[NDArray, _Mapping]] = ..., orientation: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class SimulatorState(_message.Message):
-    __slots__ = ("idx", "box_size", "max_agents", "max_objects", "num_steps_lax", "dt", "freq", "neighbor_radius", "to_jit", "use_fori_loop", "collision_eps", "collision_alpha")
+    __slots__ = ("idx", "box_size", "max_agents", "max_objects", "num_steps_lax", "dt", "freq", "neighbor_radius", "to_jit", "use_fori_loop", "collision_eps", "collision_alpha", "has_changed")
     IDX_FIELD_NUMBER: _ClassVar[int]
     BOX_SIZE_FIELD_NUMBER: _ClassVar[int]
     MAX_AGENTS_FIELD_NUMBER: _ClassVar[int]
@@ -40,6 +40,7 @@ class SimulatorState(_message.Message):
     USE_FORI_LOOP_FIELD_NUMBER: _ClassVar[int]
     COLLISION_EPS_FIELD_NUMBER: _ClassVar[int]
     COLLISION_ALPHA_FIELD_NUMBER: _ClassVar[int]
+    HAS_CHANGED_FIELD_NUMBER: _ClassVar[int]
     idx: NDArray
     box_size: NDArray
     max_agents: NDArray
@@ -52,7 +53,8 @@ class SimulatorState(_message.Message):
     use_fori_loop: NDArray
     collision_eps: NDArray
     collision_alpha: NDArray
-    def __init__(self, idx: _Optional[_Union[NDArray, _Mapping]] = ..., box_size: _Optional[_Union[NDArray, _Mapping]] = ..., max_agents: _Optional[_Union[NDArray, _Mapping]] = ..., max_objects: _Optional[_Union[NDArray, _Mapping]] = ..., num_steps_lax: _Optional[_Union[NDArray, _Mapping]] = ..., dt: _Optional[_Union[NDArray, _Mapping]] = ..., freq: _Optional[_Union[NDArray, _Mapping]] = ..., neighbor_radius: _Optional[_Union[NDArray, _Mapping]] = ..., to_jit: _Optional[_Union[NDArray, _Mapping]] = ..., use_fori_loop: _Optional[_Union[NDArray, _Mapping]] = ..., collision_eps: _Optional[_Union[NDArray, _Mapping]] = ..., collision_alpha: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
+    has_changed: NDArray
+    def __init__(self, idx: _Optional[_Union[NDArray, _Mapping]] = ..., box_size: _Optional[_Union[NDArray, _Mapping]] = ..., max_agents: _Optional[_Union[NDArray, _Mapping]] = ..., max_objects: _Optional[_Union[NDArray, _Mapping]] = ..., num_steps_lax: _Optional[_Union[NDArray, _Mapping]] = ..., dt: _Optional[_Union[NDArray, _Mapping]] = ..., freq: _Optional[_Union[NDArray, _Mapping]] = ..., neighbor_radius: _Optional[_Union[NDArray, _Mapping]] = ..., to_jit: _Optional[_Union[NDArray, _Mapping]] = ..., use_fori_loop: _Optional[_Union[NDArray, _Mapping]] = ..., collision_eps: _Optional[_Union[NDArray, _Mapping]] = ..., collision_alpha: _Optional[_Union[NDArray, _Mapping]] = ..., has_changed: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class EntitiesState(_message.Message):
     __slots__ = ("position", "momentum", "force", "mass", "diameter", "entity_type", "entity_idx", "friction", "exists")
