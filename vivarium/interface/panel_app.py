@@ -67,7 +67,7 @@ class EntityManager:
         raise NotImplementedError()
 
     def update_cds(self, state):
-        """Updates the ColumnDataSource with new data
+        """Updates the ColumnDataSource with new data from server
 
         :param state: The state coming from the server
         """
