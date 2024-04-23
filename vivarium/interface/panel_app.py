@@ -41,23 +41,45 @@ class EntityManager:
             self.config[i].param.watch(self.hide_non_existing, "exists", onlychanged=True)
 
     def drag_cb(self, attr, old, new):
+        """Callback for the drag & drop of entities
+
+        :param attr: (unused)
+        :param old: (unused)
+        :param new: The event containing the new positions of the entities
+        """
         for i, c in enumerate(self.config):
             c.x_position = new['x'][i]
             c.y_position = new['y'][i]
 
     @contextmanager
     def no_drag_cb(self):
+        """Prevent the CDS from updating the configs when the change comes from the
+        server
+        """
         self.cds.remove_on_change('data', self.drag_cb)
         yield
         self.cds.on_change('data', self.drag_cb)
 
     def get_cds_data(self, state):
+        """Update the ColumnDataSource with the new data
+
+        :param state: The state coming from the server
+        :return: Data dictionary for the ColumnDataSource
+        """
         raise NotImplementedError()
 
     def update_cds(self, state):
+        """Updates the ColumnDataSource with new data from server
+
+        :param state: The state coming from the server
+        """
         self.cds.data.update(self.get_cds_data(state))
 
     def create_cds_view(self):
+        """Creates a ColumnDataSource view for each visibility attribute
+
+        :return: A dictionary of ColumnDataSource views for each visibility attribute
+        """
         # For each attribute in the panel config, create a filter
         # that is a logical AND of the visibility and the attribute
         return {
@@ -67,20 +89,40 @@ class EntityManager:
         }
 
     def update_cds_view(self, event):
+        """Updates the view of the ColumnDataSource if the visibility of an entity
+        changes
+
+        :param event: The event containing the changed value
+        """
         n = event.name
         for attr in [n] if n != "visible" else self.panel_configs[0].param_names():
             f = [getattr(pc, attr) and pc.visible for pc in self.panel_configs]
             self.cds_view[attr].filter = BooleanFilter(f)
 
     def update_selected_plot(self, event):
+        """Updates the selected entities in the plot
+
+        :param event: The event containing the new selected entities
+        """
         self.cds.selected.indices = event.new
 
     def hide_all_non_existing(self, event):
+        """Hides or shows all the entities that do not exist according to the global
+        visibility of non-existing entities
+
+        :param event: The event containing the new global "visibility of non-existing
+        entities" value
+        """
         for i, pc in enumerate(self.panel_configs):
             if not self.config[i].exists:
                 pc.visible = not event.new
 
     def hide_non_existing(self, event):
+        """Hides or shows an entity that does not exist depending on the global
+        visibility of non-existing entities
+
+        :param event: The event containing the new existence value
+        """
         if not self.panel_simulator_config.hide_non_existing:
             return
         idx = self.config.index(event.obj)
@@ -88,11 +130,18 @@ class EntityManager:
 
 
     def update_selected_simulator(self):
+        """Updates the list of selected entities in the Selection list
+        """
         indices = self.cds.selected.indices
         if len(indices) > 0 and indices != self.selected.selection:
             self.selected.selection = indices
 
     def plot(self, fig: figure):
+        """Plot the objects on the bokeh figure
+
+        :param fig: A bokeh figure
+        :return: The figure with the objects plotted
+        """
         raise NotImplementedError()
 
 
@@ -205,6 +254,7 @@ class WindowManager(Parameterized):
                                            align="center", value=config_types[1:])
     update_switch = pn.widgets.Switch(name="Update plot", value=True, align="center")
     update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=1, start=1, end=1000)
+    scene_loader = pn.widgets.FileInput(accept=".yml", name="Load scene", align="center")
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.entity_manager_classes = {EntityType.AGENT: AgentManager,
@@ -224,6 +274,10 @@ class WindowManager(Parameterized):
         self.set_callbacks()
 
     def start_toggle_cb(self, event):
+        """Callback for the start/stop button
+
+        :param event: The event for the new value of the button
+        """
         if event.new != self.controller.is_started():
             if event.new:
                 self.controller.start()
@@ -237,9 +291,15 @@ class WindowManager(Parameterized):
             cc.visible = cc.name in event.new
 
     def update_timestep_cb(self, event):
+        """Callback for the timestep of the plot update
+
+        :param event: The event for the new value of the timestep
+        """
         self.pcb_plot.period = event.new
 
     def update_plot_cb(self):
+        """Periodic callback for the plot update
+        """
         for em in self.entity_managers.values():
             em.update_selected_simulator()
         state = self.controller.update_state()
@@ -257,12 +317,20 @@ class WindowManager(Parameterized):
                 em.update_cds(state)
 
     def update_switch_cb(self, event):
+        """Callback for the plot update switch
+
+        :param event: The event for the new value of the switch
+        """
         if event.new and not self.pcb_plot.running:
             self.pcb_plot.start()
         elif not event.new and self.pcb_plot.running:
             self.pcb_plot.stop()
 
     def create_plot(self):
+        """Creates a bokeh plot for the simulator
+
+        :return: A bokeh plot
+        """
         p_tools = "crosshair,pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
         p = figure(tools=p_tools, active_drag="box_select")
         p.axis.major_label_text_font_size = "24px"
@@ -276,6 +344,10 @@ class WindowManager(Parameterized):
         return p
 
     def create_app(self):
+        """Creates a panel app
+
+        :return: the panel app
+        """
         self.config_columns = pn.Row(*
             [pn.Column(
                 pn.pane.Markdown("### SIMULATOR", align="center"),
@@ -293,7 +365,9 @@ class WindowManager(Parameterized):
             for etype in self.entity_managers.keys()])
 
         app = pn.Row(pn.Column(pn.Row(pn.pane.Markdown("### Start/Stop server", align="center"),
-                                      self.start_toggle),
+                                      self.start_toggle,
+                                      pn.pane.Markdown("### Load scene", align="center"),
+                                      self.scene_loader),
                                pn.Row(pn.pane.Markdown("### Start/Stop update", align="center"),
                                       self.update_switch, self.update_timestep),
                                pn.panel(self.plot)),
@@ -302,7 +376,9 @@ class WindowManager(Parameterized):
         return app
 
     def set_callbacks(self):
-        # putting directly the slider value causes bugs on some OS
+        """
+        Set the callbacks for all the widgets in the app
+        """
         self.pcb_plot = pn.state.add_periodic_callback(self.update_plot_cb,
                                                        self.update_timestep.value)
         self.entity_toggle.param.watch(self.entity_toggle_cb, "value")
