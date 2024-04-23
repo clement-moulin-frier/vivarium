@@ -40,6 +40,7 @@ service SimulatorServer {
 
   rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 
+  rpc LoadScene(Scene) returns (google.protobuf.Empty) {}
 }
 
 message AgentIdx {
@@ -68,6 +69,7 @@ message SimulatorState {
   NDArray use_fori_loop = 10;
   NDArray collision_eps = 11;
   NDArray collision_alpha = 12;
+  NDArray has_changed = 13;
 }
 
 message EntitiesState {
@@ -123,4 +125,8 @@ message AddAgentInput {
 
 message IsStartedState {
   bool is_started = 1;
+}
+
+message Scene {
+  string scene = 1;
 }

@@ -41,7 +41,8 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         self._lock = Lock()
 
     def GetState(self, request, context):
-        state = self.simulator.state
+        with self._lock:
+            state = self.simulator.state
         return state_to_proto(state)
 
     def GetNVEState(self, request, context):
@@ -62,6 +63,11 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
     def IsStarted(self, request, context):
         return simulator_pb2.IsStartedState(is_started=self.simulator.is_started())
+    
+    def LoadScene(self, request, context):
+        with self._lock:
+            self.simulator.load_scene(request.scene)
+        return Empty()
 
     def Stop(self, request, context):
         self.simulator.stop()

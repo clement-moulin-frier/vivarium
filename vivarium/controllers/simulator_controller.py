@@ -104,6 +104,10 @@ class SimulatorController(param.Parameterized):
         self.state = self.client.get_nve_state()
         return self.state
 
+    def load_scene(self, scene):
+        self.client.load_scene(scene)
+        self.client.state = self.client.get_state()
+        self.__init__(client=self.client)
 
 if __name__ == "__main__":
 

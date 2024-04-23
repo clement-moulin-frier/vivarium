@@ -34,3 +34,4 @@ simulator:
   num_steps_lax: 4
   to_jit: true
   use_fori_loop: false
+  has_changed: false

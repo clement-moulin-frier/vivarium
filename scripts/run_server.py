@@ -1,14 +1,12 @@
 import logging
 import hydra
 
+import hydra.core
+import hydra.core.global_hydra
 from omegaconf import DictConfig, OmegaConf
 
 from vivarium.simulator import behaviors
-from vivarium.simulator.states import init_simulator_state
-from vivarium.simulator.states import init_agent_state
-from vivarium.simulator.states import init_object_state
-from vivarium.simulator.states import init_entities_state
-from vivarium.simulator.states import init_state
+from vivarium.simulator.states import init_state_from_dict
 from vivarium.simulator.simulator import Simulator
 from vivarium.simulator.physics_engine import dynamics_rigid
 from vivarium.simulator.grpc_server.simulator_server import serve
@@ -21,22 +19,13 @@ def main(cfg: DictConfig = None) -> None:
 
     args = OmegaConf.merge(cfg.default, cfg.scene)
 
-    simulator_state = init_simulator_state(**args.simulator)
-
-    agents_state = init_agent_state(simulator_state=simulator_state, **args.agents)
-
-    objects_state = init_object_state(simulator_state=simulator_state, **args.objects)
-
-    entities_state = init_entities_state(simulator_state=simulator_state, **args.entities)
-
-    state = init_state(
-        simulator_state=simulator_state,
-        agents_state=agents_state,
-        objects_state=objects_state,
-        entities_state=entities_state
-        )
+    state = init_state_from_dict(args)
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
+
+    # necessary to be able to load other scenes
+    glob = hydra.core.global_hydra.GlobalHydra()
+    glob.clear()
 
     lg.info('Simulator server started')
     serve(simulator)
