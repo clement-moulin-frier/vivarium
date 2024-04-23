@@ -303,6 +303,7 @@ class WindowManager(Parameterized):
         for em in self.entity_managers.values():
             em.update_selected_simulator()
         state = self.controller.update_state()
+        # TODO: change this part to use a function, that could be reused by the load button
         if state.simulator_state.has_changed:
             self = WindowManager()
             self.controller.update_entity_list()
