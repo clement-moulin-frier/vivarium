@@ -296,7 +296,7 @@ def init_object_state(
     )
 
 
-def init_state(
+def _init_state(
         simulator_state: SimulatorState,
         agents_state: AgentState,
         objects_state: ObjectState,
@@ -309,6 +309,30 @@ def init_state(
         object_state=objects_state,
         entities_state=entities_state
     )
+
+def init_state(args=None):
+    # Use default parameters of functions if user didn't provide input
+    if not args:
+        args = {}
+
+    simulator_args = args.get('simulator', {})
+    agents_args = args.get('agents', {})
+    objects_args = args.get('agents', {})
+    entities_args = args.get('agents', {})
+
+    simulator_state = init_simulator_state(**simulator_args)
+    agents_state = init_agent_state(simulator_state=simulator_state, **agents_args)
+    objects_state = init_object_state(simulator_state=simulator_state, **objects_args)
+    entities_state = init_entities_state(simulator_state=simulator_state, **entities_args)
+
+    state = _init_state(
+        simulator_state=simulator_state,
+        agents_state=agents_state,
+        objects_state=objects_state,
+        entities_state=entities_state
+        )
+    
+    return state
 
 
 def generate_default_config_files():
