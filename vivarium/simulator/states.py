@@ -317,8 +317,8 @@ def init_state(args=None):
 
     simulator_args = args.get('simulator', {})
     agents_args = args.get('agents', {})
-    objects_args = args.get('agents', {})
-    entities_args = args.get('agents', {})
+    objects_args = args.get('objects', {})
+    entities_args = args.get('entities', {})
 
     simulator_state = init_simulator_state(**simulator_args)
     agents_state = init_agent_state(simulator_state=simulator_state, **agents_args)
