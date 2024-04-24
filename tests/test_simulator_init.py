@@ -4,18 +4,28 @@ from vivarium.simulator.states import init_agent_state
 from vivarium.simulator.states import init_object_state
 from vivarium.simulator.states import init_entities_state
 from vivarium.simulator.states import init_state
+from vivarium.simulator.states import _init_state
 from vivarium.simulator.simulator import Simulator
 from vivarium.simulator.physics_engine import dynamics_rigid
 
 
-def test_init_simulator_no_args():
+
+def test_init_simulator_no_args2():
+    """ Test the initialization of state without arguments """
+    state = init_state()
+    simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
+
+    assert simulator
+
+
+def test_init_simulator_helper_fns():
     """ Test the initialization of state without arguments """
     simulator_state = init_simulator_state()
     agents_state = init_agent_state(simulator_state=simulator_state)
     objects_state = init_object_state(simulator_state=simulator_state)
     entities_state = init_entities_state(simulator_state=simulator_state)
 
-    state = init_state(
+    state = _init_state(
         simulator_state=simulator_state,
         agents_state=agents_state,
         objects_state=objects_state,
@@ -72,7 +82,7 @@ def test_init_simulator_args():
         simulator_state,
         color=color)
 
-    state = init_state(
+    state = _init_state(
         simulator_state=simulator_state,
         agents_state=agent_state,
         objects_state=object_state,
