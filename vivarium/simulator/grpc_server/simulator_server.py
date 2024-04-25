@@ -45,8 +45,8 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return state_to_proto(state)
 
     def GetNVEState(self, request, context):
-        entities_state = self.simulator.state.entities_state
-        return nve_state_to_proto(entities_state)
+        entity_state = self.simulator.state.entity_state
+        return nve_state_to_proto(entity_state)
 
     def GetAgentState(self, request, context):
         agent_state = self.simulator.state.agent_state

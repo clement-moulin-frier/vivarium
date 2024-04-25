@@ -2,7 +2,7 @@ from vivarium.simulator import behaviors
 from vivarium.simulator.states import init_simulator_state
 from vivarium.simulator.states import init_agent_state
 from vivarium.simulator.states import init_object_state
-from vivarium.simulator.states import init_entities_state
+from vivarium.simulator.states import init_entity_state
 from vivarium.simulator.states import init_state
 from vivarium.simulator.states import _init_state
 from vivarium.simulator.simulator import Simulator
@@ -23,13 +23,13 @@ def test_init_simulator_helper_fns():
     simulator_state = init_simulator_state()
     agents_state = init_agent_state(simulator_state=simulator_state)
     objects_state = init_object_state(simulator_state=simulator_state)
-    entities_state = init_entities_state(simulator_state=simulator_state)
+    entity_state = init_entity_state(simulator_state=simulator_state)
 
     state = _init_state(
         simulator_state=simulator_state,
         agents_state=agents_state,
         objects_state=objects_state,
-        entities_state=entities_state
+        entity_state=entity_state
         )
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
@@ -63,7 +63,7 @@ def test_init_simulator_args():
         collision_eps=col_eps,
         collision_alpha=col_alpha)
 
-    entities_state = init_entities_state(
+    entity_state = init_entity_state(
         simulator_state,
         diameter=diameter,
         friction=friction)
@@ -86,7 +86,7 @@ def test_init_simulator_args():
         simulator_state=simulator_state,
         agents_state=agent_state,
         objects_state=object_state,
-        entities_state=entities_state)
+        entity_state=entity_state)
 
     simulator = Simulator(state, behaviors.behavior_bank, dynamics_rigid)
 
