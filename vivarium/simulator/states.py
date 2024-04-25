@@ -1,6 +1,5 @@
 from enum import Enum
 from typing import Optional, List, Union
-from collections import OrderedDict
 
 import inspect
 import yaml
@@ -186,6 +185,7 @@ def _init_positions(key_pos, positions, n_entities, box_size, n_dims=2):
     return positions
 
 def _init_existing(n_existing, n_entities):
+    # Here n_entities = max_agents or max_objects
     if n_existing:
         assert n_existing <= n_entities
         existing_arr = jnp.ones((n_existing))
