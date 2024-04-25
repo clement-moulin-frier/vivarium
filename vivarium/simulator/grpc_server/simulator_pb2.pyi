@@ -54,7 +54,7 @@ class SimulatorState(_message.Message):
     collision_alpha: NDArray
     def __init__(self, idx: _Optional[_Union[NDArray, _Mapping]] = ..., box_size: _Optional[_Union[NDArray, _Mapping]] = ..., max_agents: _Optional[_Union[NDArray, _Mapping]] = ..., max_objects: _Optional[_Union[NDArray, _Mapping]] = ..., num_steps_lax: _Optional[_Union[NDArray, _Mapping]] = ..., dt: _Optional[_Union[NDArray, _Mapping]] = ..., freq: _Optional[_Union[NDArray, _Mapping]] = ..., neighbor_radius: _Optional[_Union[NDArray, _Mapping]] = ..., to_jit: _Optional[_Union[NDArray, _Mapping]] = ..., use_fori_loop: _Optional[_Union[NDArray, _Mapping]] = ..., collision_eps: _Optional[_Union[NDArray, _Mapping]] = ..., collision_alpha: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
-class EntitiesState(_message.Message):
+class EntityState(_message.Message):
     __slots__ = ("position", "momentum", "force", "mass", "diameter", "entity_type", "entity_idx", "friction", "exists")
     POSITION_FIELD_NUMBER: _ClassVar[int]
     MOMENTUM_FIELD_NUMBER: _ClassVar[int]
@@ -113,16 +113,16 @@ class ObjectState(_message.Message):
     def __init__(self, nve_idx: _Optional[_Union[NDArray, _Mapping]] = ..., custom_field: _Optional[_Union[NDArray, _Mapping]] = ..., color: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class State(_message.Message):
-    __slots__ = ("simulator_state", "entities_state", "agent_state", "object_state")
+    __slots__ = ("simulator_state", "entity_state", "agent_state", "object_state")
     SIMULATOR_STATE_FIELD_NUMBER: _ClassVar[int]
-    ENTITIES_STATE_FIELD_NUMBER: _ClassVar[int]
+    ENTITY_STATE_FIELD_NUMBER: _ClassVar[int]
     AGENT_STATE_FIELD_NUMBER: _ClassVar[int]
     OBJECT_STATE_FIELD_NUMBER: _ClassVar[int]
     simulator_state: SimulatorState
-    entities_state: EntitiesState
+    entity_state: EntityState
     agent_state: AgentState
     object_state: ObjectState
-    def __init__(self, simulator_state: _Optional[_Union[SimulatorState, _Mapping]] = ..., entities_state: _Optional[_Union[EntitiesState, _Mapping]] = ..., agent_state: _Optional[_Union[AgentState, _Mapping]] = ..., object_state: _Optional[_Union[ObjectState, _Mapping]] = ...) -> None: ...
+    def __init__(self, simulator_state: _Optional[_Union[SimulatorState, _Mapping]] = ..., entity_state: _Optional[_Union[EntityState, _Mapping]] = ..., agent_state: _Optional[_Union[AgentState, _Mapping]] = ..., object_state: _Optional[_Union[ObjectState, _Mapping]] = ...) -> None: ...
 
 class StateChange(_message.Message):
     __slots__ = ("nve_idx", "col_idx", "nested_field", "value")

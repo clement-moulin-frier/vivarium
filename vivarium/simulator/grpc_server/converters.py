@@ -3,12 +3,12 @@ from jax_md.rigid_body import RigidBody
 import simulator_pb2
 
 from vivarium.simulator.grpc_server.numproto.numproto import proto_to_ndarray, ndarray_to_proto
-from vivarium.simulator.states import State, SimulatorState, EntitiesState, AgentState, ObjectState
+from vivarium.simulator.states import State, SimulatorState, EntityState, AgentState, ObjectState
 
 
 def proto_to_state(state):
     return State(simulator_state=proto_to_simulator_state(state.simulator_state),
-                 entities_state=proto_to_nve_state(state.entities_state),
+                 entity_state=proto_to_nve_state(state.entity_state),
                  agent_state=proto_to_agent_state(state.agent_state),
                  object_state=proto_to_object_state(state.object_state))
 
@@ -29,20 +29,20 @@ def proto_to_simulator_state(simulator_state):
                           )
 
 
-def proto_to_nve_state(entities_state):
-    return EntitiesState(position=RigidBody(center=proto_to_ndarray(entities_state.position.center).astype(float),
-                                       orientation=proto_to_ndarray(entities_state.position.orientation).astype(float)),
-                    momentum=RigidBody(center=proto_to_ndarray(entities_state.momentum.center).astype(float),
-                                       orientation=proto_to_ndarray(entities_state.momentum.orientation).astype(float)),
-                    force=RigidBody(center=proto_to_ndarray(entities_state.force.center).astype(float),
-                                    orientation=proto_to_ndarray(entities_state.force.orientation).astype(float)),
-                    mass=RigidBody(center=proto_to_ndarray(entities_state.mass.center).astype(float),
-                                   orientation=proto_to_ndarray(entities_state.mass.orientation).astype(float)),
-                    entity_type=proto_to_ndarray(entities_state.entity_type).astype(int),
-                    entity_idx=proto_to_ndarray(entities_state.entity_idx).astype(int),
-                    diameter=proto_to_ndarray(entities_state.diameter).astype(float),
-                    friction=proto_to_ndarray(entities_state.friction).astype(float),
-                    exists=proto_to_ndarray(entities_state.exists).astype(int)
+def proto_to_nve_state(entity_state):
+    return EntityState(position=RigidBody(center=proto_to_ndarray(entity_state.position.center).astype(float),
+                                       orientation=proto_to_ndarray(entity_state.position.orientation).astype(float)),
+                    momentum=RigidBody(center=proto_to_ndarray(entity_state.momentum.center).astype(float),
+                                       orientation=proto_to_ndarray(entity_state.momentum.orientation).astype(float)),
+                    force=RigidBody(center=proto_to_ndarray(entity_state.force.center).astype(float),
+                                    orientation=proto_to_ndarray(entity_state.force.orientation).astype(float)),
+                    mass=RigidBody(center=proto_to_ndarray(entity_state.mass.center).astype(float),
+                                   orientation=proto_to_ndarray(entity_state.mass.orientation).astype(float)),
+                    entity_type=proto_to_ndarray(entity_state.entity_type).astype(int),
+                    entity_idx=proto_to_ndarray(entity_state.entity_idx).astype(int),
+                    diameter=proto_to_ndarray(entity_state.diameter).astype(float),
+                    friction=proto_to_ndarray(entity_state.friction).astype(float),
+                    exists=proto_to_ndarray(entity_state.exists).astype(int)
                     )
 
 
@@ -69,7 +69,7 @@ def proto_to_object_state(object_state):
 
 def state_to_proto(state):
     return simulator_pb2.State(simulator_state=simulator_state_to_proto(state.simulator_state),
-                               entities_state=nve_state_to_proto(state.entities_state),
+                               entity_state=nve_state_to_proto(state.entity_state),
                                agent_state=agent_state_to_proto(state.agent_state),
                                object_state=object_state_to_proto(state.object_state))
 
@@ -91,20 +91,20 @@ def simulator_state_to_proto(simulator_state):
     )
 
 
-def nve_state_to_proto(entities_state):
-    return simulator_pb2.EntitiesState(position=simulator_pb2.RigidBody(center=ndarray_to_proto(entities_state.position.center),
-                                                                   orientation=ndarray_to_proto(entities_state.position.orientation)),
-                                  momentum=simulator_pb2.RigidBody(center=ndarray_to_proto(entities_state.momentum.center),
-                                                                   orientation=ndarray_to_proto(entities_state.momentum.orientation)),
-                                  force=simulator_pb2.RigidBody(center=ndarray_to_proto(entities_state.force.center),
-                                                                orientation=ndarray_to_proto(entities_state.force.orientation)),
-                                  mass=simulator_pb2.RigidBody(center=ndarray_to_proto(entities_state.mass.center),
-                                                               orientation=ndarray_to_proto(entities_state.mass.orientation)),
-                                  entity_type=ndarray_to_proto(entities_state.entity_type),
-                                  entity_idx=ndarray_to_proto(entities_state.entity_idx),
-                                  diameter=ndarray_to_proto(entities_state.diameter),
-                                  friction=ndarray_to_proto(entities_state.friction),
-                                  exists=ndarray_to_proto(entities_state.exists)
+def nve_state_to_proto(entity_state):
+    return simulator_pb2.EntityState(position=simulator_pb2.RigidBody(center=ndarray_to_proto(entity_state.position.center),
+                                                                   orientation=ndarray_to_proto(entity_state.position.orientation)),
+                                  momentum=simulator_pb2.RigidBody(center=ndarray_to_proto(entity_state.momentum.center),
+                                                                   orientation=ndarray_to_proto(entity_state.momentum.orientation)),
+                                  force=simulator_pb2.RigidBody(center=ndarray_to_proto(entity_state.force.center),
+                                                                orientation=ndarray_to_proto(entity_state.force.orientation)),
+                                  mass=simulator_pb2.RigidBody(center=ndarray_to_proto(entity_state.mass.center),
+                                                               orientation=ndarray_to_proto(entity_state.mass.orientation)),
+                                  entity_type=ndarray_to_proto(entity_state.entity_type),
+                                  entity_idx=ndarray_to_proto(entity_state.entity_idx),
+                                  diameter=ndarray_to_proto(entity_state.diameter),
+                                  friction=ndarray_to_proto(entity_state.friction),
+                                  exists=ndarray_to_proto(entity_state.exists)
                                   )
 
 
