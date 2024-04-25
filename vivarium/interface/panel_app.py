@@ -204,7 +204,7 @@ class WindowManager(Parameterized):
     entity_toggle = pn.widgets.ToggleGroup(name="EntityToggle", options=config_types,
                                            align="center", value=config_types[1:])
     update_switch = pn.widgets.Switch(name="Update plot", value=True, align="center")
-    update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=1, start=1, end=1000)
+    update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=10, start=1, end=1000)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.entity_manager_classes = {EntityType.AGENT: AgentManager,

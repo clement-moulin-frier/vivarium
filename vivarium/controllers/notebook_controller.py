@@ -1,8 +1,9 @@
 import math
 import threading
 
-import numpy as np
 import logging
+import time
+import numpy as np
 
 from vivarium.controllers.simulator_controller import SimulatorController
 from vivarium.simulator.states import StateType, EntityType
@@ -13,6 +14,7 @@ class Entity:
     def __init__(self, config):
         self.config = config
         self._routines = {}
+        self.user_events = {}
 
     def __getattr__(self, item):
         if item in self.config.param_names():
@@ -22,7 +24,8 @@ class Entity:
 
     def __setattr__(self, item, val):
         if item != 'config' and item in self.config.param_names():
-            return setattr(self.config, item, val)
+            self.user_events[item] = val
+            return
         else:
             return super().__setattr__(item, val)
 
@@ -46,7 +49,10 @@ class Agent(Entity):
         self.config.behavior = 'manual'
         self.etype = EntityType.AGENT
 
+        self.stop_motors()
+
         self.behaviors = {}
+        self.active_behaviors = {}
 
     def sensors(self):
         return [self.config.left_prox, self.config.right_prox]
@@ -55,23 +61,53 @@ class Agent(Entity):
         self.behaviors[name or behavior_fn.__name__] = (behavior_fn, weight)
 
     def detach_behavior(self, name):
-        del self.behaviors[name]
+        n = name.__name__ if hasattr(name, "__name__") else name
+        if n in self.behaviors:
+            del self.behaviors[n]
+        if n in self.active_behaviors:
+            del self.active_behaviors[n]
 
     def detach_all_behaviors(self):
         self.behaviors = {}
 
-    def behave(self):
-        if len(self.behaviors) == 0:
-            motors = [0., 0.]
-        else:
-            total_weights = 0.
-            total_motor = np.zeros(2)
-            for fn, w in self.behaviors.values():
-                total_motor += w * np.array(fn(self))
-                total_weights += w
-            motors = total_motor / total_weights
-        self.left_motor, self.right_motor = motors
+    def start_behavior(self, name):
+        n = name.__name__ if hasattr(name, "__name__") else name
+        self.active_behaviors[n] = self.behaviors[n]
 
+    def start_all_behaviors(self):
+        for n in self.behaviors:
+            self.active_behaviors[n] = self.behaviors[n]
+
+    def stop_behavior(self, name):
+        n = name.__name__ if hasattr(name, "__name__") else name
+        del self.active_behaviors[n]
+
+    def check_behaviors(self):
+        if len(self.behaviors) == 0:
+            print("No behaviors attached")
+        else:
+            print(f"available behaviors: {self.behaviors.keys()}")
+    
+    def check_active_behaviors(self):
+        if len(self.active_behaviors) == 0:
+            print("No active behaviors")
+        else:
+            print(f"active behaviors: {self.active_behaviors.keys()}")
+
+    def behave(self):
+        if len(self.active_behaviors) == 0:
+            return
+        total_weights = 0.
+        total_motor = np.zeros(2)
+        for fn, w in self.active_behaviors.values():
+            total_motor += w * np.array(fn(self))
+            total_weights += w
+        motors = total_motor / total_weights
+        self.left_motor, self.right_motor = motors
+        
+    def stop_motors(self):
+        self.left_motor = 0
+        self.right_motor = 0
 
 class Object(Entity):
     def __init__(self, config):
@@ -92,11 +128,13 @@ class NotebookController(SimulatorController):
             self.all_entities.extend(getattr(self, f'{etype.name.lower()}s'))
         self.from_stream = True
         self.configs[StateType.SIMULATOR][0].freq = -1
+        self.set_all_user_events()
         self._is_running = False
+        self.client.stop()
 
     def run(self, threaded=False, num_steps=math.inf):
-        if self.is_started():
-            raise Exception("Simulator is already started")
+        if self._is_running:
+            raise RuntimeError("Simulator is already started")
         self._is_running = True
         if threaded:
             threading.Thread(target=self._run).start()
@@ -111,6 +149,7 @@ class NotebookController(SimulatorController):
                     e.routine_step()
                 for ag in self.agents:
                     ag.behave()
+                self.set_all_user_events()
             self.state = self.client.step()
             self.pull_configs()
 
@@ -119,6 +158,15 @@ class NotebookController(SimulatorController):
 
     def stop(self):
         self._is_running = False
+
+    def set_all_user_events(self):
+        for e in self.all_entities:
+            for k, v in e.user_events.items():
+                setattr(e.config, k, v)
+            e.user_events = {}
+
+    def wait(self, seconds):
+        time.sleep(seconds)
 
 
 if __name__ == "__main__":
