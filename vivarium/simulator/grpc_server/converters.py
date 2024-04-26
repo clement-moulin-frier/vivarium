@@ -48,6 +48,8 @@ def proto_to_nve_state(entity_state):
 
 def proto_to_agent_state(agent_state):
     return AgentState(nve_idx=proto_to_ndarray(agent_state.nve_idx).astype(int),
+                      proximity_map_dist=proto_to_ndarray(agent_state.proximity_map_dist).astype(float),
+                      proximity_map_theta=proto_to_ndarray(agent_state.proximity_map_theta).astype(float),
                       prox=proto_to_ndarray(agent_state.prox).astype(float),
                       motor=proto_to_ndarray(agent_state.motor).astype(float),
                       behavior=proto_to_ndarray(agent_state.behavior).astype(int),
@@ -110,6 +112,8 @@ def nve_state_to_proto(entity_state):
 
 def agent_state_to_proto(agent_state):
     return simulator_pb2.AgentState(nve_idx=ndarray_to_proto(agent_state.nve_idx),
+                                    proximity_map_dist=ndarray_to_proto(agent_state.proximity_map_dist),
+                                    proximity_map_theta=ndarray_to_proto(agent_state.proximity_map_theta),
                                     prox=ndarray_to_proto(agent_state.prox),
                                     motor=ndarray_to_proto(agent_state.motor),
                                     behavior=ndarray_to_proto(agent_state.behavior),
