@@ -276,11 +276,15 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
         Rb = body.center[receivers]
         dR = - space.map_bond(displacement)(Ra, Rb)  # Looks like it should be opposite, but don't understand why
 
+        # dist_theta[:, 0] = dist array, dist_theta[:, 1] = theta array
         dist_theta = proximity_map(dR, body.orientation[senders])
-        proximity_map_dist = jnp.zeros((state.agent_state.nve_idx.shape[0], state.entities_state.entity_idx.shape[0]))
+        # Create distance map between entities
+        proximity_map_dist = jnp.zeros((state.agent_state.nve_idx.shape[0], state.entity_state.entity_idx.shape[0]))
         proximity_map_dist = proximity_map_dist.at[agent_neighs_idx[0, :], agent_neighs_idx[1, :]].set(dist_theta[:, 0])
-        proximity_map_theta = jnp.zeros((state.agent_state.nve_idx.shape[0], state.entities_state.entity_idx.shape[0]))
+        # Create theta map between entities
+        proximity_map_theta = jnp.zeros((state.agent_state.nve_idx.shape[0], state.entity_state.entity_idx.shape[0]))
         proximity_map_theta = proximity_map_theta.at[agent_neighs_idx[0, :], agent_neighs_idx[1, :]].set(dist_theta[:, 1])
+
         prox = sensor(dist_theta[:, 0], dist_theta[:, 1], state.agent_state.proxs_dist_max[senders],
                       state.agent_state.proxs_cos_min[senders], len(state.agent_state.nve_idx), senders, mask)
         return state.agent_state.set(proximity_map_dist=proximity_map_dist, proximity_map_theta=proximity_map_theta, prox=prox)
