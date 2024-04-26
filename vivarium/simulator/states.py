@@ -35,7 +35,7 @@ class StateType(Enum):
 
 # No need to define position, momentum, force, and mass (i.e already in jax_md.simulate.NVEState)
 @dataclass
-class EntitiesState(simulate.NVEState):
+class EntityState(simulate.NVEState):
     entity_type: util.Array
     entity_idx: util.Array  # idx in XState (e.g. AgentState)
     diameter: util.Array
@@ -49,7 +49,7 @@ class EntitiesState(simulate.NVEState):
 
 @dataclass
 class AgentState:
-    nve_idx: util.Array  # idx in EntitiesState
+    nve_idx: util.Array  # idx in EntityState
     prox: util.Array
     motor: util.Array
     proximity_map_dist: util.Array
@@ -66,7 +66,7 @@ class AgentState:
 
 @dataclass
 class ObjectState:
-    nve_idx: util.Array  # idx in EntitiesState
+    nve_idx: util.Array  # idx in EntityState
     color: util.Array
 
 
@@ -100,7 +100,7 @@ class SimulatorState:
 @dataclass
 class State:
     simulator_state: SimulatorState
-    entities_state: EntitiesState
+    entity_state: EntityState
     agent_state: AgentState
     object_state: ObjectState
 
@@ -121,17 +121,17 @@ class State:
         return self.field(etype).nve_idx[entity_idx]
 
     def e_idx(self, etype):
-        return self.entities_state.entity_idx[self.entities_state.entity_type == etype.value]
+        return self.entity_state.entity_idx[self.entity_state.entity_type == etype.value]
 
     def e_cond(self, etype):
-        return self.entities_state.entity_type == etype.value
+        return self.entity_state.entity_type == etype.value
 
     def row_idx(self, field, nve_idx):
-        return nve_idx if field == 'entities_state' else self.entities_state.entity_idx[jnp.array(nve_idx)]
+        return nve_idx if field == 'entity_state' else self.entity_state.entity_idx[jnp.array(nve_idx)]
 
     def __getattr__(self, name):
         def wrapper(e_type):
-            value = getattr(self.entities_state, name)
+            value = getattr(self.entity_state, name)
             if isinstance(value, rigid_body.RigidBody):
                 return rigid_body.RigidBody(center=value.center[self.e_cond(e_type)],
                                             orientation=value.orientation[self.e_cond(e_type)])
@@ -199,7 +199,7 @@ def _init_existing(n_existing, n_entities):
 
 
 # TODO : Add options to have either 1 value or a list for parameters such as diameter, friction ...
-def init_entities_state(
+def init_entity_state(
         simulator_state: SimulatorState,
         diameter: float = 5.,
         friction: float = 0.1,
@@ -210,7 +210,7 @@ def init_entities_state(
         existing_agents: Optional[Union[int, List[float], None]] = None,
         existing_objects: Optional[Union[int, List[float], None]] = None,
         seed: int = 0,
-        ) -> EntitiesState:
+        ) -> EntityState:
     """
     Initialize entities state with given parameters
     """
@@ -238,7 +238,7 @@ def init_entities_state(
     existing_objects = _init_existing(existing_objects, max_objects)
     exists = jnp.concatenate((existing_agents, existing_objects), dtype=int)
 
-    return EntitiesState(
+    return EntityState(
         position=RigidBody(center=positions, orientation=orientations),
         momentum=None,
         force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
@@ -300,19 +300,43 @@ def init_object_state(
     )
 
 
-def init_state(
+def _init_state(
         simulator_state: SimulatorState,
         agents_state: AgentState,
         objects_state: ObjectState,
-        entities_state: EntitiesState
+        entity_state: EntityState
         ) -> State:
   
     return State(
         simulator_state=simulator_state,
         agent_state=agents_state,
         object_state=objects_state,
-        entities_state=entities_state
+        entity_state=entity_state
     )
+
+def init_state(args=None):
+    # Use default parameters of functions if user didn't provide input
+    if not args:
+        args = {}
+
+    simulator_args = args.get('simulator', {})
+    agents_args = args.get('agents', {})
+    objects_args = args.get('objects', {})
+    entities_args = args.get('entities', {})
+
+    simulator_state = init_simulator_state(**simulator_args)
+    agents_state = init_agent_state(simulator_state=simulator_state, **agents_args)
+    objects_state = init_object_state(simulator_state=simulator_state, **objects_args)
+    entity_state = init_entity_state(simulator_state=simulator_state, **entities_args)
+
+    state = _init_state(
+        simulator_state=simulator_state,
+        agents_state=agents_state,
+        objects_state=objects_state,
+        entity_state=entity_state
+        )
+    
+    return state
 
 
 def generate_default_config_files():
@@ -321,7 +345,7 @@ def generate_default_config_files():
     """
     init_params_fns = {
         'simulator': init_simulator_state,
-        'entities': init_entities_state,
+        'entities': init_entity_state,
         'agents': init_agent_state,
         'objects': init_object_state
     }

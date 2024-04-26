@@ -10,7 +10,7 @@ import matplotlib.colors as mcolors
 from jax_md.rigid_body import RigidBody
 
 from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig, stype_to_config, config_to_stype
-from vivarium.simulator.states import State, SimulatorState, EntitiesState, AgentState, ObjectState, EntityType, StateType
+from vivarium.simulator.states import State, SimulatorState, EntityState, AgentState, ObjectState, EntityType, StateType
 from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
 
 
@@ -54,13 +54,13 @@ exists_c_to_s = lambda x: int(x)
 neighbor_map_s_to_c = lambda x, typ: x
 
 
-agent_configs_to_state_dict = {'x_position': StateFieldInfo(('entities_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
-                               'y_position': StateFieldInfo(('entities_state', 'position', 'center'), 1, identity_s_to_c, identity_c_to_s),
-                               'orientation': StateFieldInfo(('entities_state', 'position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
-                               'mass_center': StateFieldInfo(('entities_state', 'mass', 'center'), np.array([0]), mass_center_s_to_c, mass_center_c_to_s),
-                               'mass_orientation': StateFieldInfo(('entities_state', 'mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
-                               'diameter': StateFieldInfo(('entities_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
-                               'friction': StateFieldInfo(('entities_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
+agent_configs_to_state_dict = {'x_position': StateFieldInfo(('entity_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
+                               'y_position': StateFieldInfo(('entity_state', 'position', 'center'), 1, identity_s_to_c, identity_c_to_s),
+                               'orientation': StateFieldInfo(('entity_state', 'position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
+                               'mass_center': StateFieldInfo(('entity_state', 'mass', 'center'), np.array([0]), mass_center_s_to_c, mass_center_c_to_s),
+                               'mass_orientation': StateFieldInfo(('entity_state', 'mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
+                               'diameter': StateFieldInfo(('entity_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
+                               'friction': StateFieldInfo(('entity_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
                                'left_motor': StateFieldInfo(('agent_state', 'motor',), 0, identity_s_to_c, identity_c_to_s),
                                'right_motor': StateFieldInfo(('agent_state', 'motor',), 1, identity_s_to_c, identity_c_to_s),
                                'left_prox': StateFieldInfo(('agent_state', 'prox',), 0, identity_s_to_c, identity_c_to_s),
@@ -70,21 +70,21 @@ agent_configs_to_state_dict = {'x_position': StateFieldInfo(('entities_state', '
                                'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
                                'color': StateFieldInfo(('agent_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
                                'idx': StateFieldInfo(('agent_state', 'nve_idx',), None, identity_s_to_c, identity_c_to_s),
-                               'exists': StateFieldInfo(('entities_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
+                               'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
                                }
 
 agent_configs_to_state_dict.update({f: StateFieldInfo(('agent_state', f,), None, identity_s_to_c, identity_c_to_s) for f in agent_common_fields if f not in agent_configs_to_state_dict})
 
-object_configs_to_state_dict = {'x_position': StateFieldInfo(('entities_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
-                                'y_position': StateFieldInfo(('entities_state', 'position', 'center'), 1, identity_s_to_c, identity_c_to_s),
-                                'orientation': StateFieldInfo(('entities_state', 'position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
-                                'mass_center': StateFieldInfo(('entities_state', 'mass', 'center'), np.array([0]), mass_center_s_to_c, mass_center_c_to_s),
-                                'mass_orientation': StateFieldInfo(('entities_state', 'mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
-                                'diameter': StateFieldInfo(('entities_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
-                                'friction': StateFieldInfo(('entities_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
+object_configs_to_state_dict = {'x_position': StateFieldInfo(('entity_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
+                                'y_position': StateFieldInfo(('entity_state', 'position', 'center'), 1, identity_s_to_c, identity_c_to_s),
+                                'orientation': StateFieldInfo(('entity_state', 'position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
+                                'mass_center': StateFieldInfo(('entity_state', 'mass', 'center'), np.array([0]), mass_center_s_to_c, mass_center_c_to_s),
+                                'mass_orientation': StateFieldInfo(('entity_state', 'mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
+                                'diameter': StateFieldInfo(('entity_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
+                                'friction': StateFieldInfo(('entity_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
                                 'color': StateFieldInfo(('object_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
                                 'idx': StateFieldInfo(('object_state', 'nve_idx',), None, identity_s_to_c, identity_c_to_s),
-                                'exists': StateFieldInfo(('entities_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
+                                'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
 
                                 }
 
@@ -110,7 +110,7 @@ def get_default_state(n_entities_dict):
                                                 to_jit= jnp.array([1]), use_fori_loop=jnp.array([0]),
                                                 collision_alpha=jnp.array([0.]),
                                                 collision_eps=jnp.array([0.])),
-                 entities_state=EntitiesState(position=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
+                 entity_state=EntityState(position=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
                                     momentum=None,
                                     force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
                                     mass=RigidBody(center=jnp.zeros((n_entities, 1)), orientation=jnp.zeros(n_entities)),
@@ -136,7 +136,7 @@ def get_default_state(n_entities_dict):
                  object_state=ObjectState(nve_idx=jnp.zeros(max_objects, dtype=int), color=jnp.zeros((max_objects, 3))))
 
 
-EntitiesTuple = namedtuple('EntitiesTuple', ['idx', 'col', 'val'])
+EntityTuple = namedtuple('EntityTuple', ['idx', 'col', 'val'])
 ValueTuple = namedtuple('ValueData', ['nve_idx', 'col_idx', 'row_map', 'col_map', 'val'])
 StateChangeTuple = namedtuple('StateChange', ['nested_field', 'nve_idx', 'column_idx', 'value'])
 
@@ -153,12 +153,12 @@ def events_to_nve_data(events, state):
         val = state_field_info.config_to_state(e.new)
 
         if state_field_info.column_idx is None:
-            nve_data[nested_field].append(EntitiesTuple(idx, None, val))
+            nve_data[nested_field].append(EntityTuple(idx, None, val))
         elif isinstance(state_field_info.column_idx, int):
-            nve_data[nested_field].append(EntitiesTuple(idx, state_field_info.column_idx, val))
+            nve_data[nested_field].append(EntityTuple(idx, state_field_info.column_idx, val))
         else:
             for c, v in zip(state_field_info.column_idx, val):
-                nve_data[nested_field].append(EntitiesTuple(idx, c, v))
+                nve_data[nested_field].append(EntityTuple(idx, c, v))
 
     return nve_data
 
@@ -231,15 +231,15 @@ def set_state_from_config_dict(config_dict, state=None):
         params = configs[0].param_names()
         for p in params:
             state_field_info = configs_to_state_dict[stype][p]
-            nve_idx = [c.idx for c in configs] if state_field_info.nested_field[0] == 'entities_state' else range(len(configs))
+            nve_idx = [c.idx for c in configs] if state_field_info.nested_field[0] == 'entity_state' else range(len(configs))
             change = rec_set_dataclass(state, state_field_info.nested_field, jnp.array(nve_idx), state_field_info.column_idx,
                                        jnp.array([state_field_info.config_to_state(getattr(c, p)) for c in configs]))
             state = state.set(**change)
         if stype.is_entity():
             e_idx.at[state.field(stype).nve_idx].set(jnp.array(range(n_entities_dict[stype])))
 
-    # TODO: something weird with the to lines below, the second one will have no effect (would need state = state.set(.)), but if we fix it we get only zeros in entities_state.entitiy_idx. As it is it seems to get correct values though
-    change = rec_set_dataclass(state, ('entities_state', 'entity_idx'), jnp.array(range(sum(n_entities_dict.values()))), None, e_idx)
+    # TODO: something weird with the to lines below, the second one will have no effect (would need state = state.set(.)), but if we fix it we get only zeros in entity_state.entitiy_idx. As it is it seems to get correct values though
+    change = rec_set_dataclass(state, ('entity_state', 'entity_idx'), jnp.array(range(sum(n_entities_dict.values()))), None, e_idx)
     state.set(**change)
 
     return state
@@ -248,7 +248,7 @@ def set_state_from_config_dict(config_dict, state=None):
 def set_configs_from_state(state, config_dict=None):
     if config_dict is None:
         config_dict = {stype: [] for stype in list(StateType)}
-        for idx, stype_int in enumerate(state.entities_state.entity_type):
+        for idx, stype_int in enumerate(state.entity_state.entity_type):
             stype = StateType(stype_int)
             config_dict[stype].append(stype_to_config[stype](idx=idx))
         config_dict[StateType.SIMULATOR].append(SimulatorConfig())

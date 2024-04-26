@@ -105,42 +105,42 @@ def get_verlet_force_fn(displacement):
 
     def collision_force(state, neighbor, exists_mask):
         return coll_force_fn(
-            state.entities_state.position.center,
+            state.entity_state.position.center,
             neighbor=neighbor,
             exists_mask=exists_mask,
-            diameter=state.entities_state.diameter,
+            diameter=state.entity_state.diameter,
             epsilon=state.simulator_state.collision_eps,
             alpha=state.simulator_state.collision_alpha
             )
 
     def friction_force(state, exists_mask):
-        cur_vel = state.entities_state.momentum.center / state.entities_state.mass.center
+        cur_vel = state.entity_state.momentum.center / state.entity_state.mass.center
         # stack the mask to give it the same shape as cur_vel (that has 2 rows for forward and angular velocities) 
         mask = jnp.stack([exists_mask] * 2, axis=1) 
         cur_vel = jnp.where(mask, cur_vel, 0.)
-        return - jnp.tile(state.entities_state.friction, (SPACE_NDIMS, 1)).T * cur_vel
+        return - jnp.tile(state.entity_state.friction, (SPACE_NDIMS, 1)).T * cur_vel
 
     def motor_force(state, exists_mask):
         agent_idx = state.agent_state.nve_idx
 
         body = rigid_body.RigidBody(
-            center=state.entities_state.position.center[agent_idx],
-            orientation=state.entities_state.position.orientation[agent_idx]
+            center=state.entity_state.position.center[agent_idx],
+            orientation=state.entity_state.position.orientation[agent_idx]
             )
         
         n = normal(body.orientation)
 
         fwd, rot = motor_command(
             state.agent_state.motor,
-            state.entities_state.diameter[agent_idx],
+            state.entity_state.diameter[agent_idx],
             state.agent_state.wheel_diameter
             )
         # `a_max` arg is deprecated in recent versions of jax, replaced by `max`
         fwd = jnp.clip(fwd, a_max=state.agent_state.max_speed)
 
-        cur_vel = state.entities_state.momentum.center[agent_idx] / state.entities_state.mass.center[agent_idx]
+        cur_vel = state.entity_state.momentum.center[agent_idx] / state.entity_state.mass.center[agent_idx]
         cur_fwd_vel = vmap(jnp.dot)(cur_vel, n)
-        cur_rot_vel = state.entities_state.momentum.orientation[agent_idx] / state.entities_state.mass.orientation[agent_idx]
+        cur_rot_vel = state.entity_state.momentum.orientation[agent_idx] / state.entity_state.mass.orientation[agent_idx]
         
         fwd_delta = fwd - cur_fwd_vel
         rot_delta = rot - cur_rot_vel
@@ -148,8 +148,8 @@ def get_verlet_force_fn(displacement):
         fwd_force = n * jnp.tile(fwd_delta, (SPACE_NDIMS, 1)).T * jnp.tile(state.agent_state.speed_mul, (SPACE_NDIMS, 1)).T
         rot_force = rot_delta * state.agent_state.theta_mul
 
-        center=jnp.zeros_like(state.entities_state.position.center).at[agent_idx].set(fwd_force)
-        orientation=jnp.zeros_like(state.entities_state.position.orientation).at[agent_idx].set(rot_force)
+        center=jnp.zeros_like(state.entity_state.position.center).at[agent_idx].set(fwd_force)
+        orientation=jnp.zeros_like(state.entity_state.position.orientation).at[agent_idx].set(rot_force)
 
         # apply mask to make non existing agents stand still
         orientation = jnp.where(exists_mask, orientation, 0.)
@@ -227,37 +227,37 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
 
     def init_fn(state, key, kT=0.):
         key, _ = jax.random.split(key)
-        assert state.entities_state.momentum is None
-        assert not jnp.any(state.entities_state.force.center) and not jnp.any(state.entities_state.force.orientation)
+        assert state.entity_state.momentum is None
+        assert not jnp.any(state.entity_state.force.center) and not jnp.any(state.entity_state.force.orientation)
 
-        state = state.set(entities_state=simulate.initialize_momenta(state.entities_state, key, kT))
+        state = state.set(entity_state=simulate.initialize_momenta(state.entity_state, key, kT))
         return state
     
-    def mask_momentum(entities_state, exists_mask):
+    def mask_momentum(entity_state, exists_mask):
         """
         Set the momentum values to zeros for non existing entities
-        :param entities_state: entities_state
+        :param entity_state: entity_state
         :param exists_mask: bool array specifying which entities exist or not
-        :return: entities_state: new entities state state with masked momentum values
+        :return: entity_state: new entities state state with masked momentum values
         """
-        orientation = jnp.where(exists_mask, entities_state.momentum.orientation, 0)
+        orientation = jnp.where(exists_mask, entity_state.momentum.orientation, 0)
         exists_mask = jnp.stack([exists_mask] * SPACE_NDIMS, axis=1)
-        center = jnp.where(exists_mask, entities_state.momentum.center, 0)
+        center = jnp.where(exists_mask, entity_state.momentum.center, 0)
         momentum = rigid_body.RigidBody(center=center, orientation=orientation)
-        return entities_state.set(momentum=momentum)
+        return entity_state.set(momentum=momentum)
 
     def physics_fn(state, force, shift_fn, dt, neighbor, mask):
         """Apply a single step of velocity Verlet integration to a state."""
         # dt = f32(dt)
         dt_2 = dt / 2.  # f32(dt / 2)
         # state = sensorimotor(state, neighbor)  # now in step_fn
-        entities_state = simulate.momentum_step(state.entities_state, dt_2)
-        entities_state = simulate.position_step(entities_state, shift_fn, dt, neighbor=neighbor)
-        entities_state = entities_state.set(force=force)
-        entities_state = simulate.momentum_step(entities_state, dt_2)
-        entities_state = mask_momentum(entities_state, mask)
+        entity_state = simulate.momentum_step(state.entity_state, dt_2)
+        entity_state = simulate.position_step(entity_state, shift_fn, dt, neighbor=neighbor)
+        entity_state = entity_state.set(force=force)
+        entity_state = simulate.momentum_step(entity_state, dt_2)
+        entity_state = mask_momentum(entity_state, mask)
 
-        return state.set(entities_state=entities_state)
+        return state.set(entity_state=entity_state)
 
     def compute_prox(state, agent_neighs_idx, target_exists_mask):
         """
@@ -266,10 +266,10 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
         :param agent_neighs_idx: Neighbor representation, where sources are only agents. Matrix of shape (2, n_pairs),
         where n_pairs is the number of neighbor entity pairs where sources (first row) are agent indexes.
         :param target_exists_mask: Specify which target entities exist. Vector with shape (n_entities,).
-        target_exists_mask[i] is True (resp. False) if entity of index i in state.entities_state exists (resp. don't exist).
+        target_exists_mask[i] is True (resp. False) if entity of index i in state.entity_state exists (resp. don't exist).
         :return:
         """
-        body = state.entities_state.position
+        body = state.entity_state.position
         mask = target_exists_mask[agent_neighs_idx[1, :]]
         senders, receivers = agent_neighs_idx
         Ra = body.center[senders]
@@ -290,7 +290,7 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
         return agent_state.set(motor=motor)
 
     def step_fn(state, neighbor, agent_neighs_idx):
-        exists_mask = (state.entities_state.exists == 1)  # Only existing entities have effect on others
+        exists_mask = (state.entity_state.exists == 1)  # Only existing entities have effect on others
         state = state.set(agent_state=compute_prox(state, agent_neighs_idx, target_exists_mask=exists_mask))
         state = state.set(agent_state=sensorimotor(state.agent_state))
         force = force_fn(state, neighbor, exists_mask)
