@@ -167,7 +167,7 @@ class Simulator:
             assert not neighbors.did_buffer_overflow
 
         if self.recording:
-            self.record(new_state.entity_state)
+            self.record((new_state.entity_state, new_state.agent_state, new_state.object_state, new_state.simulator_state))
 
         return new_state, neighbors
     
