@@ -121,7 +121,7 @@ def get_verlet_force_fn(displacement):
         return - jnp.tile(state.entity_state.friction, (SPACE_NDIMS, 1)).T * cur_vel
 
     def motor_force(state, exists_mask):
-        agent_idx = state.agent_state.nve_idx
+        agent_idx = state.agent_state.ent_idx
 
         body = rigid_body.RigidBody(
             center=state.entity_state.position.center[agent_idx],
@@ -279,14 +279,14 @@ def dynamics_rigid(displacement, shift, behavior_bank, force_fn=None):
         # dist_theta[:, 0] = dist array, dist_theta[:, 1] = theta array
         dist_theta = proximity_map(dR, body.orientation[senders])
         # Create distance map between entities
-        proximity_map_dist = jnp.zeros((state.agent_state.nve_idx.shape[0], state.entity_state.entity_idx.shape[0]))
+        proximity_map_dist = jnp.zeros((state.agent_state.ent_idx.shape[0], state.entity_state.entity_idx.shape[0]))
         proximity_map_dist = proximity_map_dist.at[agent_neighs_idx[0, :], agent_neighs_idx[1, :]].set(dist_theta[:, 0])
         # Create theta map between entities
-        proximity_map_theta = jnp.zeros((state.agent_state.nve_idx.shape[0], state.entity_state.entity_idx.shape[0]))
+        proximity_map_theta = jnp.zeros((state.agent_state.ent_idx.shape[0], state.entity_state.entity_idx.shape[0]))
         proximity_map_theta = proximity_map_theta.at[agent_neighs_idx[0, :], agent_neighs_idx[1, :]].set(dist_theta[:, 1])
 
         prox = sensor(dist_theta[:, 0], dist_theta[:, 1], state.agent_state.proxs_dist_max[senders],
-                      state.agent_state.proxs_cos_min[senders], len(state.agent_state.nve_idx), senders, mask)
+                      state.agent_state.proxs_cos_min[senders], len(state.agent_state.ent_idx), senders, mask)
         return state.agent_state.set(proximity_map_dist=proximity_map_dist, proximity_map_theta=proximity_map_theta, prox=prox)
 
     def sensorimotor(agent_state):

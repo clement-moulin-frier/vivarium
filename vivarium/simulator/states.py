@@ -48,7 +48,7 @@ class EntityState(simulate.NVEState):
 
 @dataclass
 class AgentState:
-    nve_idx: util.Array  # idx in EntityState
+    ent_idx: util.Array  # idx in EntityState
     prox: util.Array
     motor: util.Array
     proximity_map_dist: util.Array
@@ -65,7 +65,7 @@ class AgentState:
 
 @dataclass
 class ObjectState:
-    nve_idx: util.Array  # idx in EntityState
+    ent_idx: util.Array  # idx in EntityState
     color: util.Array
 
 
@@ -116,8 +116,8 @@ class State:
 
         return res
 
-    def nve_idx(self, etype, entity_idx):
-        return self.field(etype).nve_idx[entity_idx]
+    def ent_idx(self, etype, entity_idx):
+        return self.field(etype).ent_idx[entity_idx]
 
     def e_idx(self, etype):
         return self.entity_state.entity_idx[self.entity_state.entity_type == etype.value]
@@ -125,8 +125,8 @@ class State:
     def e_cond(self, etype):
         return self.entity_state.entity_type == etype.value
 
-    def row_idx(self, field, nve_idx):
-        return nve_idx if field == 'entity_state' else self.entity_state.entity_idx[jnp.array(nve_idx)]
+    def row_idx(self, field, ent_idx):
+        return ent_idx if field == 'entity_state' else self.entity_state.entity_idx[jnp.array(ent_idx)]
 
     def __getattr__(self, name):
         def wrapper(e_type):
@@ -268,7 +268,7 @@ def init_agent_state(
     max_agents = simulator_state.max_agents[0]
 
     return AgentState(
-        nve_idx=jnp.arange(max_agents, dtype=int),
+        ent_idx=jnp.arange(max_agents, dtype=int),
         prox=jnp.zeros((max_agents, 2)),
         motor=jnp.zeros((max_agents, 2)),
         proximity_map_dist=jnp.zeros((max_agents, 1)),
@@ -295,7 +295,7 @@ def init_object_state(
     start_idx, stop_idx = max_agents, max_agents + max_objects
     objects_nve_idx = jnp.arange(start_idx, stop_idx, dtype=int)
     return  ObjectState(
-        nve_idx=objects_nve_idx,
+        ent_idx=objects_nve_idx,
         color=jnp.tile(_string_to_rgb(color), (max_objects, 1))
     )
 

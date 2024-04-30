@@ -47,7 +47,7 @@ def proto_to_nve_state(entity_state):
 
 
 def proto_to_agent_state(agent_state):
-    return AgentState(nve_idx=proto_to_ndarray(agent_state.nve_idx).astype(int),
+    return AgentState(ent_idx=proto_to_ndarray(agent_state.ent_idx).astype(int),
                       proximity_map_dist=proto_to_ndarray(agent_state.proximity_map_dist).astype(float),
                       proximity_map_theta=proto_to_ndarray(agent_state.proximity_map_theta).astype(float),
                       prox=proto_to_ndarray(agent_state.prox).astype(float),
@@ -64,7 +64,7 @@ def proto_to_agent_state(agent_state):
 
 
 def proto_to_object_state(object_state):
-    return ObjectState(nve_idx=proto_to_ndarray(object_state.nve_idx).astype(int),
+    return ObjectState(ent_idx=proto_to_ndarray(object_state.ent_idx).astype(int),
                        color=proto_to_ndarray(object_state.color).astype(float),
                        )
 
@@ -111,7 +111,7 @@ def nve_state_to_proto(entity_state):
 
 
 def agent_state_to_proto(agent_state):
-    return simulator_pb2.AgentState(nve_idx=ndarray_to_proto(agent_state.nve_idx),
+    return simulator_pb2.AgentState(ent_idx=ndarray_to_proto(agent_state.ent_idx),
                                     proximity_map_dist=ndarray_to_proto(agent_state.proximity_map_dist),
                                     proximity_map_theta=ndarray_to_proto(agent_state.proximity_map_theta),
                                     prox=ndarray_to_proto(agent_state.prox),
@@ -128,6 +128,6 @@ def agent_state_to_proto(agent_state):
 
 
 def object_state_to_proto(object_state):
-    return simulator_pb2.ObjectState(nve_idx=ndarray_to_proto(object_state.nve_idx),
+    return simulator_pb2.ObjectState(ent_idx=ndarray_to_proto(object_state.ent_idx),
                                      color=ndarray_to_proto(object_state.color)
                                      )

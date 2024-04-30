@@ -42,8 +42,8 @@ stype_to_panel_config = {stype: config_class for config_class, stype in panel_co
 class Selected(param.Parameterized):
     selection = param.ListSelector([0], objects=[0])
 
-    def selection_nve_idx(self, nve_idx):
-        return nve_idx[np.array(self.selection)].tolist()
+    def selection_nve_idx(self, ent_idx):
+        return ent_idx[np.array(self.selection)].tolist()
 
     def __len__(self):
         return len(self.selection)
@@ -108,7 +108,7 @@ class PanelController(SimulatorController):
         with self.dont_push_selected_configs():
             # Todo: check if for loop below is still required
             for etype, selected in self.selected_entities.items():
-                config_dict[etype.to_state_type()][0].idx = int(state.nve_idx(etype.to_state_type(), selected.selection[0]))
+                config_dict[etype.to_state_type()][0].idx = int(state.ent_idx(etype.to_state_type(), selected.selection[0]))
             converters.set_configs_from_state(state, config_dict)
         return state
 

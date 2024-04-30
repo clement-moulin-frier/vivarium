@@ -69,7 +69,7 @@ agent_configs_to_state_dict = {'x_position': StateFieldInfo(('entity_state', 'po
                                'proximity_map_theta': StateFieldInfo(('agent_state', 'proximity_map_theta',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
                                'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
                                'color': StateFieldInfo(('agent_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
-                               'idx': StateFieldInfo(('agent_state', 'nve_idx',), None, identity_s_to_c, identity_c_to_s),
+                               'idx': StateFieldInfo(('agent_state', 'ent_idx',), None, identity_s_to_c, identity_c_to_s),
                                'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
                                }
 
@@ -83,7 +83,7 @@ object_configs_to_state_dict = {'x_position': StateFieldInfo(('entity_state', 'p
                                 'diameter': StateFieldInfo(('entity_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
                                 'friction': StateFieldInfo(('entity_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
                                 'color': StateFieldInfo(('object_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
-                                'idx': StateFieldInfo(('object_state', 'nve_idx',), None, identity_s_to_c, identity_c_to_s),
+                                'idx': StateFieldInfo(('object_state', 'ent_idx',), None, identity_s_to_c, identity_c_to_s),
                                 'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
 
                                 }
@@ -120,7 +120,7 @@ def get_default_state(n_entities_dict):
                                     friction=jnp.zeros(n_entities),
                                     exists=jnp.ones(n_entities, dtype=int)
                                     ),
-                 agent_state=AgentState(nve_idx=jnp.zeros(max_agents, dtype=int),
+                 agent_state=AgentState(ent_idx=jnp.zeros(max_agents, dtype=int),
                                         prox=jnp.zeros((max_agents, 2)),
                                         motor=jnp.zeros((max_agents, 2)),
                                         proximity_map_dist=jnp.zeros((max_agents, 1)),
@@ -133,12 +133,12 @@ def get_default_state(n_entities_dict):
                                         proxs_dist_max=jnp.zeros(max_agents),
                                         proxs_cos_min=jnp.zeros(max_agents),
                                         color=jnp.zeros((max_agents, 3))),
-                 object_state=ObjectState(nve_idx=jnp.zeros(max_objects, dtype=int), color=jnp.zeros((max_objects, 3))))
+                 object_state=ObjectState(ent_idx=jnp.zeros(max_objects, dtype=int), color=jnp.zeros((max_objects, 3))))
 
 
 EntityTuple = namedtuple('EntityTuple', ['idx', 'col', 'val'])
-ValueTuple = namedtuple('ValueData', ['nve_idx', 'col_idx', 'row_map', 'col_map', 'val'])
-StateChangeTuple = namedtuple('StateChange', ['nested_field', 'nve_idx', 'column_idx', 'value'])
+ValueTuple = namedtuple('ValueData', ['ent_idx', 'col_idx', 'row_map', 'col_map', 'val'])
+StateChangeTuple = namedtuple('StateChange', ['nested_field', 'ent_idx', 'column_idx', 'value'])
 
 
 def events_to_nve_data(events, state):
@@ -166,17 +166,17 @@ def events_to_nve_data(events, state):
 def nve_data_to_state_changes(nve_data, state):
     value_data = dict()
     for nf, nve_tuples in nve_data.items():
-        nve_idx = sorted(list(set([int(t.idx) for t in nve_tuples])))
-        row_map = {idx: i for i, idx in enumerate(nve_idx)}
+        ent_idx = sorted(list(set([int(t.idx) for t in nve_tuples])))
+        row_map = {idx: i for i, idx in enumerate(ent_idx)}
         if nve_tuples[0].col is None:
-            val = np.array(state.field(nf)[np.array(nve_idx)])
+            val = np.array(state.field(nf)[np.array(ent_idx)])
             col_map = None
             col_idx = None
         else:
             col_idx = sorted(list(set([t.col for t in nve_tuples])))
             col_map = {idx: i for i, idx in enumerate(col_idx)}
-            val = np.array(state.field(nf)[np.ix_(state.row_idx(nf[0], nve_idx), col_idx)])
-        value_data[nf] = ValueTuple(nve_idx, col_idx, row_map, col_map, val)
+            val = np.array(state.field(nf)[np.ix_(state.row_idx(nf[0], ent_idx), col_idx)])
+        value_data[nf] = ValueTuple(ent_idx, col_idx, row_map, col_map, val)
 
     state_changes = []
     for nf, value_tuple in value_data.items():
@@ -187,7 +187,7 @@ def nve_data_to_state_changes(nve_data, state):
             else:
                 col = value_tuple.col_map[nve_tuple.col]
                 value_tuple.val[row, col] = nve_tuple.val
-        state_changes.append(StateChangeTuple(nf, value_data[nf].nve_idx,
+        state_changes.append(StateChangeTuple(nf, value_data[nf].ent_idx,
                                               value_data[nf].col_idx, value_tuple.val))
 
     return state_changes
@@ -231,12 +231,12 @@ def set_state_from_config_dict(config_dict, state=None):
         params = configs[0].param_names()
         for p in params:
             state_field_info = configs_to_state_dict[stype][p]
-            nve_idx = [c.idx for c in configs] if state_field_info.nested_field[0] == 'entity_state' else range(len(configs))
-            change = rec_set_dataclass(state, state_field_info.nested_field, jnp.array(nve_idx), state_field_info.column_idx,
+            ent_idx = [c.idx for c in configs] if state_field_info.nested_field[0] == 'entity_state' else range(len(configs))
+            change = rec_set_dataclass(state, state_field_info.nested_field, jnp.array(ent_idx), state_field_info.column_idx,
                                        jnp.array([state_field_info.config_to_state(getattr(c, p)) for c in configs]))
             state = state.set(**change)
         if stype.is_entity():
-            e_idx.at[state.field(stype).nve_idx].set(jnp.array(range(n_entities_dict[stype])))
+            e_idx.at[state.field(stype).ent_idx].set(jnp.array(range(n_entities_dict[stype])))
 
     # TODO: something weird with the to lines below, the second one will have no effect (would need state = state.set(.)), but if we fix it we get only zeros in entity_state.entitiy_idx. As it is it seems to get correct values though
     change = rec_set_dataclass(state, ('entity_state', 'entity_idx'), jnp.array(range(sum(n_entities_dict.values()))), None, e_idx)

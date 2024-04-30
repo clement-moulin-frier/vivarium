@@ -30,8 +30,8 @@ class SimulatorGRPCClient(SimulatorClient):
     def get_change_time(self):
         return self.stub.GetChangeTime(Empty()).time
 
-    def set_state(self, nested_field, nve_idx, column_idx, value):
-        state_change = simulator_pb2.StateChange(nested_field=nested_field, nve_idx=nve_idx, col_idx=column_idx,
+    def set_state(self, nested_field, ent_idx, column_idx, value):
+        state_change = simulator_pb2.StateChange(nested_field=nested_field, ent_idx=ent_idx, col_idx=column_idx,
                                                  value=ndarray_to_proto(value))
         self.stub.SetState(state_change)
 

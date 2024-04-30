@@ -248,9 +248,9 @@ class Simulator:
             sleep_time = 0
         return sleep_time
 
-    def set_state(self, nested_field, nve_idx, column_idx, value):
-        lg.info(f'set_state {nested_field} {nve_idx} {column_idx} {value}')
-        row_idx = self.state.row_idx(nested_field[0], jnp.array(nve_idx))
+    def set_state(self, nested_field, ent_idx, column_idx, value):
+        lg.info(f'set_state {nested_field} {ent_idx} {column_idx} {value}')
+        row_idx = self.state.row_idx(nested_field[0], jnp.array(ent_idx))
         col_idx = None if column_idx is None else jnp.array(column_idx)
         change = converters.rec_set_dataclass(self.state, nested_field, row_idx, col_idx, value)
         self.state = self.state.set(**change)   
