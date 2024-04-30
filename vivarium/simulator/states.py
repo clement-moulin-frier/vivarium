@@ -32,7 +32,7 @@ class StateType(Enum):
         return EntityType(self.value)
 
 
-# No need to define position, momentum, force, and mass (i.e already in simulate.EntityState)
+# No need to define position, momentum, force, and mass (i.e already in jax_md.simulate.NVEState)
 @dataclass
 class EntityState(simulate.NVEState):
     entity_type: util.Array
@@ -51,6 +51,8 @@ class AgentState:
     nve_idx: util.Array  # idx in EntityState
     prox: util.Array
     motor: util.Array
+    proximity_map_dist: util.Array
+    proximity_map_theta: util.Array
     behavior: util.Array
     wheel_diameter: util.Array
     speed_mul: util.Array
@@ -269,6 +271,8 @@ def init_agent_state(
         nve_idx=jnp.arange(max_agents, dtype=int),
         prox=jnp.zeros((max_agents, 2)),
         motor=jnp.zeros((max_agents, 2)),
+        proximity_map_dist=jnp.zeros((max_agents, 1)),
+        proximity_map_theta=jnp.zeros((max_agents, 1)),
         behavior=jnp.full((max_agents), behavior),
         wheel_diameter=jnp.full((max_agents), wheel_diameter),
         speed_mul=jnp.full((max_agents), speed_mul),

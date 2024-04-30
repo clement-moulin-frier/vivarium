@@ -94,6 +94,8 @@ message AgentState {
   NDArray proxs_dist_max = 9;
   NDArray proxs_cos_min = 10;
   NDArray color = 11;
+  NDArray proximity_map_dist = 12;
+  NDArray proximity_map_theta = 13;
 }
 
 message ObjectState {
