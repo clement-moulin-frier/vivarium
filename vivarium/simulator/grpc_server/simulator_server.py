@@ -70,10 +70,10 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def SetState(self, request, context):
 
         with self._lock:
-            nve_idx = request.nve_idx
+            ent_idx = request.ent_idx
             col_idx = request.col_idx
             # with self.simulator.pause():
-            self.simulator.set_state(request.nested_field, nve_idx, col_idx,
+            self.simulator.set_state(request.nested_field, ent_idx, col_idx,
                                                    proto_to_ndarray(request.value))
         return Empty()
 

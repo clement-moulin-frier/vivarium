@@ -83,7 +83,7 @@ message EntityState {
 }
 
 message AgentState {
-  NDArray nve_idx = 1;
+  NDArray ent_idx = 1;
   NDArray prox = 2;
   NDArray motor = 3;
   NDArray behavior = 4;
@@ -99,7 +99,7 @@ message AgentState {
 }
 
 message ObjectState {
-  NDArray nve_idx = 1;
+  NDArray ent_idx = 1;
   NDArray custom_field = 2;
   NDArray color = 3;
 }
@@ -112,7 +112,7 @@ message State {
 }
 
 message StateChange {
-  repeated int32 nve_idx= 1;
+  repeated int32 ent_idx= 1;
   repeated int32 col_idx= 2;
   repeated string nested_field = 3;
   NDArray value = 4;
