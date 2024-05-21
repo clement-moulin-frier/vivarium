@@ -15,7 +15,7 @@ from jax_md.rigid_body import RigidBody
 from jax_md import space, rigid_body, partition, simulate, quantity
 
 from vivarium.utils import normal, render, render_history
-from vivarium.simulator.braitenberg_physics import total_collision_energy
+from vivarium.simulator.general_physics_engine import total_collision_energy, friction_force, dynamics_fn
 # TODO : Later use this line to directly import the braitenberg physics (collisions + motors ...)
 
 
@@ -221,8 +221,9 @@ def motor_command(wheel_activation, base_length, wheel_diameter):
 
 motor_command = vmap(motor_command, (0, 0, 0))
 
+### Define the force in the environment
 
-def verlet_force_fn(displacement):
+def braintenberg_force_fn(displacement):
     coll_force_fn = quantity.force(partial(total_collision_energy, displacement=displacement))
 
     def collision_force(state, neighbor, exists_mask):
@@ -234,13 +235,6 @@ def verlet_force_fn(displacement):
             epsilon=state.collision_eps,
             alpha=state.collision_alpha
             )
-
-    def friction_force(state, exists_mask):
-        cur_vel = state.entities.momentum.center / state.entities.mass.center
-        # stack the mask to give it the same shape as cur_vel (that has 2 rows for forward and angular velocities) 
-        mask = jnp.stack([exists_mask] * 2, axis=1) 
-        cur_vel = jnp.where(mask, cur_vel, 0.)
-        return - jnp.tile(state.entities.friction, (SPACE_NDIMS, 1)).T * cur_vel
 
     def motor_force(state, exists_mask):
         agent_idx = state.agents.ent_idx
@@ -281,6 +275,7 @@ def verlet_force_fn(displacement):
 
         return rigid_body.RigidBody(center=center,
                                     orientation=orientation)
+    
 
     def force_fn(state, neighbor, exists_mask):
         mf = motor_force(state, exists_mask)
@@ -292,49 +287,6 @@ def verlet_force_fn(displacement):
         return rigid_body.RigidBody(center=center, orientation=orientation)
 
     return force_fn
-
-## TODO : This should be a general function that only takes forces (why the force fn here)
-## TODO : Only motor force should be defined here in this file, and import the collision and friction forces
-# TODO (i.e, we should only redefine the "verlet force fn here, by adding the motor force to it")  
-def dynamics_fn(displacement, shift, force_fn=None):
-    force_fn = force_fn if force_fn else verlet_force_fn(displacement)
-    
-    def init_fn(state, key, kT=0.):
-        key, _ = random.split(key)
-        assert state.entities.momentum is None
-        assert not jnp.any(state.entities.force.center) and not jnp.any(state.entities.force.orientation)
-
-        state = state.replace(entities=simulate.initialize_momenta(state.entities, key, kT))
-        return state
-    
-    def mask_momentum(entity_state, exists_mask):
-        """
-        Set the momentum values to zeros for non existing entities
-        :param entity_state: entity_state
-        :param exists_mask: bool array specifying which entities exist or not
-        :return: entity_state: new entities state state with masked momentum values
-        """
-        orientation = jnp.where(exists_mask, entity_state.momentum.orientation, 0)
-        exists_mask = jnp.stack([exists_mask] * SPACE_NDIMS, axis=1)
-        center = jnp.where(exists_mask, entity_state.momentum.center, 0)
-        momentum = rigid_body.RigidBody(center=center, orientation=orientation)
-        return entity_state.replace(momentum=momentum)
-
-    def step_fn(state, neighbor):
-        exists_mask = (state.entities.exists == 1)  # Only existing entities have effect on others
-        dt_2 = state.dt / 2.
-        # Compute forces
-        force = force_fn(state, neighbor, exists_mask)
-        # Compute changes on entities
-        entity_state = simulate.momentum_step(state.entities, dt_2)
-        # TODO : why do we used dt and not dt/2 in the line below ? 
-        entity_state = simulate.position_step(entity_state, shift, state.dt, neighbor=neighbor)
-        entity_state = entity_state.replace(force=force)
-        entity_state = simulate.momentum_step(entity_state, dt_2)
-        entity_state = mask_momentum(entity_state, exists_mask)
-        return entity_state
-
-    return init_fn, step_fn
 
 
 class BraitenbergEnv:
@@ -474,7 +426,7 @@ class BraitenbergEnv:
         # Create jax_md attributes for environment physics
         key, physics_key = random.split(key)
         self.displacement, self.shift = space.periodic(self.box_size)
-        init_fn, apply_physics = dynamics_fn(self.displacement, self.shift)
+        init_fn, apply_physics = dynamics_fn(self.displacement, self.shift, braintenberg_force_fn)
         self.init_fn = init_fn
         self.apply_physics = jit(apply_physics)
         self.neighbor_fn = partition.neighbor_list(
@@ -557,6 +509,7 @@ if __name__ == "__main__":
     n_steps = 10_000
 
     hist = []
+    render(state)
 
     start = time.perf_counter()
     for i in range(n_steps):
@@ -564,5 +517,7 @@ if __name__ == "__main__":
         hist.append(state)
     end = time.perf_counter()
     print(f"{end - start} s to run")
+
+    render(state)
 
     # render_history(hist)
