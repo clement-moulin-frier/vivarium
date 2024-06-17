@@ -6,11 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import matplotlib.colors as colors
 
-from jax import vmap
+from vivarium.experimental.environments.utils import normal
 
-@vmap 
-def normal(theta):
-    return jnp.array([jnp.cos(theta), jnp.sin(theta)])
 
 def _string_to_rgb(color_str):
     return jnp.array(list(colors.to_rgb(color_str)))

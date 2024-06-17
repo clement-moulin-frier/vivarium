@@ -1,8 +1,13 @@
+# TODO : Added these lines for testing purposes (there was a bug from a jax_md error where gpu isn't detected anymore)
+import os
+os.environ["JAX_PLATFORMS"] = "cpu"
+
 import logging as lg
 from enum import Enum
 from functools import partial
 from typing import Tuple
 
+import jax
 import numpy as np
 import jax.numpy as jnp
 
@@ -13,7 +18,7 @@ from flax import struct
 from jax_md.rigid_body import RigidBody
 from jax_md import space, rigid_body, partition, quantity
 
-from vivarium.experimental.environments.braitenberg.utils import normal
+from vivarium.experimental.environments.braitenberg.render import normal
 from vivarium.experimental.environments.base_env import BaseState, BaseEntityState, BaseAgentState, BaseObjectState, BaseEnv
 from vivarium.experimental.environments.physics_engine import total_collision_energy, friction_force, dynamics_fn
 
@@ -106,6 +111,7 @@ sensor_fn = vmap(sensor_fn, (0, 0, 0, 0, 0))
 
 def sensor(dist, relative_theta, dist_max, cos_min, max_agents, senders, target_exists):
     raw_proxs = sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists)
+
     # Computes the maximum within the proximeter activations of agents on all their neigbhors.
     proxs = ops.segment_max(
         raw_proxs,
@@ -113,6 +119,7 @@ def sensor(dist, relative_theta, dist_max, cos_min, max_agents, senders, target_
         max_agents)
     
     return proxs
+
 
 # TODO : Could potentially refactor this part of the code with a function using vmap (not a priority)
 def compute_prox(state, agents_neighs_idx, target_exists_mask, displacement):
@@ -126,7 +133,6 @@ def compute_prox(state, agents_neighs_idx, target_exists_mask, displacement):
     :return:
     """
     body = state.entities.position
-    mask = target_exists_mask[agents_neighs_idx[1, :]]   
     senders, receivers = agents_neighs_idx
     Ra = body.center[senders]
     Rb = body.center[receivers]
@@ -140,6 +146,7 @@ def compute_prox(state, agents_neighs_idx, target_exists_mask, displacement):
     proximity_map_theta = proximity_map_theta.at[senders, receivers].set(theta)
 
     # TODO : Could refactor this function bc there's a lot of redundancies in the arguments (state.agents)
+    mask = target_exists_mask[agents_neighs_idx[1, :]]   
     prox = sensor(dist, theta, state.agents.proxs_dist_max[senders],
                     state.agents.proxs_cos_min[senders], len(state.agents.ent_idx), senders, mask)
     
@@ -181,11 +188,11 @@ def behavior_to_params(behavior):
     return behavior_params[behavior]
 
 def compute_motor(proxs, params):
-    """Compute motor values according to proximeter values and "params"
+    """Compute motor values according to proximeter values and params
 
-    :param proxs: _description_
-    :param params: _description_
-    :return: _description_
+    :param proxs: proximeter values
+    :param params: linear mapping between proxs and motor values
+    :return: motor activations
     """
     return params.dot(jnp.hstack((proxs, 1.)))
 
@@ -360,7 +367,7 @@ class BraitenbergEnv(BaseEnv):
             return jnp.sqrt(squared_diff)
     
     # TODO See how to clean the function to remove the agents_neighs_idx
-    @partial(jit, static_argnums=(0,))
+    # @partial(jit, static_argnums=(0,))
     def _step(self, state: State, neighbors: jnp.array, agents_neighs_idx: jnp.array) -> Tuple[State, jnp.array]:
         # 1 : Compute agents proximeter
         exists_mask = jnp.where(state.entities.exists == 1, 1, 0)
