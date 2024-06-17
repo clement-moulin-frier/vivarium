@@ -1,4 +1,5 @@
 import logging as lg
+
 from enum import Enum
 from functools import partial
 from typing import Tuple
@@ -10,27 +11,38 @@ from jax import random, ops, lax
 
 from flax import struct
 from jax_md.rigid_body import RigidBody
+from jax_md import simulate 
 from jax_md import space, rigid_body, partition, quantity
 
-from vivarium.experimental.environments.braitenberg.utils import normal
-from vivarium.experimental.environments.base_env import BaseState, BaseEntityState, BaseAgentState, BaseObjectState, BaseEnv
+from vivarium.experimental.environments.utils import normal, distance, relative_position 
+from vivarium.experimental.environments.base_env import BaseState, BaseEnv
 from vivarium.experimental.environments.physics_engine import total_collision_energy, friction_force, dynamics_fn
 
 ### Define the constants and the classes of the environment to store its state ###
 
 SPACE_NDIMS = 2
 
-# TODO : Should maybe just let the user define its own class and just have a base class State with time ... 
+# TODO : The best is surely to only define BaseState because some envs might not use EntityState / ObjectState or AgentState
 class EntityType(Enum):
     AGENT = 0
     OBJECT = 1
 
+# Already incorporates position, momentum, force, mass and velocity
 @struct.dataclass
-class EntityState(BaseEntityState):
-    pass
+class EntityState(simulate.NVEState):
+    entity_type: jnp.array
+    entity_idx: jnp.array
+    diameter: jnp.array
+    friction: jnp.array
+    exists: jnp.array
     
 @struct.dataclass
-class AgentState(BaseAgentState):
+class ParticleState:
+    ent_idx: jnp.array
+    color: jnp.array
+
+@struct.dataclass
+class AgentState(ParticleState):
     prox: jnp.array
     motor: jnp.array
     proximity_map_dist: jnp.array
@@ -44,13 +56,11 @@ class AgentState(BaseAgentState):
     proxs_cos_min: jnp.array
 
 @struct.dataclass
-class ObjectState(BaseObjectState):
+class ObjectState(ParticleState):
     pass
 
 @struct.dataclass
 class State(BaseState):
-    time: jnp.int32
-    box_size: jnp.int32
     max_agents: jnp.int32
     max_objects: jnp.int32
     neighbor_radius: jnp.float32
@@ -61,28 +71,15 @@ class State(BaseState):
     agents: AgentState
     objects: ObjectState    
 
+
 ### Define helper functions used to step from one state to the next one ###
 
 
 #--- 1 Functions to compute the proximeter of braitenberg agents ---#
 
-def relative_position(displ, theta):
-    """
-    Compute the relative distance and angle from a source agent to a target agent
-    :param displ: Displacement vector (jnp arrray with shape (2,) from source to target
-    :param theta: Orientation of the source agent (in the reference frame of the map)
-    :return: dist: distance from source to target.
-    relative_theta: relative angle of the target in the reference frame of the source agent (front direction at angle 0)
-    """
-    dist = jnp.linalg.norm(displ)
-    norm_displ = displ / dist
-    theta_displ = jnp.arccos(norm_displ[0]) * jnp.sign(jnp.arcsin(norm_displ[1]))
-    relative_theta = theta_displ - theta
-    return dist, relative_theta
 
 proximity_map = vmap(relative_position, (0, 0))
 
-# TODO : Could potentially refactor these functions with vmaps to make them easier (not a priority)
 def sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists):
     """
     Compute the proximeter activations (left, right) induced by the presence of an entity
@@ -107,12 +104,11 @@ def sensor(dist, relative_theta, dist_max, cos_min, max_agents, senders, target_
     # Computes the maximum within the proximeter activations of agents on all their neigbhors.
     proxs = ops.segment_max(
         raw_proxs,
-        senders, 
+        senders,    
         max_agents)
     
     return proxs
 
-# TODO : Could potentially refactor this part of the code with a function using vmap (not a priority)
 def compute_prox(state, agents_neighs_idx, target_exists_mask, displacement):
     """
     Set agents' proximeter activations
@@ -137,11 +133,9 @@ def compute_prox(state, agents_neighs_idx, target_exists_mask, displacement):
     proximity_map_theta = jnp.zeros((state.agents.ent_idx.shape[0], state.entities.entity_idx.shape[0]))
     proximity_map_theta = proximity_map_theta.at[senders, receivers].set(theta)
 
-    # TODO : Could refactor this function bc there's a lot of redundancies in the arguments (state.agents)
     prox = sensor(dist, theta, state.agents.proxs_dist_max[senders],
                     state.agents.proxs_cos_min[senders], len(state.agents.ent_idx), senders, mask)
     
-    # TODO Could refactor this to have a cleaner split of functions (instead of returning 3 args here) 
     return prox, proximity_map_dist, proximity_map_theta
 
 
@@ -295,8 +289,8 @@ class BraitenbergEnv(BaseEnv):
             friction=0.1,
             mass_center=1.0,
             mass_orientation=0.125,
-            existing_agents=10,
-            existing_objects=2,
+            existing_agents=None,
+            existing_objects=None,
             behavior=behavior_name_map['AGGRESSION'],
             wheel_diameter=2.0,
             speed_mul=1.0,
@@ -308,7 +302,6 @@ class BraitenbergEnv(BaseEnv):
             objects_color=jnp.array([1.0, 0.0, 0.0])
     ):
         
-        # TODO : add docstrings
         # general parameters
         self.box_size = box_size
         self.dt = dt
@@ -324,8 +317,9 @@ class BraitenbergEnv(BaseEnv):
         self.friction = friction
         self.mass_center = mass_center
         self.mass_orientation = mass_orientation
-        self.existing_agents = existing_agents
-        self.existing_objects = existing_objects
+        # Set existing objects and agents to max values if not specified
+        self.existing_agents = existing_agents if existing_agents else max_agents
+        self.existing_objects = existing_objects if existing_objects else max_objects
         # agents parameters
         self.behavior = behavior
         self.wheel_diameter = wheel_diameter
@@ -337,30 +331,25 @@ class BraitenbergEnv(BaseEnv):
         self.agents_color = agents_color
         # objects parameters
         self.objects_color = objects_color
-        # TODO : other parameters are defined when init_state is called, maybe coud / should set them to None here ? 
-        # Or can also directly initialize the state ... and jax_md attributes in this function too ...
 
     def init_state(self) -> State:
         key = random.PRNGKey(self.seed)
         key, key_agents_pos, key_objects_pos, key_orientations = random.split(key, 4)
 
-        entities = self.init_entities(key_agents_pos, key_objects_pos, key_orientations)
-        agents = self.init_agents()
-        objects = self.init_objects()
-        state = self.init_complete_state(entities, agents, objects)
+        entities = self._init_entities(key_agents_pos, key_objects_pos, key_orientations)
+        agents = self._init_agents()
+        objects = self._init_objects()
+        state = self._init_complete_state(entities, agents, objects)
 
         # Create jax_md attributes for environment physics
         # TODO : Might not be optimal to just use this function here (harder to understand what's in the class attributes)
-        state = self.init_env_physics(key, state)
+        state = self._init_env_physics(key, state)
 
         return state
         
     def distance(self, point1, point2):
-            diff = self.displacement(point1, point2)
-            squared_diff = jnp.sum(jnp.square(diff))
-            return jnp.sqrt(squared_diff)
+            return distance(self.displacement, point1, point2)
     
-    # TODO See how to clean the function to remove the agents_neighs_idx
     @partial(jit, static_argnums=(0,))
     def _step(self, state: State, neighbors: jnp.array, agents_neighs_idx: jnp.array) -> Tuple[State, jnp.array]:
         # 1 : Compute agents proximeter
@@ -394,24 +383,22 @@ class BraitenbergEnv(BaseEnv):
         if self.neighbors.did_buffer_overflow:
             # reallocate neighbors and run the simulation from current_state
             lg.warning(f'NEIGHBORS BUFFER OVERFLOW at step {state.time}: rebuilding neighbors')
-            neighbors = self.allocate_neighbors(state)
+            neighbors, self.agents_neighs_idx = self.allocate_neighbors(state)
             assert not neighbors.did_buffer_overflow
 
         self.neighbors = neighbors
         return state
 
-    # TODO See how we deal with agents_neighs_idx
     def allocate_neighbors(self, state, position=None):
-        position = state.entities.position.center if position is None else position
-        neighbors = self.neighbor_fn.allocate(position)
+        neighbors = super().allocate_neighbors(state, position)
 
         # Also update the neighbor idx of agents (not the cleanest to attribute it to with self here)
         ag_idx = state.entities.entity_type[neighbors.idx[0]] == EntityType.AGENT.value
-        self.agents_neighs_idx = neighbors.idx[:, ag_idx]
+        agents_neighs_idx = neighbors.idx[:, ag_idx]
         
-        return neighbors
+        return neighbors, agents_neighs_idx
     
-    def init_entities(self, key_agents_pos, key_objects_pos, key_orientations):
+    def _init_entities(self, key_agents_pos, key_objects_pos, key_orientations):
         n_entities = self.max_agents + self.max_objects # we store the entities data in jax arrays of length max_agents + max_objects 
         # Assign random positions to each entity in the environment
         agents_positions = random.uniform(key_agents_pos, (self.max_agents, self.n_dims)) * self.box_size
@@ -440,7 +427,7 @@ class BraitenbergEnv(BaseEnv):
             exists=exists
         )
     
-    def init_agents(self):
+    def _init_agents(self):
         return AgentState(
             # idx in the entities (ent_idx) state to map agents information in the different data structures
             ent_idx=jnp.arange(self.max_agents, dtype=int), 
@@ -458,7 +445,7 @@ class BraitenbergEnv(BaseEnv):
             color=jnp.tile(self.agents_color, (self.max_agents, 1))
         )
 
-    def init_objects(self):
+    def _init_objects(self):
         # Entities idx of objects
         start_idx, stop_idx = self.max_agents, self.max_agents + self.max_objects 
         objects_ent_idx = jnp.arange(start_idx, stop_idx, dtype=int)
@@ -468,7 +455,7 @@ class BraitenbergEnv(BaseEnv):
             color=jnp.tile(self.objects_color, (self.max_objects, 1))
         )
     
-    def init_complete_state(self, entities, agents, objects):
+    def _init_complete_state(self, entities, agents, objects):
         lg.info('Initializing state')
         return State(
             time=0,
@@ -484,7 +471,7 @@ class BraitenbergEnv(BaseEnv):
             objects=objects
         )   
     
-    def init_env_physics(self, key, state):
+    def _init_env_physics(self, key, state):
         lg.info("Initializing environment's physics features")
         key, physics_key = random.split(key)
         self.displacement, self.shift = space.periodic(self.box_size)
@@ -500,7 +487,6 @@ class BraitenbergEnv(BaseEnv):
 
         state = self.init_fn(state, physics_key)
         lg.info("Allocating neighbors")
-        neighbors = self.allocate_neighbors(state)
-        self.neighbors = neighbors
+        self.neighbors, self.agents_neighs_idx = self.allocate_neighbors(state)
 
         return state
