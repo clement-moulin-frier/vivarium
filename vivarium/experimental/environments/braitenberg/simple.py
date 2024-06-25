@@ -4,6 +4,7 @@ from enum import Enum
 from functools import partial
 from typing import Tuple
 
+import numpy as np
 import jax.numpy as jnp
 
 from jax import vmap, jit
@@ -48,6 +49,7 @@ class AgentState(ParticleState):
     proximity_map_dist: jnp.array
     proximity_map_theta: jnp.array
     behavior: jnp.array
+    params: jnp.array
     wheel_diameter: jnp.array
     speed_mul: jnp.array
     max_speed: jnp.array
@@ -141,50 +143,60 @@ def compute_prox(state, agents_neighs_idx, target_exists_mask, displacement):
 
 #--- 2 Functions to compute the motor activations of braitenberg agents ---#
 
-# TODO : I think we could also refactor this part of the code to make it clearer (part between """""""")
-""""""""
-linear_behavior_enum = Enum('matrices', ['FEAR', 'AGGRESSION', 'LOVE', 'SHY'])
+class Behaviors(Enum):
+    FEAR = 0
+    AGGRESSION = 1
+    LOVE = 2
+    SHY = 3
+    NOOP = 4
+    MANUAL = 5
 
-linear_behavior_matrices = {
-    linear_behavior_enum.FEAR: jnp.array([[1., 0., 0.], [0., 1., 0.]]),
-    linear_behavior_enum.AGGRESSION: jnp.array([[0., 1., 0.], [1., 0., 0.]]),
-    linear_behavior_enum.LOVE: jnp.array([[-1., 0., 1.], [0., -1., 1.]]),
-    linear_behavior_enum.SHY: jnp.array([[0., -1., 1.], [-1., 0., 1.]]),
+behavior_params = {
+    Behaviors.FEAR.value: jnp.array(
+        [[1., 0., 0.], 
+         [0., 1., 0.]]),
+    Behaviors.AGGRESSION.value: jnp.array(
+        [[0., 1., 0.], 
+         [1., 0., 0.]]),
+    Behaviors.LOVE.value: jnp.array(
+        [[-1., 0., 1.], 
+         [0., -1., 1.]]),
+    Behaviors.SHY.value: jnp.array(
+        [[0., -1., 1.], 
+         [-1., 0., 1.]]),
+    Behaviors.NOOP.value: jnp.array(
+        [[0., 0., 0.], 
+         [0., 0., 0.]]),
 }
 
-def linear_behavior(proxs, motors, matrix):
-    return matrix.dot(jnp.hstack((proxs, 1.)))
+def behavior_to_params(behavior):
+    return behavior_params[behavior]
 
-def apply_motors(proxs, motors):
-    return motors
+def linear_behavior(proxs, params):
+    """Compute the activation of motors with a linear combination of proximeters and parameters
 
-def noop(proxs, motors):
-    return jnp.array([0., 0.])
+    :param proxs: proximeter values of an agent
+    :param params: parameters of an agent (mapping proxs to motor values)
+    :return: motor values
+    """
+    return params.dot(jnp.hstack((proxs, 1.)))
 
-behavior_bank = [partial(linear_behavior, matrix=linear_behavior_matrices[beh])
-                 for beh in linear_behavior_enum] \
-                + [apply_motors, noop]
+v_linear_behavior = vmap(linear_behavior, in_axes=(0, 0))
+                    
+def compute_motor(proxs, params, behaviors, motors):
+    """Compute new motor values. If behavior is manual, keep same motor values. Else, compute new values with proximeters and params.
 
-behavior_name_map = {beh.name: i for i, beh in enumerate(linear_behavior_enum)}
-behavior_name_map['manual'] = len(behavior_bank) - 2
-behavior_name_map['noop'] = len(behavior_bank) - 1
-
-lg.info(behavior_name_map)
-
-# TODO : Check but seems unused
-reversed_behavior_name_map = {i: name for name, i in behavior_name_map.items()}
-
-def switch_fn(fn_list):
-        def switch(index, *operands):
-            return lax.switch(index, fn_list, *operands)
-        return switch
-
-multi_switch = vmap(switch_fn(behavior_bank), (0, 0, 0))
-
-def sensorimotor(prox, behaviors, motor):
-    motor = multi_switch(behaviors, prox, motor)
-    return motor
-""""""
+    :param proxs: proximeters of all agents
+    :param params: parameters mapping proximeters to new motor values
+    :param behaviors: array of behaviors
+    :param motors: current motor values
+    :return: new motor values
+    """
+    manual = jnp.where(behaviors == Behaviors.MANUAL.value, 1, 0)
+    manual_mask = jnp.broadcast_to(jnp.expand_dims(manual, axis=1), motors.shape)
+    linear_motor_values = v_linear_behavior(proxs, params)
+    motor_values = linear_motor_values * (1 - manual_mask) + motors * manual_mask
+    return motor_values
 
 def lr_2_fwd_rot(left_spd, right_spd, base_length, wheel_diameter):
     fwd = (wheel_diameter / 4.) * (left_spd + right_spd)
@@ -291,7 +303,7 @@ class BraitenbergEnv(BaseEnv):
             mass_orientation=0.125,
             existing_agents=None,
             existing_objects=None,
-            behavior=behavior_name_map['AGGRESSION'],
+            behavior=Behaviors.AGGRESSION.value,
             wheel_diameter=2.0,
             speed_mul=1.0,
             max_speed=10.0,
@@ -357,7 +369,7 @@ class BraitenbergEnv(BaseEnv):
         prox, proximity_dist_map, proximity_dist_theta = compute_prox(state, agents_neighs_idx, target_exists_mask=exists_mask, displacement=self.displacement)
 
         # 2 : Compute motor activations according to new proximeter values
-        motor = sensorimotor(prox, state.agents.behavior, state.agents.motor)
+        motor = compute_motor(prox, state.agents.params, state.agents.behavior, state.agents.motor)
         agents = state.agents.replace(
             prox=prox, 
             proximity_map_dist=proximity_dist_map, 
@@ -428,12 +440,19 @@ class BraitenbergEnv(BaseEnv):
         )
     
     def _init_agents(self):
+        # TODO : Change that so can define custom behaviors (e.g w a list)
+        # Use numpy cuz jnp elements cannot be keys of a dict
+        np_behaviors = np.full((self.max_agents), self.behavior)
+        # Cannot use a vmap fn because of dictionary, cannot have jax elements as a key because its unhashable
+        params = jnp.array([behavior_to_params(behavior) for behavior in np_behaviors])
+        behaviors = jnp.array(np_behaviors)
         return AgentState(
             # idx in the entities (ent_idx) state to map agents information in the different data structures
             ent_idx=jnp.arange(self.max_agents, dtype=int), 
             prox=jnp.zeros((self.max_agents, 2)),
             motor=jnp.zeros((self.max_agents, 2)),
-            behavior=jnp.full((self.max_agents), self.behavior),
+            behavior=behaviors,
+            params=params,
             wheel_diameter=jnp.full((self.max_agents), self.wheel_diameter),
             speed_mul=jnp.full((self.max_agents), self.speed_mul),
             max_speed=jnp.full((self.max_agents), self.max_speed),
