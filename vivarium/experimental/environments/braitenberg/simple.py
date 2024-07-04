@@ -411,31 +411,54 @@ class BraitenbergEnv(BaseEnv):
         return neighbors, agents_neighs_idx
 
 #--- 5 Define helper functions to initialize a state #
+SEED = 0
+MAX_AGENTS = 10
+MAX_OBJECTS = 2
+N_DIMS = 2
+BOX_SIZE = 100
+DIAMETER = 5.0
+FRICTION = 0.1
+MASS_CENTER = 1.0
+MASS_ORIENTATION = 0.125
+NEIGHBOR_RADIUS = 100.0
+COLLISION_ALPHA = 0.5
+COLLISION_EPS = 0.1
+DT = 0.1
+WHEEL_DIAMETER = 2.0
+SPEED_MUL = 1.0
+MAX_SPEED = 10.0
+THETA_MUL = 1.0
+PROX_DIST_MAX = 40.0
+PROX_COS_MIN = 0.0
+AGENTS_COLOR = jnp.array([0.0, 0.0, 1.0])
+OBJECTS_COLOR = jnp.array([1.0, 0.0, 0.0])
+BEHAVIOR = Behaviors.AGGRESSION.value
+
 def init_state(
-    box_size=100,
-    dt=0.1,
-    max_agents=10,
-    max_objects=2,
-    neighbor_radius=100.,
-    collision_alpha=0.5,
-    collision_eps=0.1,
-    n_dims=2,
-    seed=0,
-    diameter=5.0,
-    friction=0.1,
-    mass_center=1.0,
-    mass_orientation=0.125,
+    box_size=BOX_SIZE,
+    dt=DT,
+    max_agents=MAX_AGENTS,
+    max_objects=MAX_OBJECTS,
+    neighbor_radius=NEIGHBOR_RADIUS,
+    collision_alpha=COLLISION_ALPHA,
+    collision_eps=COLLISION_EPS,
+    n_dims=N_DIMS,
+    seed=SEED,
+    diameter=DIAMETER,
+    friction=FRICTION,
+    mass_center=MASS_CENTER,
+    mass_orientation=MASS_ORIENTATION,
     existing_agents=None,
     existing_objects=None,
-    behavior=Behaviors.AGGRESSION.value,
-    wheel_diameter=2.0,
-    speed_mul=1.0,
-    max_speed=10.0,
-    theta_mul=1.0,
-    prox_dist_max=40.0,
-    prox_cos_min=0.0,
-    agents_color=jnp.array([0.0, 0.0, 1.0]),
-    objects_color=jnp.array([1.0, 0.0, 0.0])
+    behavior=BEHAVIOR,
+    wheel_diameter=WHEEL_DIAMETER,
+    speed_mul=SPEED_MUL,
+    max_speed=MAX_SPEED,
+    theta_mul=THETA_MUL,
+    prox_dist_max=PROX_DIST_MAX,
+    prox_cos_min=PROX_COS_MIN,
+    agents_color=AGENTS_COLOR,
+    objects_color=OBJECTS_COLOR
 ) -> State:
 
     key = random.PRNGKey(seed)
@@ -492,19 +515,19 @@ def init_state(
     return state
 
 def init_entities(
-    max_agents,
-    max_objects, 
-    n_dims, 
-    box_size,
-    existing_agents,
-    existing_objects,
-    mass_center,
-    mass_orientation,
-    diameter,
-    friction,
-    key_agents_pos, 
-    key_objects_pos, 
-    key_orientations
+    max_agents=MAX_AGENTS,
+    max_objects=MAX_OBJECTS,
+    n_dims=N_DIMS,
+    box_size=BOX_SIZE,
+    existing_agents=None,
+    existing_objects=None,
+    mass_center=MASS_CENTER,
+    mass_orientation=MASS_ORIENTATION,
+    diameter=DIAMETER,
+    friction=FRICTION,
+    key_agents_pos=random.PRNGKey(SEED),
+    key_objects_pos=random.PRNGKey(SEED+1),
+    key_orientations=random.PRNGKey(SEED+2)
 ):
     existing_agents = max_agents if not existing_agents else existing_agents
     existing_objects = max_objects if not existing_objects else existing_objects
@@ -537,15 +560,15 @@ def init_entities(
     )
 
 def init_agents(
-    max_agents,
-    behavior,
-    wheel_diameter,
-    speed_mul,
-    max_speed,
-    theta_mul,
-    prox_dist_max,
-    prox_cos_min,
-    agents_color
+    max_agents=MAX_AGENTS,
+    behavior=BEHAVIOR,
+    wheel_diameter=WHEEL_DIAMETER,
+    speed_mul=SPEED_MUL,
+    max_speed=MAX_SPEED,
+    theta_mul=THETA_MUL,
+    prox_dist_max=PROX_DIST_MAX,
+    prox_cos_min=PROX_COS_MIN,
+    agents_color=AGENTS_COLOR
 ):
     # Need to use a np array because jax jax array can't be the key of a dict (for fn behaviors_to_params)
     np_behaviors = np.full((max_agents), behavior)
@@ -570,9 +593,9 @@ def init_agents(
     )
 
 def init_objects(
-    max_agents,
-    max_objects,
-    objects_color
+    max_agents=MAX_AGENTS,
+    max_objects=MAX_OBJECTS,
+    objects_color=OBJECTS_COLOR
 ):
     # Entities idx of objects
     start_idx, stop_idx = max_agents, max_agents + max_objects 
@@ -584,16 +607,16 @@ def init_objects(
     )
 
 def init_complete_state(
-    entities, 
-    agents, 
-    objects, 
-    box_size, 
-    max_agents, 
-    max_objects, 
-    neighbor_radius, 
-    collision_alpha, 
-    collision_eps, 
-    dt
+    entities=None,
+    agents=None,
+    objects=None,
+    box_size=BOX_SIZE,
+    max_agents=MAX_AGENTS,
+    max_objects=MAX_OBJECTS,
+    neighbor_radius=NEIGHBOR_RADIUS,
+    collision_alpha=COLLISION_ALPHA,
+    collision_eps=COLLISION_EPS,
+    dt=DT
 ):
     return State(
         time=0,
