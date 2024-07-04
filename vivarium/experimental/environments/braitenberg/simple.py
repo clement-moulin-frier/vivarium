@@ -4,6 +4,7 @@ from enum import Enum
 from functools import partial
 from typing import Tuple
 
+import numpy as np
 import jax.numpy as jnp
 
 from jax import vmap, jit
@@ -18,11 +19,10 @@ from vivarium.experimental.environments.utils import normal, distance, relative_
 from vivarium.experimental.environments.base_env import BaseState, BaseEnv
 from vivarium.experimental.environments.physics_engine import total_collision_energy, friction_force, dynamics_fn
 
-### Define the constants and the classes of the environment to store its state ###
 
+### Define the constants and the classes of the environment to store its state ###
 SPACE_NDIMS = 2
 
-# TODO : The best is surely to only define BaseState because some envs might not use EntityState / ObjectState or AgentState
 class EntityType(Enum):
     AGENT = 0
     OBJECT = 1
@@ -48,6 +48,7 @@ class AgentState(ParticleState):
     proximity_map_dist: jnp.array
     proximity_map_theta: jnp.array
     behavior: jnp.array
+    params: jnp.array
     wheel_diameter: jnp.array
     speed_mul: jnp.array
     max_speed: jnp.array
@@ -74,10 +75,7 @@ class State(BaseState):
 
 ### Define helper functions used to step from one state to the next one ###
 
-
 #--- 1 Functions to compute the proximeter of braitenberg agents ---#
-
-
 proximity_map = vmap(relative_position, (0, 0))
 
 def sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists):
@@ -100,6 +98,17 @@ def sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists):
 sensor_fn = vmap(sensor_fn, (0, 0, 0, 0, 0))
 
 def sensor(dist, relative_theta, dist_max, cos_min, max_agents, senders, target_exists):
+    """Return the sensor values of all agents
+
+    :param dist: relative distances between agents and targets
+    :param relative_theta: relative angles between agents and targets
+    :param dist_max: maximum range of proximeters
+    :param cos_min: cosinus of proximeters angles
+    :param max_agents: number of agents
+    :param senders: indexes of agents sensing the environment
+    :param target_exists: mask to indicate which sensed entities exist or not 
+    :return: proximeter activations
+    """
     raw_proxs = sensor_fn(dist, relative_theta, dist_max, cos_min, target_exists)
     # Computes the maximum within the proximeter activations of agents on all their neigbhors.
     proxs = ops.segment_max(
@@ -140,63 +149,100 @@ def compute_prox(state, agents_neighs_idx, target_exists_mask, displacement):
 
 
 #--- 2 Functions to compute the motor activations of braitenberg agents ---#
+class Behaviors(Enum):
+    FEAR = 0
+    AGGRESSION = 1
+    LOVE = 2
+    SHY = 3
+    NOOP = 4
+    MANUAL = 5
 
-# TODO : I think we could also refactor this part of the code to make it clearer (part between """""""")
-""""""""
-linear_behavior_enum = Enum('matrices', ['FEAR', 'AGGRESSION', 'LOVE', 'SHY'])
-
-linear_behavior_matrices = {
-    linear_behavior_enum.FEAR: jnp.array([[1., 0., 0.], [0., 1., 0.]]),
-    linear_behavior_enum.AGGRESSION: jnp.array([[0., 1., 0.], [1., 0., 0.]]),
-    linear_behavior_enum.LOVE: jnp.array([[-1., 0., 1.], [0., -1., 1.]]),
-    linear_behavior_enum.SHY: jnp.array([[0., -1., 1.], [-1., 0., 1.]]),
+behavior_params = {
+    Behaviors.FEAR.value: jnp.array(
+        [[1., 0., 0.], 
+         [0., 1., 0.]]),
+    Behaviors.AGGRESSION.value: jnp.array(
+        [[0., 1., 0.], 
+         [1., 0., 0.]]),
+    Behaviors.LOVE.value: jnp.array(
+        [[-1., 0., 1.], 
+         [0., -1., 1.]]),
+    Behaviors.SHY.value: jnp.array(
+        [[0., -1., 1.], 
+         [-1., 0., 1.]]),
+    Behaviors.NOOP.value: jnp.array(
+        [[0., 0., 0.], 
+         [0., 0., 0.]]),
 }
 
-def linear_behavior(proxs, motors, matrix):
-    return matrix.dot(jnp.hstack((proxs, 1.)))
+def behavior_to_params(behavior):
+    """Return the params associated to a behavior.
 
-def apply_motors(proxs, motors):
-    return motors
+    :param behavior: behavior id (int)
+    :return: params
+    """
+    return behavior_params[behavior]
 
-def noop(proxs, motors):
-    return jnp.array([0., 0.])
+def linear_behavior(proxs, params):
+    """Compute the activation of motors with a linear combination of proximeters and parameters
 
-behavior_bank = [partial(linear_behavior, matrix=linear_behavior_matrices[beh])
-                 for beh in linear_behavior_enum] \
-                + [apply_motors, noop]
+    :param proxs: proximeter values of an agent
+    :param params: parameters of an agent (mapping proxs to motor values)
+    :return: motor values
+    """
+    return params.dot(jnp.hstack((proxs, 1.)))
 
-behavior_name_map = {beh.name: i for i, beh in enumerate(linear_behavior_enum)}
-behavior_name_map['manual'] = len(behavior_bank) - 2
-behavior_name_map['noop'] = len(behavior_bank) - 1
+v_linear_behavior = vmap(linear_behavior, in_axes=(0, 0))
+                    
+def compute_motor(proxs, params, behaviors, motors):
+    """Compute new motor values. If behavior is manual, keep same motor values. Else, compute new values with proximeters and params.
 
-lg.info(behavior_name_map)
-
-# TODO : Check but seems unused
-reversed_behavior_name_map = {i: name for name, i in behavior_name_map.items()}
-
-def switch_fn(fn_list):
-        def switch(index, *operands):
-            return lax.switch(index, fn_list, *operands)
-        return switch
-
-multi_switch = vmap(switch_fn(behavior_bank), (0, 0, 0))
-
-def sensorimotor(prox, behaviors, motor):
-    motor = multi_switch(behaviors, prox, motor)
-    return motor
-""""""
+    :param proxs: proximeters of all agents
+    :param params: parameters mapping proximeters to new motor values
+    :param behaviors: array of behaviors
+    :param motors: current motor values
+    :return: new motor values
+    """
+    manual = jnp.where(behaviors == Behaviors.MANUAL.value, 1, 0)
+    manual_mask = jnp.broadcast_to(jnp.expand_dims(manual, axis=1), motors.shape)
+    linear_motor_values = v_linear_behavior(proxs, params)
+    motor_values = linear_motor_values * (1 - manual_mask) + motors * manual_mask
+    return motor_values
 
 def lr_2_fwd_rot(left_spd, right_spd, base_length, wheel_diameter):
+    """Return the forward and angular speeds according the the speeds of left and right wheels
+
+    :param left_spd: left wheel speed
+    :param right_spd: right wheel speed
+    :param base_length: distance between two wheels (diameter of the agent)
+    :param wheel_diameter: diameter of wheels
+    :return: forward and angular speeds
+    """
     fwd = (wheel_diameter / 4.) * (left_spd + right_spd)
     rot = 0.5 * (wheel_diameter / base_length) * (right_spd - left_spd)
     return fwd, rot
 
 def fwd_rot_2_lr(fwd, rot, base_length, wheel_diameter):
+    """Return the left and right wheels speeds according to the forward and angular speeds
+
+    :param fwd: forward speed
+    :param rot: angular speed
+    :param base_length: distance between wheels (diameter of agent)
+    :param wheel_diameter: diameter of wheels
+    :return: left wheel speed, right wheel speed
+    """
     left = ((2.0 * fwd) - (rot * base_length)) / wheel_diameter
     right = ((2.0 * fwd) + (rot * base_length)) / wheel_diameter
     return left, right
 
 def motor_command(wheel_activation, base_length, wheel_diameter):
+    """Return the forward and angular speed according to wheels speeds
+
+    :param wheel_activation: wheels speeds
+    :param base_length: distance between wheels
+    :param wheel_diameter: wheel diameters
+    :return: forward and angular speeds
+    """
     fwd, rot = lr_2_fwd_rot(wheel_activation[0], wheel_activation[1], base_length, wheel_diameter)
     return fwd, rot
 
@@ -204,12 +250,23 @@ motor_command = vmap(motor_command, (0, 0, 0))
 
 
 #--- 3 Functions to compute the different forces in the environment ---#
-
 # TODO : Refactor the code in order to simply the definition of a total force fn incorporating different forces
 def braintenberg_force_fn(displacement):
+    """Return the force function of the environment
+
+    :param displacement: displacement function to compute distances between entities
+    :return: force function
+    """
     coll_force_fn = quantity.force(partial(total_collision_energy, displacement=displacement))
 
     def collision_force(state, neighbor, exists_mask):
+        """Returns the collision force function of the environment
+
+        :param state: state
+        :param neighbor: neighbor maps of entities
+        :param exists_mask: mask on existing entities
+        :return: collision force function
+        """
         return coll_force_fn(
             state.entities.position.center,
             neighbor=neighbor,
@@ -220,6 +277,12 @@ def braintenberg_force_fn(displacement):
             )
 
     def motor_force(state, exists_mask):
+        """Returns the motor force function of the environment
+
+        :param state: state
+        :param exists_mask: mask on existing entities
+        :return: motor force function
+        """
         agent_idx = state.agents.ent_idx
 
         body = rigid_body.RigidBody(
@@ -260,6 +323,13 @@ def braintenberg_force_fn(displacement):
                                     orientation=orientation)
     
     def force_fn(state, neighbor, exists_mask):
+        """Returns the total force applied on the environment
+
+        :param state: state
+        :param neighbor: neighbor map
+        :param exists_mask: existing entities mask
+        :return: total force
+        """
         mf = motor_force(state, exists_mask)
         cf = collision_force(state, neighbor, exists_mask)
         ff = friction_force(state, exists_mask)
@@ -270,83 +340,24 @@ def braintenberg_force_fn(displacement):
 
     return force_fn
 
-
-#--- 4 Define the environment class with its different functions (init_state, _step ...) ---#
-
+#--- 4 Define the environment class with its different functions (step ...) ---#
 class BraitenbergEnv(BaseEnv):
-    def __init__(
-            self,
-            box_size=100,
-            dt=0.1,
-            max_agents=10,
-            max_objects=2,
-            neighbor_radius=100.,
-            collision_alpha=0.5,
-            collision_eps=0.1,
-            n_dims=2,
-            seed=0,
-            diameter=5.0,
-            friction=0.1,
-            mass_center=1.0,
-            mass_orientation=0.125,
-            existing_agents=None,
-            existing_objects=None,
-            behavior=behavior_name_map['AGGRESSION'],
-            wheel_diameter=2.0,
-            speed_mul=1.0,
-            max_speed=10.0,
-            theta_mul=1.0,
-            prox_dist_max=40.0,
-            prox_cos_min=0.0,
-            agents_color=jnp.array([0.0, 0.0, 1.0]),
-            objects_color=jnp.array([1.0, 0.0, 0.0])
-    ):
-        
-        # general parameters
-        self.box_size = box_size
-        self.dt = dt
-        self.max_agents = max_agents
-        self.max_objects = max_objects
-        self.neighbor_radius = neighbor_radius
-        self.collision_alpha = collision_alpha
-        self.collision_eps = collision_eps
-        self.n_dims = n_dims
+    def __init__(self, state, seed=42):
         self.seed = seed
-        # entities parameters
-        self.diameter = diameter
-        self.friction = friction
-        self.mass_center = mass_center
-        self.mass_orientation = mass_orientation
-        # Set existing objects and agents to max values if not specified
-        self.existing_agents = existing_agents if existing_agents else max_agents
-        self.existing_objects = existing_objects if existing_objects else max_objects
-        # agents parameters
-        self.behavior = behavior
-        self.wheel_diameter = wheel_diameter
-        self.speed_mul = speed_mul
-        self.max_speed = max_speed
-        self.theta_mul = theta_mul
-        self.prox_dist_max = prox_dist_max
-        self.prox_cos_min = prox_cos_min
-        self.agents_color = agents_color
-        # objects parameters
-        self.objects_color = objects_color
+        self.init_key = random.PRNGKey(seed)
+        self.displacement, self.shift = space.periodic(state.box_size)
+        self.init_fn, self.apply_physics = dynamics_fn(self.displacement, self.shift, braintenberg_force_fn)
+        self.neighbor_fn = partition.neighbor_list(
+            self.displacement, 
+            state.box_size,
+            r_cutoff=state.neighbor_radius,
+            dr_threshold=10.,
+            capacity_multiplier=1.5,
+            format=partition.Sparse
+        )
 
-    def init_state(self) -> State:
-        key = random.PRNGKey(self.seed)
-        key, key_agents_pos, key_objects_pos, key_orientations = random.split(key, 4)
+        self.neighbors, self.agents_neighs_idx = self.allocate_neighbors(state)
 
-        entities = self._init_entities(key_agents_pos, key_objects_pos, key_orientations)
-        agents = self._init_agents()
-        objects = self._init_objects()
-        state = self._init_complete_state(entities, agents, objects)
-
-        # Create jax_md attributes for environment physics
-        # TODO : Might not be optimal to just use this function here (harder to understand what's in the class attributes)
-        state = self._init_env_physics(key, state)
-
-        return state
-        
     def distance(self, point1, point2):
             return distance(self.displacement, point1, point2)
     
@@ -357,7 +368,7 @@ class BraitenbergEnv(BaseEnv):
         prox, proximity_dist_map, proximity_dist_theta = compute_prox(state, agents_neighs_idx, target_exists_mask=exists_mask, displacement=self.displacement)
 
         # 2 : Compute motor activations according to new proximeter values
-        motor = sensorimotor(prox, state.agents.behavior, state.agents.motor)
+        motor = compute_motor(prox, state.agents.params, state.agents.behavior, state.agents.motor)
         agents = state.agents.replace(
             prox=prox, 
             proximity_map_dist=proximity_dist_map, 
@@ -377,9 +388,10 @@ class BraitenbergEnv(BaseEnv):
         return state, neighbors
     
     def step(self, state: State) -> State:
+        if state.entities.momentum is None:
+             state = self.init_fn(state, self.init_key)
         current_state = state
         state, neighbors = self._step(current_state, self.neighbors, self.agents_neighs_idx)
-
         if self.neighbors.did_buffer_overflow:
             # reallocate neighbors and run the simulation from current_state
             lg.warning(f'NEIGHBORS BUFFER OVERFLOW at step {state.time}: rebuilding neighbors')
@@ -397,96 +409,225 @@ class BraitenbergEnv(BaseEnv):
         agents_neighs_idx = neighbors.idx[:, ag_idx]
         
         return neighbors, agents_neighs_idx
-    
-    def _init_entities(self, key_agents_pos, key_objects_pos, key_orientations):
-        n_entities = self.max_agents + self.max_objects # we store the entities data in jax arrays of length max_agents + max_objects 
-        # Assign random positions to each entity in the environment
-        agents_positions = random.uniform(key_agents_pos, (self.max_agents, self.n_dims)) * self.box_size
-        objects_positions = random.uniform(key_objects_pos, (self.max_objects, self.n_dims)) * self.box_size
-        positions = jnp.concatenate((agents_positions, objects_positions))
-        # Assign random orientations between 0 and 2*pi to each entity
-        orientations = random.uniform(key_orientations, (n_entities,)) * 2 * jnp.pi
-        # Assign types to the entities
-        agents_entities = jnp.full(self.max_agents, EntityType.AGENT.value)
-        object_entities = jnp.full(self.max_objects, EntityType.OBJECT.value)
-        entity_types = jnp.concatenate((agents_entities, object_entities), dtype=int)
-        # Define arrays with existing entities
-        exists_agents = jnp.concatenate((jnp.ones((self.existing_agents)), jnp.zeros((self.max_agents - self.existing_agents))))
-        exists_objects = jnp.concatenate((jnp.ones((self.existing_objects)), jnp.zeros((self.max_objects - self.existing_objects))))
-        exists = jnp.concatenate((exists_agents, exists_objects), dtype=int)
 
-        return EntityState(
-            position=RigidBody(center=positions, orientation=orientations),
-            momentum=None,
-            force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
-            mass=RigidBody(center=jnp.full((n_entities, 1), self.mass_center), orientation=jnp.full((n_entities), self.mass_orientation)),
-            entity_type=entity_types,
-            entity_idx = jnp.array(list(range(self.max_agents)) + list(range(self.max_objects))),
-            diameter=jnp.full((n_entities), self.diameter),
-            friction=jnp.full((n_entities), self.friction),
-            exists=exists
-        )
-    
-    def _init_agents(self):
-        return AgentState(
-            # idx in the entities (ent_idx) state to map agents information in the different data structures
-            ent_idx=jnp.arange(self.max_agents, dtype=int), 
-            prox=jnp.zeros((self.max_agents, 2)),
-            motor=jnp.zeros((self.max_agents, 2)),
-            behavior=jnp.full((self.max_agents), self.behavior),
-            wheel_diameter=jnp.full((self.max_agents), self.wheel_diameter),
-            speed_mul=jnp.full((self.max_agents), self.speed_mul),
-            max_speed=jnp.full((self.max_agents), self.max_speed),
-            theta_mul=jnp.full((self.max_agents), self.theta_mul),
-            proxs_dist_max=jnp.full((self.max_agents), self.prox_dist_max),
-            proxs_cos_min=jnp.full((self.max_agents), self.prox_cos_min),
-            proximity_map_dist=jnp.zeros((self.max_agents, 1)),
-            proximity_map_theta=jnp.zeros((self.max_agents, 1)),
-            color=jnp.tile(self.agents_color, (self.max_agents, 1))
-        )
+#--- 5 Define helper functions to initialize a state #
+SEED = 0
+MAX_AGENTS = 10
+MAX_OBJECTS = 2
+N_DIMS = 2
+BOX_SIZE = 100
+DIAMETER = 5.0
+FRICTION = 0.1
+MASS_CENTER = 1.0
+MASS_ORIENTATION = 0.125
+NEIGHBOR_RADIUS = 100.0
+COLLISION_ALPHA = 0.5
+COLLISION_EPS = 0.1
+DT = 0.1
+WHEEL_DIAMETER = 2.0
+SPEED_MUL = 1.0
+MAX_SPEED = 10.0
+THETA_MUL = 1.0
+PROX_DIST_MAX = 40.0
+PROX_COS_MIN = 0.0
+AGENTS_COLOR = jnp.array([0.0, 0.0, 1.0])
+OBJECTS_COLOR = jnp.array([1.0, 0.0, 0.0])
+BEHAVIOR = Behaviors.AGGRESSION.value
 
-    def _init_objects(self):
-        # Entities idx of objects
-        start_idx, stop_idx = self.max_agents, self.max_agents + self.max_objects 
-        objects_ent_idx = jnp.arange(start_idx, stop_idx, dtype=int)
+def init_state(
+    box_size=BOX_SIZE,
+    dt=DT,
+    max_agents=MAX_AGENTS,
+    max_objects=MAX_OBJECTS,
+    neighbor_radius=NEIGHBOR_RADIUS,
+    collision_alpha=COLLISION_ALPHA,
+    collision_eps=COLLISION_EPS,
+    n_dims=N_DIMS,
+    seed=SEED,
+    diameter=DIAMETER,
+    friction=FRICTION,
+    mass_center=MASS_CENTER,
+    mass_orientation=MASS_ORIENTATION,
+    existing_agents=None,
+    existing_objects=None,
+    behavior=BEHAVIOR,
+    wheel_diameter=WHEEL_DIAMETER,
+    speed_mul=SPEED_MUL,
+    max_speed=MAX_SPEED,
+    theta_mul=THETA_MUL,
+    prox_dist_max=PROX_DIST_MAX,
+    prox_cos_min=PROX_COS_MIN,
+    agents_color=AGENTS_COLOR,
+    objects_color=OBJECTS_COLOR
+) -> State:
 
-        return ObjectState(
-            ent_idx=objects_ent_idx,
-            color=jnp.tile(self.objects_color, (self.max_objects, 1))
-        )
-    
-    def _init_complete_state(self, entities, agents, objects):
-        lg.info('Initializing state')
-        return State(
-            time=0,
-            box_size=self.box_size,
-            max_agents=self.max_agents,
-            max_objects=self.max_objects,
-            neighbor_radius=self.neighbor_radius,
-            collision_alpha=self.collision_alpha,
-            collision_eps=self.collision_eps,
-            dt=self.dt,
-            entities=entities,
-            agents=agents,
-            objects=objects
-        )   
-    
-    def _init_env_physics(self, key, state):
-        lg.info("Initializing environment's physics features")
-        key, physics_key = random.split(key)
-        self.displacement, self.shift = space.periodic(self.box_size)
-        self.init_fn, self.apply_physics = dynamics_fn(self.displacement, self.shift, braintenberg_force_fn)
-        self.neighbor_fn = partition.neighbor_list(
-            self.displacement, 
-            self.box_size,
-            r_cutoff=self.neighbor_radius,
-            dr_threshold=10.,
-            capacity_multiplier=1.5,
-            format=partition.Sparse
-        )
+    key = random.PRNGKey(seed)
+    key, key_agents_pos, key_objects_pos, key_orientations = random.split(key, 4)
 
-        state = self.init_fn(state, physics_key)
-        lg.info("Allocating neighbors")
-        self.neighbors, self.agents_neighs_idx = self.allocate_neighbors(state)
+    entities = init_entities(
+        max_objects=max_objects,
+        max_agents=max_agents,
+        n_dims=n_dims,
+        box_size=box_size,
+        existing_agents=existing_agents,
+        existing_objects=existing_objects,
+        mass_center=mass_center,
+        mass_orientation=mass_orientation,
+        diameter=diameter,
+        friction=friction,
+        key_agents_pos=key_agents_pos,
+        key_objects_pos=key_objects_pos,
+        key_orientations=key_orientations
+    )
+        
+    agents = init_agents(
+        max_agents=max_agents,
+        behavior=behavior,
+        wheel_diameter=wheel_diameter,
+        speed_mul=speed_mul,
+        max_speed=max_speed,
+        theta_mul=theta_mul, 
+        prox_dist_max=prox_dist_max,
+        prox_cos_min=prox_cos_min,
+        agents_color=agents_color
 
-        return state
+    )
+
+    objects = init_objects(
+        max_agents=max_agents,
+        max_objects=max_objects,
+        objects_color=objects_color
+    )
+
+    state = init_complete_state(
+        entities=entities, 
+        agents=agents, 
+        objects=objects,
+        box_size=box_size,
+        max_agents=max_agents,
+        max_objects=max_objects,
+        neighbor_radius=neighbor_radius,
+        collision_alpha=collision_alpha,
+        collision_eps=collision_eps,
+        dt=dt
+    )
+
+    return state
+
+def init_entities(
+    max_agents=MAX_AGENTS,
+    max_objects=MAX_OBJECTS,
+    n_dims=N_DIMS,
+    box_size=BOX_SIZE,
+    existing_agents=None,
+    existing_objects=None,
+    mass_center=MASS_CENTER,
+    mass_orientation=MASS_ORIENTATION,
+    diameter=DIAMETER,
+    friction=FRICTION,
+    key_agents_pos=random.PRNGKey(SEED),
+    key_objects_pos=random.PRNGKey(SEED+1),
+    key_orientations=random.PRNGKey(SEED+2)
+):
+    existing_agents = max_agents if not existing_agents else existing_agents
+    existing_objects = max_objects if not existing_objects else existing_objects
+    n_entities = max_agents + max_objects # we store the entities data in jax arrays of length max_agents + max_objects 
+    # Assign random positions to each entity in the environment
+    agents_positions = random.uniform(key_agents_pos, (max_agents, n_dims)) * box_size
+    objects_positions = random.uniform(key_objects_pos, (max_objects, n_dims)) * box_size
+    positions = jnp.concatenate((agents_positions, objects_positions))
+    # Assign random orientations between 0 and 2*pi to each entity
+    orientations = random.uniform(key_orientations, (n_entities,)) * 2 * jnp.pi
+    # Assign types to the entities
+    agents_entities = jnp.full(max_agents, EntityType.AGENT.value)
+    object_entities = jnp.full(max_objects, EntityType.OBJECT.value)
+    entity_types = jnp.concatenate((agents_entities, object_entities), dtype=int)
+    # Define arrays with existing entities
+    exists_agents = jnp.concatenate((jnp.ones((existing_agents)), jnp.zeros((max_agents - existing_agents))))
+    exists_objects = jnp.concatenate((jnp.ones((existing_objects)), jnp.zeros((max_objects - existing_objects))))
+    exists = jnp.concatenate((exists_agents, exists_objects), dtype=int)
+
+    return EntityState(
+        position=RigidBody(center=positions, orientation=orientations),
+        momentum=None,
+        force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
+        mass=RigidBody(center=jnp.full((n_entities, 1), mass_center), orientation=jnp.full((n_entities), mass_orientation)),
+        entity_type=entity_types,
+        entity_idx = jnp.array(list(range(max_agents)) + list(range(max_objects))),
+        diameter=jnp.full((n_entities), diameter),
+        friction=jnp.full((n_entities), friction),
+        exists=exists
+    )
+
+def init_agents(
+    max_agents=MAX_AGENTS,
+    behavior=BEHAVIOR,
+    wheel_diameter=WHEEL_DIAMETER,
+    speed_mul=SPEED_MUL,
+    max_speed=MAX_SPEED,
+    theta_mul=THETA_MUL,
+    prox_dist_max=PROX_DIST_MAX,
+    prox_cos_min=PROX_COS_MIN,
+    agents_color=AGENTS_COLOR
+):
+    # Need to use a np array because jax jax array can't be the key of a dict (for fn behaviors_to_params)
+    np_behaviors = np.full((max_agents), behavior)
+    params = jnp.array([behavior_to_params(behavior) for behavior in np_behaviors])
+    behaviors = jnp.array(np_behaviors)
+    return AgentState(
+        # idx in the entities (ent_idx) state to map agents information in the different data structures
+        ent_idx=jnp.arange(max_agents, dtype=int), 
+        prox=jnp.zeros((max_agents, 2)),
+        motor=jnp.zeros((max_agents, 2)),
+        behavior=behaviors,
+        params=params,
+        wheel_diameter=jnp.full((max_agents), wheel_diameter),
+        speed_mul=jnp.full((max_agents), speed_mul),
+        max_speed=jnp.full((max_agents), max_speed),
+        theta_mul=jnp.full((max_agents), theta_mul),
+        proxs_dist_max=jnp.full((max_agents), prox_dist_max),
+        proxs_cos_min=jnp.full((max_agents), prox_cos_min),
+        proximity_map_dist=jnp.zeros((max_agents, 1)),
+        proximity_map_theta=jnp.zeros((max_agents, 1)),
+        color=jnp.tile(agents_color, (max_agents, 1))
+    )
+
+def init_objects(
+    max_agents=MAX_AGENTS,
+    max_objects=MAX_OBJECTS,
+    objects_color=OBJECTS_COLOR
+):
+    # Entities idx of objects
+    start_idx, stop_idx = max_agents, max_agents + max_objects 
+    objects_ent_idx = jnp.arange(start_idx, stop_idx, dtype=int)
+
+    return ObjectState(
+        ent_idx=objects_ent_idx,
+        color=jnp.tile(objects_color, (max_objects, 1))
+    )
+
+def init_complete_state(
+    entities=None,
+    agents=None,
+    objects=None,
+    box_size=BOX_SIZE,
+    max_agents=MAX_AGENTS,
+    max_objects=MAX_OBJECTS,
+    neighbor_radius=NEIGHBOR_RADIUS,
+    collision_alpha=COLLISION_ALPHA,
+    collision_eps=COLLISION_EPS,
+    dt=DT
+):
+    return State(
+        time=0,
+        box_size=box_size,
+        max_agents=max_agents,
+        max_objects=max_objects,
+        neighbor_radius=neighbor_radius,
+        collision_alpha=collision_alpha,
+        collision_eps=collision_eps,
+        dt=dt,
+        entities=entities,
+        agents=agents,
+        objects=objects
+    )   
