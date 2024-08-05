@@ -2,8 +2,7 @@
 
 ![Vivarium demo](images/vivarium.gif)
 
-### [>> See the full preliminary demo here ! <<](https://youtu.be/dnO-wo6Ns-8)
-
+See a preliminary demo of the project on [this video](https://youtu.be/dnO-wo6Ns-8).
 
 ## Installation
 
