@@ -17,12 +17,12 @@ from jax_md.rigid_body import RigidBody
 from jax_md import simulate 
 from jax_md import space, partition
 
-from vivarium.experimental.environments.utils import distance 
-from vivarium.experimental.environments.base_env import BaseState, BaseEnv
-from vivarium.experimental.environments.physics_engine import dynamics_fn
-from vivarium.experimental.environments.braitenberg.simple import proximity_map, sensor_fn
-from vivarium.experimental.environments.braitenberg.simple import Behaviors, behavior_to_params, linear_behavior
-from vivarium.experimental.environments.braitenberg.simple import braintenberg_force_fn
+from vivarium.environments.utils import distance 
+from vivarium.environments.base_env import BaseState, BaseEnv
+from vivarium.environments.physics_engine import dynamics_fn
+from vivarium.environments.braitenberg.simple import proximity_map, sensor_fn
+from vivarium.environments.braitenberg.simple import Behaviors, behavior_to_params, linear_behavior
+from vivarium.environments.braitenberg.simple import braintenberg_force_fn
 
 
 ### Define the constants and the classes of the environment to store its state ###

@@ -15,9 +15,9 @@ from jax_md.rigid_body import RigidBody
 from jax_md import simulate 
 from jax_md import space, rigid_body, partition, quantity
 
-from vivarium.experimental.environments.utils import normal, distance, relative_position 
-from vivarium.experimental.environments.base_env import BaseState, BaseEnv
-from vivarium.experimental.environments.physics_engine import total_collision_energy, friction_force, dynamics_fn
+from vivarium.environments.utils import normal, distance, relative_position 
+from vivarium.environments.base_env import BaseState, BaseEnv
+from vivarium.environments.physics_engine import total_collision_energy, friction_force, dynamics_fn
 
 
 ### Define the constants and the classes of the environment to store its state ###
