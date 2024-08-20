@@ -758,7 +758,7 @@ def init_complete_state(
 
 
 def init_state(
-    entities_data,
+    entities_data=entities_data,
     box_size=box_size,
     dt=dt,
     neighbor_radius=neighbor_radius,
