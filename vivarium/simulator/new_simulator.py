@@ -105,7 +105,7 @@ class SimState:
 # TODO : Make that the state of simulator is the SimState (because will be used in CLient server communication)
 # TODO : Create a property method that returns env state as self.sim_to_env_state(self.state)
 class Simulator:
-    def __init__(self, env, state, num_steps_lax=4, update_freq=-1, jit_step=True, use_fori_loop=True, seed=0):
+    def __init__(self, env, env_state, num_steps_lax=4, update_freq=-1, jit_step=True, use_fori_loop=True, seed=0):
         self.env = env
 
         self.key = jax.random.PRNGKey(seed)
@@ -113,13 +113,10 @@ class Simulator:
         self.freq = update_freq
         self.jit_step = jit_step
         self.use_fori_loop = use_fori_loop
-        self.ent_sub_types = state.ent_sub_types # information about entities sub types in a dictionary, can't be given client side at the moment
+        self.ent_sub_types = env_state.ent_sub_types # information about entities sub types in a dictionary, can't be given client side at the moment
 
         # transform the env state (only backend) into a jax md state with the older interface
-        self.state = state
-        # TODO : implement later
-        # self.env_state = state
-        # self.state = self.convert_env_state(self.env_state)
+        self.state = self.env_to_sim_state(env_state)
 
         # Attributes to start or stop the simulation
         self._is_started = False
@@ -181,6 +178,12 @@ class Simulator:
         )
 
         return env_state
+    
+    # Add a method to directly get env state
+    @property
+    def env_state(self):
+        return self.sim_to_env_state(self.state)
+
 
     # DONE : Remove num loops arg and removed 
     # TODO : Handle the num steps lax in environment side (not too hard to do)
@@ -191,14 +194,15 @@ class Simulator:
         :param neighbors: current simulation neighbors array 
         :return: updated state and neighbors
         """
-        # Create a copy of the current state in case of neighbor buffer overflow
-        new_state = self.env.step(state=state)
+        # convert the sim_state into env state to call env.step()
+        new_env_state = self.env.step(state=self.sim_to_env_state(state))
 
-        # TODO : Remove this weird thing and just save the state
+        # TODO : Remove this weird thing and just save the env state --> Because it is with this one that we can plot state in server side
         if self.recording:
-            self.record((new_state.entity_state, new_state.agent_state, new_state.object_state, new_state.simulator_state))
+            self.record(new_env_state)
 
-        return new_state
+        # return the next sim state
+        return self.env_to_sim_state(new_env_state)
     
 
     def step(self):
@@ -453,13 +457,14 @@ if __name__ == "__main__":
     env_state = init_state()
     env = SelectiveSensorsEnv(state=env_state)
 
-    simulator = Simulator(env=env, state=env_state)
+    simulator = Simulator(env=env, env_state=env_state)
 
     num_steps = 10
-    env_state = simulator.run(num_steps=num_steps)
+    sim_state = simulator.run(num_steps=num_steps)
 
-    sim_state = simulator.env_to_sim_state(env_state)
     env_state = simulator.sim_to_env_state(sim_state)
-
-    env_state = simulator.run(num_steps=num_steps)
     assert isinstance(env_state, EnvState)
+    sim_state = simulator.env_to_sim_state(env_state)
+
+    sim_state = simulator.run(num_steps=num_steps)
+    assert isinstance(sim_state, SimState)
