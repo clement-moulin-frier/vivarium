@@ -37,6 +37,8 @@ class SimulatorGRPCClient(SimulatorClient):
 
     def get_state(self):
         state = self.stub.GetState(Empty())
+        print(f"\n get state in SimulatorGRPCClient")
+        print(f"{state = }")
         return proto_to_state(state)
 
     def get_nve_state(self):

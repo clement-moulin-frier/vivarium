@@ -33,19 +33,26 @@ class Config(Parameterized):
 
 class AgentConfig(Config):
     idx = param.Integer()
+    ent_sensedtype = param.Integer()
     x_position = param.Number(0.)
     y_position = param.Number(0.)
     orientation = param.Number(0.)
     mass_center = param.Number(mass_center)
     mass_orientation = param.Number(mass_orientation)
+    # TODO : Change that to have at the moment only a np array --> But there will be problems for the rendering later ...
     behavior = param.ObjectSelector(default=behaviors.linear_behavior_enum.AGGRESSION.name,
                                     objects=behaviors.behavior_name_map.keys())
     left_motor = param.Number(0., bounds=(0., 1.))
     right_motor = param.Number(0., bounds=(0., 1.))
+    # TODO : Will be problems here with the proximeters 
+    # TODO : Can't handle this client side because we want to have different sensors 
+    # TODO : Except if we consider the non occlusion case where the sensors information is just the sensor of closest entity
     left_prox = param.Number(0., bounds=(0., 1.))
     right_prox = param.Number(0., bounds=(0., 1.))
     proximity_map_dist = param.Array(np.array([0.]))
     proximity_map_theta = param.Array(np.array([0.]))
+    params = param.Array(np.array([0.]))
+    sensed = param.Array(np.array([0.]))
     wheel_diameter = param.Number(2.)
     diameter = param.Number(5.)
     speed_mul = param.Number(1.)
@@ -63,6 +70,7 @@ class AgentConfig(Config):
 
 class ObjectConfig(Config):
     idx = param.Integer()
+    ent_sensedtype = param.Integer()
     x_position = param.Number(0.)
     y_position = param.Number(0.)
     orientation = param.Number(0.)
@@ -79,6 +87,7 @@ class ObjectConfig(Config):
 
 class SimulatorConfig(Config):
     idx = param.Integer(0, constant=True)
+    time = param.Integer(0)
     box_size = param.Number(100., bounds=(0, None))
     max_agents = param.Integer(10)
     max_objects = param.Integer(2)

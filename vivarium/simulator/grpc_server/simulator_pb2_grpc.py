@@ -191,7 +191,7 @@ class SimulatorServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.unary_unary(request, target, '/simulator.SimulatorServer/Step',
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/Step',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             simulator__pb2.State.FromString,
             options, channel_credentials,
@@ -208,7 +208,7 @@ class SimulatorServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.unary_unary(request, target, '/simulator.SimulatorServer/GetState',
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetState',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             simulator__pb2.State.FromString,
             options, channel_credentials,
@@ -225,7 +225,7 @@ class SimulatorServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.unary_unary(request, target, '/simulator.SimulatorServer/GetNVEState',
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetNVEState',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             simulator__pb2.EntityState.FromString,
             options, channel_credentials,
@@ -242,7 +242,7 @@ class SimulatorServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.unary_unary(request, target, '/simulator.SimulatorServer/GetAgentState',
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetAgentState',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             simulator__pb2.AgentState.FromString,
             options, channel_credentials,
@@ -259,7 +259,7 @@ class SimulatorServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.unary_unary(request, target, '/simulator.SimulatorServer/GetObjectState',
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetObjectState',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             simulator__pb2.ObjectState.FromString,
             options, channel_credentials,
@@ -276,7 +276,7 @@ class SimulatorServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.unary_unary(request, target, '/simulator.SimulatorServer/SetState',
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetState',
             simulator__pb2.StateChange.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options, channel_credentials,
@@ -293,7 +293,7 @@ class SimulatorServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.unary_unary(request, target, '/simulator.SimulatorServer/IsStarted',
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/IsStarted',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             simulator__pb2.IsStartedState.FromString,
             options, channel_credentials,
@@ -310,7 +310,7 @@ class SimulatorServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.unary_unary(request, target, '/simulator.SimulatorServer/Start',
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/Start',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options, channel_credentials,
@@ -327,7 +327,7 @@ class SimulatorServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.unary_unary(request, target, '/simulator.SimulatorServer/Stop',
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/Stop',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options, channel_credentials,

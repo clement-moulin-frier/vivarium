@@ -42,8 +42,12 @@ class StateFieldInfo:
     config_to_state: typing.Callable
 
 
+# TODO : Add documentation here
 identity_s_to_c = lambda x, typ: typ(x)
 identity_c_to_s = lambda x: x
+# TODO : Something to change here because now behaviors are a list of behaviors, so can let them as a list for the moment ?
+# Also need to change the other way around to change behaviors on client side and put them on server side
+# + gonna need a lot of effort to have a clean web interface
 behavior_s_to_c = lambda x, typ: reversed_behavior_name_map[int(x)]
 behavior_c_to_s = lambda x: behavior_name_map[x]
 color_s_to_c = lambda x, typ: mcolors.to_hex(np.array(x))  # Warning : temporary (below as well)
@@ -51,6 +55,7 @@ color_c_to_s = lambda x: mcolors.to_rgb(x)
 mass_center_s_to_c = lambda x, typ: typ(x)
 mass_center_c_to_s = lambda x: [x]
 exists_c_to_s = lambda x: int(x)
+# Should I use this here ? 
 neighbor_map_s_to_c = lambda x, typ: x
 
 
@@ -62,12 +67,17 @@ agent_configs_to_state_dict = {'x_position': StateFieldInfo(('entity_state', 'po
                                'diameter': StateFieldInfo(('entity_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
                                'friction': StateFieldInfo(('entity_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
                                'left_motor': StateFieldInfo(('agent_state', 'motor',), 0, identity_s_to_c, identity_c_to_s),
+                               # TODO : Might need to change this logic where you can have a list of proxs for different behaviors ...
                                'right_motor': StateFieldInfo(('agent_state', 'motor',), 1, identity_s_to_c, identity_c_to_s),
                                'left_prox': StateFieldInfo(('agent_state', 'prox',), 0, identity_s_to_c, identity_c_to_s),
                                'right_prox': StateFieldInfo(('agent_state', 'prox',), 1, identity_s_to_c, identity_c_to_s),
                                'proximity_map_dist': StateFieldInfo(('agent_state', 'proximity_map_dist',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
                                'proximity_map_theta': StateFieldInfo(('agent_state', 'proximity_map_theta',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
-                               'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
+                               # TODO : Think params and sensed should be like that but not sure (because it returns a list and not just a single value)
+                               'params': StateFieldInfo(('agent_state', 'params',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
+                               'sensed': StateFieldInfo(('agent_state', 'sensed',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
+                               'behavior': StateFieldInfo(('agent_state', 'behavior',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
+                            #    'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
                                'color': StateFieldInfo(('agent_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
                                'idx': StateFieldInfo(('agent_state', 'ent_idx',), None, identity_s_to_c, identity_c_to_s),
                                'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
@@ -97,43 +107,6 @@ configs_to_state_dict = {StateType.AGENT: agent_configs_to_state_dict,
                          StateType.OBJECT: object_configs_to_state_dict,
                          StateType.SIMULATOR: simulator_configs_to_state_dict
                          }
-
-
-def get_default_state(n_entities_dict):
-    max_agents = n_entities_dict[StateType.AGENT]
-    max_objects = n_entities_dict[StateType.OBJECT]
-    n_entities = sum(n_entities_dict.values())
-    return State(simulator_state=SimulatorState(idx=jnp.array([0]), box_size=jnp.array([100.]),
-                                                max_agents=jnp.array([max_agents]), max_objects=jnp.array([max_objects]),
-                                                num_steps_lax=jnp.array([1]), dt=jnp.array([1.]), freq=jnp.array([1.]),
-                                                neighbor_radius=jnp.array([1.]),
-                                                to_jit= jnp.array([1]), use_fori_loop=jnp.array([0]),
-                                                collision_alpha=jnp.array([0.]),
-                                                collision_eps=jnp.array([0.])),
-                 entity_state=EntityState(position=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
-                                    momentum=None,
-                                    force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
-                                    mass=RigidBody(center=jnp.zeros((n_entities, 1)), orientation=jnp.zeros(n_entities)),
-                                    entity_type=jnp.array([EntityType.AGENT.value] * max_agents + [EntityType.OBJECT.value] * max_objects, dtype=int),
-                                    entity_idx = jnp.array(list(range(max_agents)) + list(range(max_objects))),
-                                    diameter=jnp.zeros(n_entities),
-                                    friction=jnp.zeros(n_entities),
-                                    exists=jnp.ones(n_entities, dtype=int)
-                                    ),
-                 agent_state=AgentState(ent_idx=jnp.zeros(max_agents, dtype=int),
-                                        prox=jnp.zeros((max_agents, 2)),
-                                        motor=jnp.zeros((max_agents, 2)),
-                                        proximity_map_dist=jnp.zeros((max_agents, 1)),
-                                        proximity_map_theta=jnp.zeros((max_agents, 1)),
-                                        behavior=jnp.zeros(max_agents, dtype=int),
-                                        wheel_diameter=jnp.zeros(max_agents),
-                                        speed_mul=jnp.zeros(max_agents),
-                                        max_speed=jnp.zeros(max_agents),
-                                        theta_mul=jnp.zeros(max_agents),
-                                        proxs_dist_max=jnp.zeros(max_agents),
-                                        proxs_cos_min=jnp.zeros(max_agents),
-                                        color=jnp.zeros((max_agents, 3))),
-                 object_state=ObjectState(ent_idx=jnp.zeros(max_objects, dtype=int), color=jnp.zeros((max_objects, 3))))
 
 
 EntityTuple = namedtuple('EntityTuple', ['idx', 'col', 'val'])
@@ -223,40 +196,33 @@ def rec_set_dataclass(var, nested_field, row_idx, column_idx, value):
         return {nested_field[0]: next_var.set(**d)}
 
 
-def set_state_from_config_dict(config_dict, state=None):
-    n_entities_dict = {stype: len(config) for stype, config in config_dict.items() if stype != StateType.SIMULATOR}
-    state = state or get_default_state(n_entities_dict)
-    e_idx = jnp.zeros(sum(n_entities_dict.values()), dtype=int)
-    for stype, configs in config_dict.items():
-        params = configs[0].param_names()
-        for p in params:
-            state_field_info = configs_to_state_dict[stype][p]
-            ent_idx = [c.idx for c in configs] if state_field_info.nested_field[0] == 'entity_state' else range(len(configs))
-            change = rec_set_dataclass(state, state_field_info.nested_field, jnp.array(ent_idx), state_field_info.column_idx,
-                                       jnp.array([state_field_info.config_to_state(getattr(c, p)) for c in configs]))
-            state = state.set(**change)
-        if stype.is_entity():
-            e_idx.at[state.field(stype).ent_idx].set(jnp.array(range(n_entities_dict[stype])))
+# DONE : Removed these functions :
+# def get_default_state(n_entities_dict):
+# def set_state_from_config_dict(config_dict, state=None):
 
-    # TODO: something weird with the to lines below, the second one will have no effect (would need state = state.set(.)), but if we fix it we get only zeros in entity_state.entitiy_idx. As it is it seems to get correct values though
-    change = rec_set_dataclass(state, ('entity_state', 'entity_idx'), jnp.array(range(sum(n_entities_dict.values()))), None, e_idx)
-    state.set(**change)
-
-    return state
-
-
+# TODO : Is this one still useful ? 
 def set_configs_from_state(state, config_dict=None):
+    print("\nset_configs_from_state")
+    print(f"{state = }")
+    print(f"{config_dict = }")
     if config_dict is None:
         config_dict = {stype: [] for stype in list(StateType)}
         for idx, stype_int in enumerate(state.entity_state.entity_type):
             stype = StateType(stype_int)
             config_dict[stype].append(stype_to_config[stype](idx=idx))
         config_dict[StateType.SIMULATOR].append(SimulatorConfig())
+    
+    print(f"\n{config_dict = }")
+    print("\nIterate over stypes in config dict")
     for stype in config_dict.keys():
+        print(f"{stype = }")
         for param, state_field_info in configs_to_state_dict[stype].items():
+            print(f"{param, state_field_info = }")
             value = state
             for f in state_field_info.nested_field:
                 value = getattr(value, f)
+                print(f"{value = }")
+            print("Iterate over config in config dict[stype]")
             for config in config_dict[stype]:
                 t = type(getattr(config, param))
                 row_idx = state.row_idx(state_field_info.nested_field[0], config.idx)
@@ -264,6 +230,10 @@ def set_configs_from_state(state, config_dict=None):
                     value_to_set = value[row_idx]
                 else:
                     value_to_set = value[row_idx, state_field_info.column_idx]
+                print(f"{value_to_set = }")
                 value_to_set = state_field_info.state_to_config(value_to_set, t)
+                print(f"{value_to_set = }")
+                # TODO : Error here because we try to set a Behavior of shape (2,) but it expects an integer I think 
+                # --> Lets look into params configs
                 config.param.update(**{param: value_to_set})
     return config_dict

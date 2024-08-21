@@ -80,6 +80,7 @@ class State(BaseState):
     agents: AgentState
     objects: ObjectState    
 
+# Not part of the state but part of the environment
 @struct.dataclass
 class Neighbors:
     neighbors: jnp.array

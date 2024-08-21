@@ -3,7 +3,10 @@ from jax_md.rigid_body import RigidBody
 import simulator_pb2
 
 from vivarium.simulator.grpc_server.numproto.numproto import proto_to_ndarray, ndarray_to_proto
-from vivarium.simulator.states import State, SimulatorState, EntityState, AgentState, ObjectState
+# from vivarium.simulator.states import State, SimulatorState, EntityState, AgentState, ObjectState
+# Use new states 
+from vivarium.simulator.new_simulator import SimulatorState, EntityState, AgentState, ObjectState
+from vivarium.simulator.new_simulator import SimState as State
 
 
 def proto_to_state(state):
@@ -12,10 +15,11 @@ def proto_to_state(state):
                  agent_state=proto_to_agent_state(state.agent_state),
                  object_state=proto_to_object_state(state.object_state))
 
-
+# Added time, sensed, params and entity subtypes
 def proto_to_simulator_state(simulator_state):
     return SimulatorState(idx=proto_to_ndarray(simulator_state.idx).astype(int),
                           box_size=proto_to_ndarray(simulator_state.box_size).astype(float),
+                          time=proto_to_ndarray(simulator_state.time).astype(int),
                           max_agents=proto_to_ndarray(simulator_state.max_agents).astype(int),
                           max_objects=proto_to_ndarray(simulator_state.max_objects).astype(int),
                           num_steps_lax=proto_to_ndarray(simulator_state.num_steps_lax).astype(int),
@@ -39,6 +43,7 @@ def proto_to_nve_state(entity_state):
                     mass=RigidBody(center=proto_to_ndarray(entity_state.mass.center).astype(float),
                                    orientation=proto_to_ndarray(entity_state.mass.orientation).astype(float)),
                     entity_type=proto_to_ndarray(entity_state.entity_type).astype(int),
+                    ent_subtype=proto_to_ndarray(entity_state.ent_subtype).astype(int),
                     entity_idx=proto_to_ndarray(entity_state.entity_idx).astype(int),
                     diameter=proto_to_ndarray(entity_state.diameter).astype(float),
                     friction=proto_to_ndarray(entity_state.friction).astype(float),
@@ -47,12 +52,17 @@ def proto_to_nve_state(entity_state):
 
 
 def proto_to_agent_state(agent_state):
+    print('\nproto_to_agent_state')
+    print(f"{type(agent_state) = }")
+    print('')
     return AgentState(ent_idx=proto_to_ndarray(agent_state.ent_idx).astype(int),
                       proximity_map_dist=proto_to_ndarray(agent_state.proximity_map_dist).astype(float),
                       proximity_map_theta=proto_to_ndarray(agent_state.proximity_map_theta).astype(float),
                       prox=proto_to_ndarray(agent_state.prox).astype(float),
                       motor=proto_to_ndarray(agent_state.motor).astype(float),
                       behavior=proto_to_ndarray(agent_state.behavior).astype(int),
+                      params=proto_to_ndarray(agent_state.params).astype(float),
+                      sensed=proto_to_ndarray(agent_state.sensed).astype(float),
                       wheel_diameter=proto_to_ndarray(agent_state.wheel_diameter).astype(float),
                       speed_mul=proto_to_ndarray(agent_state.speed_mul).astype(float),
                       max_speed=proto_to_ndarray(agent_state.max_speed).astype(float),
@@ -80,6 +90,7 @@ def simulator_state_to_proto(simulator_state):
     return simulator_pb2.SimulatorState(
         idx=ndarray_to_proto(simulator_state.idx),
         box_size=ndarray_to_proto(simulator_state.box_size),
+        time=ndarray_to_proto(simulator_state.time),
         max_agents=ndarray_to_proto(simulator_state.max_agents),
         max_objects=ndarray_to_proto(simulator_state.max_objects),
         num_steps_lax=ndarray_to_proto(simulator_state.num_steps_lax),
@@ -94,6 +105,9 @@ def simulator_state_to_proto(simulator_state):
 
 
 def nve_state_to_proto(entity_state):
+    print("\nnve_state_to_proto")
+    print(f"{type(entity_state) = }")
+    print("")
     return simulator_pb2.EntityState(position=simulator_pb2.RigidBody(center=ndarray_to_proto(entity_state.position.center),
                                                                    orientation=ndarray_to_proto(entity_state.position.orientation)),
                                   momentum=simulator_pb2.RigidBody(center=ndarray_to_proto(entity_state.momentum.center),
@@ -103,6 +117,7 @@ def nve_state_to_proto(entity_state):
                                   mass=simulator_pb2.RigidBody(center=ndarray_to_proto(entity_state.mass.center),
                                                                orientation=ndarray_to_proto(entity_state.mass.orientation)),
                                   entity_type=ndarray_to_proto(entity_state.entity_type),
+                                  ent_subtype=ndarray_to_proto(entity_state.ent_subtype),
                                   entity_idx=ndarray_to_proto(entity_state.entity_idx),
                                   diameter=ndarray_to_proto(entity_state.diameter),
                                   friction=ndarray_to_proto(entity_state.friction),
@@ -111,12 +126,17 @@ def nve_state_to_proto(entity_state):
 
 
 def agent_state_to_proto(agent_state):
+    print('\nagent_state_to_proto')
+    print(f"{type(agent_state) = }")
+    print('')
     return simulator_pb2.AgentState(ent_idx=ndarray_to_proto(agent_state.ent_idx),
                                     proximity_map_dist=ndarray_to_proto(agent_state.proximity_map_dist),
                                     proximity_map_theta=ndarray_to_proto(agent_state.proximity_map_theta),
                                     prox=ndarray_to_proto(agent_state.prox),
                                     motor=ndarray_to_proto(agent_state.motor),
                                     behavior=ndarray_to_proto(agent_state.behavior),
+                                    sensed=ndarray_to_proto(agent_state.sensed),
+                                    params=ndarray_to_proto(agent_state.params),
                                     wheel_diameter=ndarray_to_proto(agent_state.wheel_diameter),
                                     speed_mul=ndarray_to_proto(agent_state.speed_mul),
                                     max_speed=ndarray_to_proto(agent_state.max_speed),
