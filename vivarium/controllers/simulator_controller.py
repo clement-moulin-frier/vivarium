@@ -27,6 +27,8 @@ class SimulatorController(param.Parameterized):
         super().__init__(**params)
         self.client = client or SimulatorGRPCClient()
         self.state = self.client.state
+        print("\nSimulator Controller init")
+        print(f"{self.state = }")
         configs_dict = converters.set_configs_from_state(self.state)
         for stype, configs in configs_dict.items():
             self.configs[stype] = configs

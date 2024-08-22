@@ -224,15 +224,16 @@ def set_configs_from_state(state, config_dict=None):
                 print(f"{value = }")
             print("Iterate over config in config dict[stype]")
             for config in config_dict[stype]:
+                print("")
                 t = type(getattr(config, param))
                 row_idx = state.row_idx(state_field_info.nested_field[0], config.idx)
                 if state_field_info.column_idx is None:
                     value_to_set = value[row_idx]
                 else:
                     value_to_set = value[row_idx, state_field_info.column_idx]
-                print(f"{value_to_set = }")
+                print(f"unprocessed {value_to_set = }")
                 value_to_set = state_field_info.state_to_config(value_to_set, t)
-                print(f"{value_to_set = }")
+                print(f"{param, value_to_set = }")
                 # TODO : Error here because we try to set a Behavior of shape (2,) but it expects an integer I think 
                 # --> Lets look into params configs
                 config.param.update(**{param: value_to_set})

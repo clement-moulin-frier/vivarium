@@ -40,8 +40,9 @@ class AgentConfig(Config):
     mass_center = param.Number(mass_center)
     mass_orientation = param.Number(mass_orientation)
     # TODO : Change that to have at the moment only a np array --> But there will be problems for the rendering later ...
-    behavior = param.ObjectSelector(default=behaviors.linear_behavior_enum.AGGRESSION.name,
-                                    objects=behaviors.behavior_name_map.keys())
+    # behavior = param.ObjectSelector(default=behaviors.linear_behavior_enum.AGGRESSION.name,
+    #                                 objects=behaviors.behavior_name_map.keys())
+    behavior = param.Array(np.array([0.]))
     left_motor = param.Number(0., bounds=(0., 1.))
     right_motor = param.Number(0., bounds=(0., 1.))
     # TODO : Will be problems here with the proximeters 
@@ -104,5 +105,6 @@ class SimulatorConfig(Config):
         super().__init__(**params)
 
 
+# TODO : Check how this works but weird because it seems like SimulatorConfig is 2 in StateTypes and 0 here
 config_to_stype = {SimulatorConfig: StateType.SIMULATOR, AgentConfig: StateType.AGENT, ObjectConfig: StateType.OBJECT}
 stype_to_config = {stype: config_class for config_class, stype in config_to_stype.items()}

@@ -65,7 +65,8 @@ class Simulator:
     @partial(jax.jit, static_argnums=(0,))
     def env_to_sim_state(self, env_state):
         simulator_state = SimulatorState(
-            idx=jnp.array([2]),
+            # why 0 and not 2 ? Like in state types
+            idx=jnp.array([0]),
             time=jnp.array([env_state.time]),
             box_size=jnp.array([env_state.box_size]),
             max_agents=jnp.array([env_state.max_agents]),
@@ -76,8 +77,9 @@ class Simulator:
             collision_eps=jnp.array([env_state.collision_eps]),
             num_steps_lax=jnp.array([self.num_steps_lax]),
             freq=jnp.array([self.freq]),
-            use_fori_loop=jnp.array([self.use_fori_loop]),
-            to_jit=jnp.array([self.jit_step])
+            # convert bool to either 1 or 0
+            use_fori_loop=jnp.array([1*self.use_fori_loop]),
+            to_jit=jnp.array([1*self.jit_step])
         )
 
         sim_state = SimState(
@@ -478,12 +480,24 @@ class SimState:
     object_state: ObjectState
 
     def field(self, stype_or_nested_fields):
-        if isinstance(stype_or_nested_fields, StateType):
+        print("\nfield function in SimState")
+        print(f"{stype_or_nested_fields = }")
+        print(f"{type(stype_or_nested_fields)}")
+        # if isinstance(stype_or_nested_fields, StateType):
+        # TODO : Really weird bug where a fied was an enum of a StateType and thus this didn't work ...
+        # TODO : But shouldn't really be a problem because agent types stayed the same ... to investigate     
+        if isinstance(stype_or_nested_fields, StateType) or isinstance(stype_or_nested_fields, Enum):
+            print("is StateType")
             name = stype_or_nested_fields.name.lower()
             nested_fields = (f'{name}_state', )
         else:
+            print("is not StateType")
             nested_fields = stype_or_nested_fields
 
+        print(f"{nested_fields = }")
+        print(f"{type(nested_fields) = }")
+
+        # what does this line do ?
         res = self
         for f in nested_fields:
             res = getattr(res, f)
@@ -491,6 +505,8 @@ class SimState:
         return res
 
     def ent_idx(self, etype, entity_idx):
+        print("\nent_idx in SimState")
+        print(f"{etype, entity_idx = }")
         return self.field(etype).ent_idx[entity_idx]
 
     def e_idx(self, etype):
