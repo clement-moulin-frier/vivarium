@@ -5,8 +5,8 @@ import simulator_pb2
 from vivarium.simulator.grpc_server.numproto.numproto import proto_to_ndarray, ndarray_to_proto
 # from vivarium.simulator.states import State, SimulatorState, EntityState, AgentState, ObjectState
 # Use new states 
-from vivarium.simulator.new_simulator import SimulatorState, EntityState, AgentState, ObjectState
-from vivarium.simulator.new_simulator import SimState as State
+from vivarium.simulator.new_states import SimulatorState, EntityState, AgentState, ObjectState
+from vivarium.simulator.new_states import SimState as State
 
 
 def proto_to_state(state):
@@ -52,9 +52,9 @@ def proto_to_nve_state(entity_state):
 
 
 def proto_to_agent_state(agent_state):
-    print('\nproto_to_agent_state')
-    print(f"{type(agent_state) = }")
-    print('')
+    # print('\nproto_to_agent_state')
+    # print(f"{type(agent_state) = }")
+    # print('')
     return AgentState(ent_idx=proto_to_ndarray(agent_state.ent_idx).astype(int),
                       proximity_map_dist=proto_to_ndarray(agent_state.proximity_map_dist).astype(float),
                       proximity_map_theta=proto_to_ndarray(agent_state.proximity_map_theta).astype(float),

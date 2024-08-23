@@ -1,7 +1,8 @@
 from vivarium.controllers import converters
 from vivarium.controllers.config import AgentConfig, ObjectConfig, config_to_stype, Config
 from vivarium.controllers.simulator_controller import SimulatorController
-from vivarium.simulator.states import EntityType, StateType
+# from vivarium.simulator.states import EntityType, StateType
+from vivarium.simulator.new_states import EntityType, StateType
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 
 import param
@@ -11,6 +12,7 @@ from contextlib import contextmanager
 import logging
 
 lg = logging.getLogger(__name__)
+print(f"logging in panel controller {lg = }")
 
 class PanelConfig(Config):
     pass
@@ -122,6 +124,7 @@ class PanelController(SimulatorController):
         self.pull_configs({StateType.SIMULATOR: self.configs[StateType.SIMULATOR]})
 
     def push_selected_to_config_list(self, *events):
+        print("push_selected_to_config_list")
         lg.info('push_selected_to_config_list %d', len(events))
         for e in events:
             if isinstance(e.obj, PanelConfig):
@@ -138,5 +141,8 @@ class PanelController(SimulatorController):
 
 if __name__ == '__main__':
     simulator = PanelController(client=SimulatorGRPCClient())
+    simulator.configs[StateType.AGENT][0] = 'black'
+    # TODO : Add a thing to check if there's a callback and see if the 
+
     lg.info('Done')
     

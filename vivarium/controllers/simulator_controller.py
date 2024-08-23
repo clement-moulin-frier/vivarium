@@ -8,7 +8,8 @@ import param
 
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.controllers.config import SimulatorConfig
-from vivarium.simulator.states import StateType
+# from vivarium.simulator.states import StateType
+from vivarium.simulator.new_states import StateType
 from vivarium.controllers import converters
 
 
@@ -48,6 +49,10 @@ class SimulatorController(param.Parameterized):
         return self.configs[StateType.SIMULATOR][0]
 
     def push_state(self, *events):
+        lg.debug("push_state")
+        print(f"\n XXXXXXXX")
+        print("PUSH STATE")
+        print(f"{events = }")
         if self._in_batch:
             self._event_list.extend(events)
             return
@@ -55,9 +60,11 @@ class SimulatorController(param.Parameterized):
         # lg.info(converters.events_to_state_changes(events))
 
         state_changes = converters.events_to_state_changes(events, self.state)
+        print(f"{state_changes}")
         for sc in state_changes:
+            print(f"{sc = }")
             self.client.set_state(**sc._asdict())
-
+    
     @contextmanager
     def dont_push_entity_configs(self):
         for etype, configs in self.configs.items():
@@ -70,6 +77,7 @@ class SimulatorController(param.Parameterized):
 
     @contextmanager
     def batch_set_state(self):
+        lg.debug("BATCH_SET_STATE")
         self._in_batch = True
         self._event_list = []
         try:
@@ -83,6 +91,7 @@ class SimulatorController(param.Parameterized):
         self.pull_configs()
 
     def pull_configs(self, configs=None):
+        lg.debug("pull_configs")
         configs = configs or self.configs
         state = self.state
         with self.dont_push_entity_configs():

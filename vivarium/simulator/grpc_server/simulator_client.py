@@ -31,14 +31,18 @@ class SimulatorGRPCClient(SimulatorClient):
         return self.stub.GetChangeTime(Empty()).time
 
     def set_state(self, nested_field, ent_idx, column_idx, value):
+        print(f"\n XXXXXXXX")
+        print("PUSH STATE")
         state_change = simulator_pb2.StateChange(nested_field=nested_field, ent_idx=ent_idx, col_idx=column_idx,
                                                  value=ndarray_to_proto(value))
+        print(f"{state_change = }")
         self.stub.SetState(state_change)
 
     def get_state(self):
         state = self.stub.GetState(Empty())
-        print(f"\n get state in SimulatorGRPCClient")
-        print(f"{state = }")
+
+        # print(f"\nget state in SimulatorGRPCClient")
+        # print(f"{type(state) = }")
         return proto_to_state(state)
 
     def get_nve_state(self):

@@ -10,8 +10,15 @@ import matplotlib.colors as mcolors
 from jax_md.rigid_body import RigidBody
 
 from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig, stype_to_config, config_to_stype
-from vivarium.simulator.states import State, SimulatorState, EntityState, AgentState, ObjectState, EntityType, StateType
+# from vivarium.simulator.states import SimulatorState, AgentState, ObjectState, StateType
+from vivarium.simulator.new_states import SimulatorState, AgentState, ObjectState, StateType
+
 from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
+
+import time
+import logging
+lg = logging.getLogger(__name__)
+lg.debug
 
 
 agent_config_fields = AgentConfig.param.objects().keys()
@@ -58,6 +65,7 @@ exists_c_to_s = lambda x: int(x)
 # Should I use this here ? 
 neighbor_map_s_to_c = lambda x, typ: x
 
+# TODO : Understand how to use the slice mechanism
 
 agent_configs_to_state_dict = {'x_position': StateFieldInfo(('entity_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
                                'y_position': StateFieldInfo(('entity_state', 'position', 'center'), 1, identity_s_to_c, identity_c_to_s),
@@ -202,9 +210,10 @@ def rec_set_dataclass(var, nested_field, row_idx, column_idx, value):
 
 # TODO : Is this one still useful ? 
 def set_configs_from_state(state, config_dict=None):
-    print("\nset_configs_from_state")
-    print(f"{state = }")
-    print(f"{config_dict = }")
+    # print(f"set_configs_from_state, {round(time.time(), 3) = }")
+    lg.debug("\nset_configs_from_state")
+    lg.debug(f"{state = }")
+    lg.debug(f"{config_dict = }")
     if config_dict is None:
         config_dict = {stype: [] for stype in list(StateType)}
         for idx, stype_int in enumerate(state.entity_state.entity_type):
@@ -212,28 +221,28 @@ def set_configs_from_state(state, config_dict=None):
             config_dict[stype].append(stype_to_config[stype](idx=idx))
         config_dict[StateType.SIMULATOR].append(SimulatorConfig())
     
-    print(f"\n{config_dict = }")
-    print("\nIterate over stypes in config dict")
+    lg.debug(f"\n{config_dict = }")
+    lg.debug("\nIterate over stypes in config dict")
     for stype in config_dict.keys():
-        print(f"{stype = }")
+        lg.debug(f"{stype = }")
         for param, state_field_info in configs_to_state_dict[stype].items():
-            print(f"{param, state_field_info = }")
+            lg.debug(f"{param, state_field_info = }")
             value = state
             for f in state_field_info.nested_field:
                 value = getattr(value, f)
-                print(f"{value = }")
-            print("Iterate over config in config dict[stype]")
+                lg.debug(f"{value = }")
+            lg.debug("Iterate over config in config dict[stype]")
             for config in config_dict[stype]:
-                print("")
+                lg.debug("")
                 t = type(getattr(config, param))
                 row_idx = state.row_idx(state_field_info.nested_field[0], config.idx)
                 if state_field_info.column_idx is None:
                     value_to_set = value[row_idx]
                 else:
                     value_to_set = value[row_idx, state_field_info.column_idx]
-                print(f"unprocessed {value_to_set = }")
+                lg.debug(f"unprocessed {value_to_set = }")
                 value_to_set = state_field_info.state_to_config(value_to_set, t)
-                print(f"{param, value_to_set = }")
+                lg.debug(f"{param, value_to_set = }")
                 # TODO : Error here because we try to set a Behavior of shape (2,) but it expects an integer I think 
                 # --> Lets look into params configs
                 config.param.update(**{param: value_to_set})
