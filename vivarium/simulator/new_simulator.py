@@ -6,34 +6,21 @@ import logging
 import threading
 import datetime
 
-from enum import Enum
 from functools import partial
 from contextlib import contextmanager
 
 import jax
 import jax.numpy as jnp
 
-from jax import jit
 from jax import lax
-from jax_md import space, partition, dataclasses
-from flax import struct
 
 from vivarium.controllers import converters
-from vivarium.simulator.new_states import EntityType, AgentState, EntityState, ObjectState, StateType, SimState, SimulatorState
-# TODO :  # Import it later but atm defined in the same file
-# from vivarium.simulator.states import State as SimState
+from vivarium.simulator.new_states import SimState, SimulatorState
 from vivarium.environments.braitenberg.selective_sensing import State as EnvState
-
-
-# TODO : Handle the simulator state, handle the weird jax_md functions ... 
-from jax_md.dataclasses import dataclass
-from jax_md import util, simulate, rigid_body
 
 lg = logging.getLogger(__name__)
 
 
-# TODO : Make that the state of simulator is the SimState (because will be used in CLient server communication)
-# TODO : Create a property method that returns env state as self.sim_to_env_state(self.state)
 class Simulator:
     def __init__(self, env, env_state, num_steps_lax=4, update_freq=-1, jit_step=True, use_fori_loop=True, seed=0):
         self.env = env
@@ -218,7 +205,7 @@ class Simulator:
             sleep_time = 0
         return sleep_time
 
-
+    # TODO : Delete those two functions because now these kind of loops need to be done in the environment
     def classic_simulation_loop(self, state, neighbors, num_iterations):
         """Update the state and the neighbors on a few iterations with a classic python loop
 
@@ -320,29 +307,15 @@ class Simulator:
             return data
     
 
-    # TODO : Add new attrbutes in this file when conversion functions are done
     def set_state(self, nested_field, ent_idx, column_idx, value):
-        lg.info(f'set_state {nested_field} {ent_idx} {column_idx} {value}')
+        lg.info(f"set_state {nested_field} {ent_idx} {column_idx} {value}")
         row_idx = self.state.row_idx(nested_field[0], jnp.array(ent_idx))
         col_idx = None if column_idx is None else jnp.array(column_idx)
         change = converters.rec_set_dataclass(self.state, nested_field, row_idx, col_idx, value)
         self.state = self.state.set(**change)   
 
-        if nested_field[0] == 'simulator_state':
-            self.update_attr(nested_field[1], SimulatorState.get_type(nested_field[1]))
-
-        if nested_field == ('simulator_state', 'box_size'):
-            self.update_space(self.box_size)
-
-        if nested_field in (('simulator_state', 'box_size'), ('simulator_state', 'neighbor_radius')):
-            self.update_neighbor_fn(box_size=self.box_size, neighbor_radius=self.neighbor_radius)
-
-        if nested_field in (('simulator_state', 'box_size'), ('simulator_state', 'dt'), ('simulator_state', 'to_jit')):
-            self.update_function_update()
-
 
     # Functions to start, stop, pause
-
     def start(self):
         self.run(threaded=True)
 
@@ -371,11 +344,6 @@ class Simulator:
         lg.info('update_attr')
         setattr(self, attr, type_(getattr(self.state.simulator_state, attr)[0]))
 
-    # DONE : No more update space in the simulator 
-    # DONE : No more update fn in the simulator 
-    # DONE : No more update neighbor functions in the simulator
-
-    # Other functions
     # TODO : Remove ? 
     def get_change_time(self):
         return 0
@@ -383,155 +351,6 @@ class Simulator:
     def get_state(self):
         return self.state
     
-
-### States definition : really ugly
-
-# class EntityType(Enum):
-#     AGENT = 0
-#     OBJECT = 1
-
-#     def to_state_type(self):
-#         return StateType(self.value)
-
-# class StateType(Enum):
-#     AGENT = 0
-#     OBJECT = 1
-#     SIMULATOR = 2
-
-#     def is_entity(self):
-#         return self != StateType.SIMULATOR
-
-#     def to_entity_type(self):
-#         assert self.is_entity()
-#         return EntityType(self.value)
-
-
-# # No need to define position, momentum, force, and mass (i.e already in jax_md.simulate.NVEState)
-# @dataclass
-# class EntityState(simulate.NVEState):
-#     entity_type: util.Array
-#     ent_subtype: util.Array
-#     entity_idx: util.Array  # idx in XState (e.g. AgentState)
-#     diameter: util.Array
-#     friction: util.Array
-#     exists: util.Array
-
-#     @property
-#     def velocity(self) -> util.Array:
-#         return self.momentum / self.mass
-    
-# # TODO : ent idx and color already in Particle state in env side
-
-# @dataclass
-# class AgentState:
-#     ent_idx: util.Array  # idx in EntityState
-#     prox: util.Array
-#     motor: util.Array
-#     proximity_map_dist: util.Array
-#     proximity_map_theta: util.Array
-#     behavior: util.Array
-#     params: util.Array
-#     sensed: util.Array
-#     wheel_diameter: util.Array
-#     speed_mul: util.Array
-#     max_speed: util.Array
-#     theta_mul: util.Array
-#     proxs_dist_max: util.Array
-#     proxs_cos_min: util.Array
-#     color: util.Array
-
-
-# # TODO : just need to convert the simulator state and the elements inside en_state (not inside agents, objects ...)
-# # TODO : Make sure that when the update freq ... is updated on client side, the freq is updated on server side (check later when reestablished client server comm)
-# @dataclass
-# class SimulatorState:
-#     idx: util.Array
-#     time: util.Array
-#     # ent_sub_types: util.Array # TODO : Maybe add it later
-#     box_size: util.Array
-#     max_agents: util.Array
-#     max_objects: util.Array
-#     num_steps_lax: util.Array
-#     dt: util.Array
-#     freq: util.Array
-#     neighbor_radius: util.Array
-#     to_jit: util.Array
-#     use_fori_loop: util.Array
-#     collision_alpha: util.Array
-#     collision_eps: util.Array
-
-#     # DONE : Added time
-#     @staticmethod
-#     def get_type(attr):
-#         if attr in ['idx', 'max_agents', 'max_objects', 'num_steps_lax']:
-#             return int
-#         elif attr in ['time', 'box_size', 'dt', 'freq', 'neighbor_radius', 'collision_alpha', 'collision_eps']:
-#             return float
-#         elif attr in ['to_jit', 'use_fori_loop']:
-#             return bool
-#         else:
-#             raise ValueError(f"Unknown attribute {attr}")
-     
-# @dataclass
-# class SimState:
-#     simulator_state: SimulatorState
-#     entity_state: EntityState
-#     agent_state: AgentState
-#     object_state: ObjectState
-
-#     def field(self, stype_or_nested_fields):
-#         print("\nfield function in SimState")
-#         print(f"{stype_or_nested_fields = }")
-#         print(f"{type(stype_or_nested_fields)}")
-#         # if isinstance(stype_or_nested_fields, StateType):
-#         # TODO : Really weird bug where a fied was an enum of a StateType and thus this didn't work ...
-#         # TODO : But shouldn't really be a problem because agent types stayed the same ... to investigate     
-#         if isinstance(stype_or_nested_fields, StateType) or isinstance(stype_or_nested_fields, Enum):
-#             print("is StateType")
-#             name = stype_or_nested_fields.name.lower()
-#             nested_fields = (f'{name}_state', )
-#         else:
-#             print("is not StateType")
-#             nested_fields = stype_or_nested_fields
-
-#         print(f"{nested_fields = }")
-#         print(f"{type(nested_fields) = }")
-
-#         # what does this line do ?
-#         res = self
-#         for f in nested_fields:
-#             res = getattr(res, f)
-
-#         return res
-
-#     def ent_idx(self, etype, entity_idx):
-#         print("\nent_idx in SimState")
-#         print(f"{etype, entity_idx = }")
-#         return self.field(etype).ent_idx[entity_idx]
-
-#     def e_idx(self, etype):
-#         return self.entity_state.entity_idx[self.entity_state.entity_type == etype.value]
-
-#     def e_cond(self, etype):
-#         return self.entity_state.entity_type == etype.value
-
-#     def row_idx(self, field, ent_idx):
-#         return ent_idx if field == 'entity_state' else self.entity_state.entity_idx[jnp.array(ent_idx)]
-
-#     def __getattr__(self, name):
-#         def wrapper(e_type):
-#             value = getattr(self.entity_state, name)
-#             if isinstance(value, rigid_body.RigidBody):
-#                 return rigid_body.RigidBody(center=value.center[self.e_cond(e_type)],
-#                                             orientation=value.orientation[self.e_cond(e_type)])
-#             else:
-#                 return value[self.e_cond(e_type)]
-#         return wrapper
-
-# @dataclass
-# class ObjectState:
-#     ent_idx: util.Array  # idx in EntityState
-#     color: util.Array
     
 if __name__ == "__main__":
     # Test for init, run and convertion functions
