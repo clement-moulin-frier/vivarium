@@ -117,7 +117,7 @@ def dynamics_fn(displacement, shift, force_fn=None):
         assert state.entities.momentum is None
         assert not jnp.any(state.entities.force.center) and not jnp.any(state.entities.force.orientation)
 
-        state = state.replace(entities=simulate.initialize_momenta(state.entities, key, kT))
+        state = state.set(entities=simulate.initialize_momenta(state.entities, key, kT))
         return state
     
     def mask_momentum(entity_state, exists_mask):
@@ -142,7 +142,7 @@ def dynamics_fn(displacement, shift, force_fn=None):
         entity_state = simulate.momentum_step(state.entities, dt_2)
         # TODO : why do we used dt and not dt/2 in the line below ? 
         entity_state = simulate.position_step(entity_state, shift, dt_2, neighbor=neighbor)
-        entity_state = entity_state.replace(force=force)
+        entity_state = entity_state.set(force=force)
         entity_state = simulate.momentum_step(entity_state, dt_2)
         entity_state = mask_momentum(entity_state, exists_mask)
         return entity_state
