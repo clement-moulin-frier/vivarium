@@ -54,86 +54,94 @@ exists_c_to_s = lambda x: int(x)
 neighbor_map_s_to_c = lambda x, typ: x
 
 
-agent_configs_to_state_dict = {'x_position': StateFieldInfo(('entity_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
-                               'y_position': StateFieldInfo(('entity_state', 'position', 'center'), 1, identity_s_to_c, identity_c_to_s),
-                               'orientation': StateFieldInfo(('entity_state', 'position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
-                               'mass_center': StateFieldInfo(('entity_state', 'mass', 'center'), np.array([0]), mass_center_s_to_c, mass_center_c_to_s),
-                               'mass_orientation': StateFieldInfo(('entity_state', 'mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
-                               'diameter': StateFieldInfo(('entity_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
-                               'friction': StateFieldInfo(('entity_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
-                               'left_motor': StateFieldInfo(('agent_state', 'motor',), 0, identity_s_to_c, identity_c_to_s),
-                               'right_motor': StateFieldInfo(('agent_state', 'motor',), 1, identity_s_to_c, identity_c_to_s),
-                               'left_prox': StateFieldInfo(('agent_state', 'prox',), 0, identity_s_to_c, identity_c_to_s),
-                               'right_prox': StateFieldInfo(('agent_state', 'prox',), 1, identity_s_to_c, identity_c_to_s),
-                               'proximity_map_dist': StateFieldInfo(('agent_state', 'proximity_map_dist',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
-                               'proximity_map_theta': StateFieldInfo(('agent_state', 'proximity_map_theta',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
-                               'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
-                               'color': StateFieldInfo(('agent_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
-                               'idx': StateFieldInfo(('agent_state', 'ent_idx',), None, identity_s_to_c, identity_c_to_s),
-                               'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
-                               }
+agent_configs_to_state_dict = {
+    'x_position': StateFieldInfo(('entity_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
+    'y_position': StateFieldInfo(('entity_state', 'position', 'center'), 1, identity_s_to_c, identity_c_to_s),
+    'orientation': StateFieldInfo(('entity_state', 'position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
+    'mass_center': StateFieldInfo(('entity_state', 'mass', 'center'), np.array([0]), mass_center_s_to_c, mass_center_c_to_s),
+    'mass_orientation': StateFieldInfo(('entity_state', 'mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
+    'diameter': StateFieldInfo(('entity_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
+    'friction': StateFieldInfo(('entity_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
+    'left_motor': StateFieldInfo(('agent_state', 'motor',), 0, identity_s_to_c, identity_c_to_s),
+    'right_motor': StateFieldInfo(('agent_state', 'motor',), 1, identity_s_to_c, identity_c_to_s),
+    'left_prox': StateFieldInfo(('agent_state', 'prox',), 0, identity_s_to_c, identity_c_to_s),
+    'right_prox': StateFieldInfo(('agent_state', 'prox',), 1, identity_s_to_c, identity_c_to_s),
+    'proximity_map_dist': StateFieldInfo(('agent_state', 'proximity_map_dist',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
+    'proximity_map_theta': StateFieldInfo(('agent_state', 'proximity_map_theta',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
+    'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
+    'color': StateFieldInfo(('agent_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
+    'idx': StateFieldInfo(('agent_state', 'ent_idx',), None, identity_s_to_c, identity_c_to_s),
+    'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
+}
 
 agent_configs_to_state_dict.update({f: StateFieldInfo(('agent_state', f,), None, identity_s_to_c, identity_c_to_s) for f in agent_common_fields if f not in agent_configs_to_state_dict})
 
-object_configs_to_state_dict = {'x_position': StateFieldInfo(('entity_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
-                                'y_position': StateFieldInfo(('entity_state', 'position', 'center'), 1, identity_s_to_c, identity_c_to_s),
-                                'orientation': StateFieldInfo(('entity_state', 'position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
-                                'mass_center': StateFieldInfo(('entity_state', 'mass', 'center'), np.array([0]), mass_center_s_to_c, mass_center_c_to_s),
-                                'mass_orientation': StateFieldInfo(('entity_state', 'mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
-                                'diameter': StateFieldInfo(('entity_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
-                                'friction': StateFieldInfo(('entity_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
-                                'color': StateFieldInfo(('object_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
-                                'idx': StateFieldInfo(('object_state', 'ent_idx',), None, identity_s_to_c, identity_c_to_s),
-                                'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
-
-                                }
+object_configs_to_state_dict = {
+    'x_position': StateFieldInfo(('entity_state', 'position', 'center'), 0, identity_s_to_c, identity_c_to_s),
+    'y_position': StateFieldInfo(('entity_state', 'position', 'center'), 1, identity_s_to_c, identity_c_to_s),
+    'orientation': StateFieldInfo(('entity_state', 'position', 'orientation'), None, identity_s_to_c, identity_c_to_s),
+    'mass_center': StateFieldInfo(('entity_state', 'mass', 'center'), np.array([0]), mass_center_s_to_c, mass_center_c_to_s),
+    'mass_orientation': StateFieldInfo(('entity_state', 'mass', 'orientation'), None, identity_s_to_c, identity_c_to_s),
+    'diameter': StateFieldInfo(('entity_state', 'diameter'), None, identity_s_to_c, identity_c_to_s),
+    'friction': StateFieldInfo(('entity_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
+    'color': StateFieldInfo(('object_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
+    'idx': StateFieldInfo(('object_state', 'ent_idx',), None, identity_s_to_c, identity_c_to_s),
+    'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
+}
 
 object_configs_to_state_dict.update({f: StateFieldInfo(('object_state', f,), None, identity_s_to_c, identity_c_to_s) for f in object_common_fields if f not in object_configs_to_state_dict})
 
 simulator_configs_to_state_dict = {}
 simulator_configs_to_state_dict.update({f: StateFieldInfo(('simulator_state', f,), None, identity_s_to_c, identity_c_to_s) for f in simulator_common_fields if f not in simulator_configs_to_state_dict})
 
-configs_to_state_dict = {StateType.AGENT: agent_configs_to_state_dict,
-                         StateType.OBJECT: object_configs_to_state_dict,
-                         StateType.SIMULATOR: simulator_configs_to_state_dict
-                         }
+configs_to_state_dict = {
+    StateType.AGENT: agent_configs_to_state_dict,
+    StateType.OBJECT: object_configs_to_state_dict,
+    StateType.SIMULATOR: simulator_configs_to_state_dict
+}
 
 
 def get_default_state(n_entities_dict):
     max_agents = n_entities_dict[StateType.AGENT]
     max_objects = n_entities_dict[StateType.OBJECT]
     n_entities = sum(n_entities_dict.values())
-    return State(simulator_state=SimulatorState(idx=jnp.array([0]), box_size=jnp.array([100.]),
-                                                max_agents=jnp.array([max_agents]), max_objects=jnp.array([max_objects]),
-                                                num_steps_lax=jnp.array([1]), dt=jnp.array([1.]), freq=jnp.array([1.]),
-                                                neighbor_radius=jnp.array([1.]),
-                                                to_jit= jnp.array([1]), use_fori_loop=jnp.array([0]),
-                                                collision_alpha=jnp.array([0.]),
-                                                collision_eps=jnp.array([0.])),
-                 entity_state=EntityState(position=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
-                                    momentum=None,
-                                    force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
-                                    mass=RigidBody(center=jnp.zeros((n_entities, 1)), orientation=jnp.zeros(n_entities)),
-                                    entity_type=jnp.array([EntityType.AGENT.value] * max_agents + [EntityType.OBJECT.value] * max_objects, dtype=int),
-                                    entity_idx = jnp.array(list(range(max_agents)) + list(range(max_objects))),
-                                    diameter=jnp.zeros(n_entities),
-                                    friction=jnp.zeros(n_entities),
-                                    exists=jnp.ones(n_entities, dtype=int)
-                                    ),
-                 agent_state=AgentState(ent_idx=jnp.zeros(max_agents, dtype=int),
-                                        prox=jnp.zeros((max_agents, 2)),
-                                        motor=jnp.zeros((max_agents, 2)),
-                                        proximity_map_dist=jnp.zeros((max_agents, 1)),
-                                        proximity_map_theta=jnp.zeros((max_agents, 1)),
-                                        behavior=jnp.zeros(max_agents, dtype=int),
-                                        wheel_diameter=jnp.zeros(max_agents),
-                                        speed_mul=jnp.zeros(max_agents),
-                                        max_speed=jnp.zeros(max_agents),
-                                        theta_mul=jnp.zeros(max_agents),
-                                        proxs_dist_max=jnp.zeros(max_agents),
-                                        proxs_cos_min=jnp.zeros(max_agents),
-                                        color=jnp.zeros((max_agents, 3))),
-                 object_state=ObjectState(ent_idx=jnp.zeros(max_objects, dtype=int), color=jnp.zeros((max_objects, 3))))
+    return State(
+        simulator_state=SimulatorState(
+            idx=jnp.array([0]), box_size=jnp.array([100.]),
+            max_agents=jnp.array([max_agents]), max_objects=jnp.array([max_objects]),
+            num_steps_lax=jnp.array([1]), dt=jnp.array([1.]), freq=jnp.array([1.]),
+            neighbor_radius=jnp.array([1.]),
+            to_jit= jnp.array([1]), use_fori_loop=jnp.array([0]),
+            collision_alpha=jnp.array([0.]),
+            collision_eps=jnp.array([0.])),
+        entity_state=EntityState(
+            position=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
+            momentum=None,
+            force=RigidBody(center=jnp.zeros((n_entities, 2)), orientation=jnp.zeros(n_entities)),
+            mass=RigidBody(center=jnp.zeros((n_entities, 1)), orientation=jnp.zeros(n_entities)),
+            entity_type=jnp.array([EntityType.AGENT.value] * max_agents + [EntityType.OBJECT.value] * max_objects, dtype=int),
+            entity_idx = jnp.array(list(range(max_agents)) + list(range(max_objects))),
+            diameter=jnp.zeros(n_entities),
+            friction=jnp.zeros(n_entities),
+            exists=jnp.ones(n_entities, dtype=int)),
+        agent_state=AgentState(
+            ent_idx=jnp.zeros(max_agents, dtype=int),
+            prox=jnp.zeros((max_agents, 2)),
+            motor=jnp.zeros((max_agents, 2)),
+            proximity_map_dist=jnp.zeros((max_agents, 1)),
+            proximity_map_theta=jnp.zeros((max_agents, 1)),
+            behavior=jnp.zeros(max_agents, dtype=int),
+            wheel_diameter=jnp.zeros(max_agents),
+            speed_mul=jnp.zeros(max_agents),
+            max_speed=jnp.zeros(max_agents),
+            theta_mul=jnp.zeros(max_agents),
+            proxs_dist_max=jnp.zeros(max_agents),
+            proxs_cos_min=jnp.zeros(max_agents),
+            color=jnp.zeros((max_agents, 3))),
+        object_state=ObjectState(
+            ent_idx=jnp.zeros(max_objects, dtype=int), 
+            color=jnp.zeros((max_objects, 3)))
+    )
 
 
 EntityTuple = namedtuple('EntityTuple', ['idx', 'col', 'val'])
@@ -154,12 +162,11 @@ def events_to_nve_data(events, state):
 
         if state_field_info.column_idx is None:
             nve_data[nested_field].append(EntityTuple(idx, None, val))
-        elif isinstance(state_field_info.column_idx, int):
+        elif isinstance(state_field_info.column_idx, int) or isinstance(state_field_info.column_idx, slice):
             nve_data[nested_field].append(EntityTuple(idx, state_field_info.column_idx, val))
         else:
             for c, v in zip(state_field_info.column_idx, val):
                 nve_data[nested_field].append(EntityTuple(idx, c, v))
-
     return nve_data
 
 
@@ -171,6 +178,10 @@ def nve_data_to_state_changes(nve_data, state):
         if nve_tuples[0].col is None:
             val = np.array(state.field(nf)[np.array(ent_idx)])
             col_map = None
+            col_idx = None
+        if isinstance(nve_tuples[0].col, slice):
+            val = np.array(state.field(nf)[np.array(ent_idx)])
+            col_map = nve_tuples[0].col
             col_idx = None
         else:
             col_idx = sorted(list(set([t.col for t in nve_tuples])))
@@ -184,6 +195,8 @@ def nve_data_to_state_changes(nve_data, state):
             row = value_tuple.row_map[nve_tuple.idx]
             if nve_tuple.col is None:
                 value_tuple.val[row] = nve_tuple.val
+            elif isinstance(nve_tuple.col, slice):
+                value_tuple.val[row] = nve_tuple.val
             else:
                 col = value_tuple.col_map[nve_tuple.col]
                 value_tuple.val[row, col] = nve_tuple.val
@@ -194,18 +207,14 @@ def nve_data_to_state_changes(nve_data, state):
 
 
 def events_to_state_changes(events, state):
-
     nve_data = events_to_nve_data(events, state)
     return nve_data_to_state_changes(nve_data, state)
 
 
 def rec_set_dataclass(var, nested_field, row_idx, column_idx, value):
-
     assert len(nested_field) > 0
-
     if isinstance(column_idx, int):
         column_idx = np.array([column_idx])
-
     if len(nested_field) == 1:
         field = nested_field[0]
         if isinstance(column_idx, slice):
