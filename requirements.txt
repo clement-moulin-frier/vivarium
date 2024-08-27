@@ -11,7 +11,7 @@ param==2.0.2
 matplotlib==3.8.2
 
 # Client-server communication
-grpcio
+grpcio==1.60.0
 grpcio-tools
 
 # Tests and code formatting
