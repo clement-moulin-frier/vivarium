@@ -32,6 +32,7 @@ class Simulator:
         ):
         self.env = env
 
+        # First initialize fields in the class because they will be used to define the simulator state below
         self.key = jax.random.PRNGKey(seed)
         self.num_steps_lax = num_steps_lax
         self.freq = update_freq
@@ -39,7 +40,7 @@ class Simulator:
         self.use_fori_loop = use_fori_loop
         self.ent_sub_types = env_state.ent_sub_types # information about entities sub types in a dictionary, can't be given client side at the moment
 
-        # transform the env state (only backend) into a jax md state with the older interface
+        # transform the env state (only used in env class) into a simulator state with a simulator state (used only in client server communication)
         self.state = self.env_to_sim_state(env_state)
 
         # Attributes to start or stop the simulation
@@ -50,6 +51,10 @@ class Simulator:
         self.recording = False
         self.records = None
         self.saving_dir = None
+        
+        # Do a step to initialize the momentum 
+        self.step()
+
 
         lg.info("Simulator initialized")
 
