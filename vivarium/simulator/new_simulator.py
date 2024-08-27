@@ -12,8 +12,6 @@ from contextlib import contextmanager
 import jax
 import jax.numpy as jnp
 
-from jax import lax
-
 from vivarium.controllers import converters
 from vivarium.simulator.new_states import SimState, SimulatorState
 from vivarium.environments.braitenberg.selective_sensing import State as EnvState
@@ -22,7 +20,16 @@ lg = logging.getLogger(__name__)
 
 
 class Simulator:
-    def __init__(self, env, env_state, num_steps_lax=4, update_freq=-1, jit_step=True, use_fori_loop=True, seed=0):
+    def __init__(
+            self, 
+            env, 
+            env_state, 
+            num_steps_lax=4, 
+            update_freq=-1, 
+            jit_step=True, 
+            use_fori_loop=True, 
+            seed=0
+        ):
         self.env = env
 
         self.key = jax.random.PRNGKey(seed)
@@ -44,8 +51,6 @@ class Simulator:
         self.records = None
         self.saving_dir = None
 
-        # TODO: Define which attributes are affected but these functions
-        self.simulation_loop = self.select_simulation_loop_type(use_fori_loop)
         lg.info("Simulator initialized")
 
     # Done : Add a partial so if args of simulator change it will be changed in this fn
@@ -105,23 +110,21 @@ class Simulator:
         return self.sim_to_env_state(self.state)
 
 
-    # DONE : Remove num loops arg and removed 
-    # TODO : Handle the num steps lax in environment side (not too hard to do)
-    def _step(self, state, num_iterations):
-        """Do a step in the simulation by applying the update function a few iterations on the state and the neighbors
+    def _step(self, state, num_updates):
+        """Do num_updates jitted steps in the simulation. This is done by converting state into environment state, and convert it back to simulation state during return
 
         :param state: current simulation state 
-        :param neighbors: current simulation neighbors array 
-        :return: updated state and neighbors
+        :param num_updates: current simulation neighbors array 
+        :return: updated state
         """
         # convert the sim_state into env state to call env.step()
-        new_env_state = self.env.step(state=self.sim_to_env_state(state))
+        new_env_state = self.env.step(state=self.sim_to_env_state(state), num_updates=num_updates)
 
         # TODO : Remove this weird thing and just save the env state --> Because it is with this one that we can plot state in server side
         if self.recording:
             self.record(new_env_state)
 
-        # return the next sim state
+        # return the next sim state (convert new env state)
         return self.env_to_sim_state(new_env_state)
     
 
@@ -130,9 +133,9 @@ class Simulator:
         self.state = self._step(self.state, self.num_steps_lax)
         return self.state
 
-    # DONE : Added a return of the final state with run function
+
     def run(self, threaded=False, num_steps=math.inf, save=False, saving_name=None):
-        """Run the simulator for the desired number of timesteps, either in a separate thread or not 
+        """Run the simulator for the desired number of timesteps, either in a separate thread or not. Return the final state
 
         :param threaded: wether to run the simulation in a thread or not, defaults to False
         :param num_steps: number of step loops before stopping the simulation run, defaults to math.inf
@@ -158,7 +161,7 @@ class Simulator:
         """
         # Encode that the simulation is started in the class
         self._is_started = True
-        lg.info('Run starts')
+        lg.info('Simulation run starts')
 
         loop_count = 0
         sleep_time = 0
@@ -173,7 +176,8 @@ class Simulator:
                 self._to_stop = False
                 break
 
-            self.state = self._step(state=self.state, num_iterations=self.num_steps_lax)
+            # self.state = self._step(state=self.state, num_iterations=self.num_steps_lax)
+            self.state = self.step()
             loop_count += 1
 
             # Sleep for updated sleep_time seconds
@@ -186,7 +190,7 @@ class Simulator:
 
         # Encode that the simulation isn't started anymore 
         self._is_started = False
-        lg.info('Run stops')
+        lg.info('Simulation run stops')
 
 
     def update_sleep_time(self, frequency, elapsed_time):
@@ -204,40 +208,6 @@ class Simulator:
         else:
             sleep_time = 0
         return sleep_time
-
-    # TODO : Delete those two functions because now these kind of loops need to be done in the environment
-    def classic_simulation_loop(self, state, neighbors, num_iterations):
-        """Update the state and the neighbors on a few iterations with a classic python loop
-
-        :param state: current_state of the simulation
-        :param neighbors: array of neighbors for simulation entities
-        :return: state, neighbors
-        """
-        for i in range(0, num_iterations):
-            state, neighbors = self.update_fn(i, (state, neighbors))
-        return state, neighbors
-
-
-    def lax_simulation_loop(self, state, neighbors, num_iterations):
-        """Update the state and the neighbors on a few iterations with lax loop
-
-        :param state: current_state of the simulation
-        :param neighbors: array of neighbors for simulation entities
-        :return: state, neighbors
-        """
-        state, neighbors = lax.fori_loop(0, num_iterations, self.update_fn, (state, neighbors))
-        return state, neighbors
-
-
-    def select_simulation_loop_type(self, use_fori_loop):
-        """Choose wether to use a lax or a classic simulation loop in function step
-
-        :return: appropriate simulation loop
-        """
-        if use_fori_loop:
-            return self.lax_simulation_loop
-        else:
-            return self.classic_simulation_loop
         
 
     def start_recording(self, saving_name):
@@ -245,7 +215,7 @@ class Simulator:
         :param saving_name: optional name of the saving file
         """
         if self.recording:
-            lg.warning('Already recording')
+            lg.warning("You called start_recording but the simulation is already being recorded")
         self.recording = True
         self.records = []
 
@@ -307,19 +277,24 @@ class Simulator:
             return data
     
 
+
     def set_state(self, nested_field, ent_idx, column_idx, value):
-        lg.info(f"set_state {nested_field} {ent_idx} {column_idx} {value}")
+        lg.info(f"Set state : {nested_field = }; {ent_idx = }; {column_idx = }; {value = }")
         row_idx = self.state.row_idx(nested_field[0], jnp.array(ent_idx))
         col_idx = None if column_idx is None else jnp.array(column_idx)
         change = converters.rec_set_dataclass(self.state, nested_field, row_idx, col_idx, value)
         self.state = self.state.set(**change)   
 
 
-    # Functions to start, stop, pause
     def start(self):
+        """Start the simulation"""
         self.run(threaded=True)
 
     def stop(self, blocking=True):
+        """Stop the simulation
+
+        :param blocking: TODO, defaults to True
+        """
         self._to_stop = True
         if blocking:
             while self._is_started:
@@ -328,27 +303,41 @@ class Simulator:
             lg.info('now stopped')
 
     def is_started(self):
+        """Check if simulation is started
+
+        :return: True if started else False
+        """
         return self._is_started
 
     @contextmanager
     def pause(self):
+        """Pause the simulation
+
+        :yield: dummy self
+        """
         self.stop(blocking=True)
         try:
             yield self
         finally:
             self.run(threaded=True)
 
-    # Other update functions
 
+    # TODO : Add documentation
     def update_attr(self, attr, type_):
-        lg.info('update_attr')
+        """_summary_
+
+        :param attr: _description_
+        :param type_: _description_
+        """
+        lg.info(f"Update attribute: {attr = }; {type_ = }")
         setattr(self, attr, type_(getattr(self.state.simulator_state, attr)[0]))
 
-    # TODO : Remove ? 
-    def get_change_time(self):
-        return 0
 
     def get_state(self):
+        """Get current simulation state
+
+        :return: simulation state
+        """
         return self.state
     
     

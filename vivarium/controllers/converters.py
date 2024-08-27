@@ -169,7 +169,7 @@ def nve_data_to_state_changes(nve_data, state):
             col_map = None
             col_idx = None
         # TODO : Added a condition for slice here
-        if isinstance(nve_tuples[0].col, slice):
+        elif isinstance(nve_tuples[0].col, slice):
             val = np.array(state.field(nf)[np.array(ent_idx)])
             col_map = nve_tuples[0].col
             # col_map = None
