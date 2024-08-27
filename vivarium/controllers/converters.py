@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.colors as mcolors
 
 from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig, stype_to_config, config_to_stype
-from vivarium.simulator.new_states import SimulatorState, AgentState, ObjectState, StateType
+from vivarium.simulator.simulator_states import SimulatorState, AgentState, ObjectState, StateType
 from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
 
 

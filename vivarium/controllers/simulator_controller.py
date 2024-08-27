@@ -9,7 +9,7 @@ import param
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.controllers.config import SimulatorConfig
 # from vivarium.simulator.states import StateType
-from vivarium.simulator.new_states import StateType
+from vivarium.simulator.simulator_states import StateType
 from vivarium.controllers import converters
 
 

@@ -13,7 +13,7 @@ import jax
 import jax.numpy as jnp
 
 from vivarium.controllers import converters
-from vivarium.simulator.new_states import SimState, SimulatorState
+from vivarium.simulator.simulator_states import SimState, SimulatorState
 from vivarium.environments.braitenberg.selective_sensing import State as EnvState
 
 lg = logging.getLogger(__name__)

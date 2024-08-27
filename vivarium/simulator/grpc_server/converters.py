@@ -5,8 +5,8 @@ import simulator_pb2
 from vivarium.simulator.grpc_server.numproto.numproto import proto_to_ndarray, ndarray_to_proto
 # from vivarium.simulator.states import State, SimulatorState, EntityState, AgentState, ObjectState
 # Use new states 
-from vivarium.simulator.new_states import SimulatorState, EntityState, AgentState, ObjectState
-from vivarium.simulator.new_states import SimState as State
+from vivarium.simulator.simulator_states import SimulatorState, EntityState, AgentState, ObjectState
+from vivarium.simulator.simulator_states import SimState as State
 
 
 def proto_to_state(state):

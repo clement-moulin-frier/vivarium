@@ -3,7 +3,7 @@ from param import Parameterized
 
 import vivarium.simulator.behaviors as behaviors
 # from vivarium.simulator.states import StateType
-from vivarium.simulator.new_states import StateType
+from vivarium.simulator.simulator_states import StateType
 
 from jax_md.rigid_body import monomer
 
