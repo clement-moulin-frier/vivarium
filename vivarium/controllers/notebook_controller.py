@@ -4,11 +4,14 @@ import threading
 import numpy as np
 import logging
 
+from vivarium.environments.braitenberg.simple import Behaviors
 from vivarium.controllers.simulator_controller import SimulatorController
-from vivarium.simulator.states import StateType, EntityType
+from vivarium.simulator.simulator_states import StateType, EntityType
 
 lg = logging.getLogger(__name__)
 
+
+# TODO : Add documentation
 class Entity:
     def __init__(self, config):
         self.config = config
@@ -40,10 +43,10 @@ class Entity:
             fn(self)
 
 
+# TODO : Add documentation
 class Agent(Entity):
     def __init__(self, config):
         super().__init__(config)
-        self.config.behavior = 'manual'
         self.etype = EntityType.AGENT
 
         self.behaviors = {}
@@ -73,26 +76,40 @@ class Agent(Entity):
         self.left_motor, self.right_motor = motors
 
 
+# TODO : Add documentation
 class Object(Entity):
     def __init__(self, config):
         super().__init__(config)
         self.etype = EntityType.OBJECT
 
 
-etype_to_class = {EntityType.AGENT: Agent, EntityType.OBJECT: Object}
+etype_to_class = {
+    EntityType.AGENT: Agent, 
+    EntityType.OBJECT: Object
+}
 
 
+
+# TODO : Add documentation
 class NotebookController(SimulatorController):
-
     def __init__(self, **params):
         super().__init__(**params)
         self.all_entities = []
+        # TODO : clarify that --> set self.agents, self.objects 
         for etype in list(EntityType):
+            # set the attributes for a specific entity type
             setattr(self, f'{etype.name.lower()}s', [etype_to_class[etype](c) for c in self.configs[etype.to_state_type()]])
+            # Add these lists of agents and objects to all_entities
             self.all_entities.extend(getattr(self, f'{etype.name.lower()}s'))
         self.from_stream = True
         self.configs[StateType.SIMULATOR][0].freq = -1
         self._is_running = False
+        self.set_manual_agents()
+
+    def set_manual_agents(self):
+        """Set a manual behavior for all agents"""
+        for ag in self.agents:
+            ag.behavior = np.full(shape=ag.behavior.shape, fill_value=Behaviors.MANUAL.value)
 
     def run(self, threaded=False, num_steps=math.inf):
         if self.is_started():
@@ -122,25 +139,25 @@ class NotebookController(SimulatorController):
 
 
 if __name__ == "__main__":
-
     controller = NotebookController()
-    c = controller.configs[StateType.AGENT][0]
-    with controller.batch_set_state():
-        for stype in list(StateType):
-            for c in controller.configs[stype]:
-                for p in c.param_names():
-                    if p != 'idx':
-                        c.param.trigger(p)
 
-    from random import random
-    from math import pi
+    # c = controller.configs[StateType.AGENT][0]
+    # with controller.batch_set_state():
+    #     for stype in list(StateType):
+    #         for c in controller.configs[stype]:
+    #             for p in c.param_names():
+    #                 if p != 'idx':
+    #                     c.param.trigger(p)
 
-    objs = [controller.objects[0], controller.objects[1]]
-    with controller.batch_set_state():
-        for obj in objs:
-            obj.x_position = random() * controller.configs[StateType.SIMULATOR][0].box_size
-            obj.y_position = random() * controller.configs[StateType.SIMULATOR][0].box_size
-            obj.color = 'grey'
-            obj.orientation = random() * 2. * pi
+    # from random import random
+    # from math import pi
 
-    lg.info('Done')
+    # objs = [controller.objects[0], controller.objects[1]]
+    # with controller.batch_set_state():
+    #     for obj in objs:
+    #         obj.x_position = random() * controller.configs[StateType.SIMULATOR][0].box_size
+    #         obj.y_position = random() * controller.configs[StateType.SIMULATOR][0].box_size
+    #         obj.color = 'grey'
+    #         obj.orientation = random() * 2. * pi
+
+    # lg.info('Done')
