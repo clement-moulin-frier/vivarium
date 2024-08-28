@@ -1,13 +1,9 @@
+import numpy as np
 import param
 from param import Parameterized
-
-import vivarium.simulator.behaviors as behaviors
-# from vivarium.simulator.states import StateType
-from vivarium.simulator.simulator_states import StateType
-
 from jax_md.rigid_body import monomer
 
-import numpy as np
+from vivarium.simulator.simulator_states import StateType
 
 
 mass = monomer.mass()
@@ -40,15 +36,12 @@ class AgentConfig(Config):
     orientation = param.Number(0.)
     mass_center = param.Number(mass_center)
     mass_orientation = param.Number(mass_orientation)
-    # TODO : Change that to have at the moment only a np array --> But there will be problems for the rendering later ...
-    # behavior = param.ObjectSelector(default=behaviors.linear_behavior_enum.AGGRESSION.name,
-    #                                 objects=behaviors.behavior_name_map.keys())
+    # TODO : Change behavior back to a list of objects
     behavior = param.Array(np.array([0.]))
     left_motor = param.Number(0., bounds=(0., 1.))
     right_motor = param.Number(0., bounds=(0., 1.))
-    # TODO : Will be problems here with the proximeters 
-    # TODO : Can't handle this client side because we want to have different sensors 
-    # TODO : Except if we consider the non occlusion case where the sensors information is just the sensor of closest entity
+    # TODO : Will be problems here if proximeters if non occlusion mode (as many proximeter values as neighbors) 
+    # TODO : Except if we only consider the non occlusion case where the sensors information is just the sensor of closest entity
     left_prox = param.Number(0., bounds=(0., 1.))
     right_prox = param.Number(0., bounds=(0., 1.))
     proximity_map_dist = param.Array(np.array([0.]))

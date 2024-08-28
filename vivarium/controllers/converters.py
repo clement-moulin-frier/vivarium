@@ -9,7 +9,6 @@ import matplotlib.colors as mcolors
 
 from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig, stype_to_config, config_to_stype
 from vivarium.simulator.simulator_states import SimulatorState, AgentState, ObjectState, StateType
-from vivarium.simulator.behaviors import behavior_name_map, reversed_behavior_name_map
 
 
 # Define config fields for agents, objects and simulator
@@ -43,14 +42,12 @@ class StateFieldInfo:
 # TODO : Add documentation here
 identity_s_to_c = lambda x, typ: typ(x)
 identity_c_to_s = lambda x: x
-behavior_s_to_c = lambda x, typ: reversed_behavior_name_map[int(x)]
-behavior_c_to_s = lambda x: behavior_name_map[x]
 color_s_to_c = lambda x, typ: mcolors.to_hex(np.array(x))  # Warning : temporary (below as well)
 color_c_to_s = lambda x: mcolors.to_rgb(x)
 mass_center_s_to_c = lambda x, typ: typ(x)
 mass_center_c_to_s = lambda x: [x]
 exists_c_to_s = lambda x: int(x)
-neighbor_map_s_to_c = lambda x, typ: x
+array_map_s_to_c = lambda x, typ: x
 
 
 # Define conversions between agents configs and state dictionary
@@ -67,12 +64,13 @@ agent_configs_to_state_dict = {
     'right_motor': StateFieldInfo(('agent_state', 'motor',), 1, identity_s_to_c, identity_c_to_s),
     'left_prox': StateFieldInfo(('agent_state', 'prox',), 0, identity_s_to_c, identity_c_to_s),
     'right_prox': StateFieldInfo(('agent_state', 'prox',), 1, identity_s_to_c, identity_c_to_s),
-    'proximity_map_dist': StateFieldInfo(('agent_state', 'proximity_map_dist',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
-    'proximity_map_theta': StateFieldInfo(('agent_state', 'proximity_map_theta',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
+    'proximity_map_dist': StateFieldInfo(('agent_state', 'proximity_map_dist',), slice(None), array_map_s_to_c, identity_c_to_s),
+    'proximity_map_theta': StateFieldInfo(('agent_state', 'proximity_map_theta',), slice(None), array_map_s_to_c, identity_c_to_s),
     # TODO : Think params and sensed should be like that but not sure (because it returns a list and not just a single value)
-    'params': StateFieldInfo(('agent_state', 'params',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
-    'sensed': StateFieldInfo(('agent_state', 'sensed',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
-    'behavior': StateFieldInfo(('agent_state', 'behavior',), slice(None), neighbor_map_s_to_c, identity_c_to_s),
+    'params': StateFieldInfo(('agent_state', 'params',), slice(None), array_map_s_to_c, identity_c_to_s),
+    'sensed': StateFieldInfo(('agent_state', 'sensed',), slice(None), array_map_s_to_c, identity_c_to_s),
+    # Now behaviors are arrays
+    'behavior': StateFieldInfo(('agent_state', 'behavior',), slice(None), array_map_s_to_c, identity_c_to_s),
     #'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
     'color': StateFieldInfo(('agent_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
     'idx': StateFieldInfo(('agent_state', 'ent_idx',), None, identity_s_to_c, identity_c_to_s),
