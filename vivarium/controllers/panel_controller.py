@@ -1,18 +1,16 @@
-from vivarium.controllers import converters
-from vivarium.controllers.config import AgentConfig, ObjectConfig, config_to_stype, Config
-from vivarium.controllers.simulator_controller import SimulatorController
-# from vivarium.simulator.states import EntityType, StateType
-from vivarium.simulator.simulator_states import EntityType, StateType
-from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
-
 import param
+import logging
 import numpy as np
 from contextlib import contextmanager
 
-import logging
+from vivarium.controllers import converters
+from vivarium.controllers.config import AgentConfig, ObjectConfig, config_to_stype, Config
+from vivarium.controllers.simulator_controller import SimulatorController
+from vivarium.simulator.simulator_states import EntityType, StateType
+from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 
 lg = logging.getLogger(__name__)
-print(f"logging in panel controller {lg = }")
+
 
 class PanelConfig(Config):
     pass
@@ -36,8 +34,12 @@ class PanelSimulatorConfig(Config):
     config_update = param.Boolean(False)
 
 
-panel_config_to_stype = {PanelSimulatorConfig: StateType.SIMULATOR, PanelAgentConfig: StateType.AGENT,
-                         PanelObjectConfig: StateType.OBJECT}
+panel_config_to_stype = {
+    PanelSimulatorConfig: StateType.SIMULATOR, 
+    PanelAgentConfig: StateType.AGENT,
+    PanelObjectConfig: StateType.OBJECT
+}
+
 stype_to_panel_config = {stype: config_class for config_class, stype in panel_config_to_stype.items()}
 
 
@@ -49,6 +51,7 @@ class Selected(param.Parameterized):
 
     def __len__(self):
         return len(self.selection)
+
 
 class PanelController(SimulatorController):
 
@@ -124,8 +127,7 @@ class PanelController(SimulatorController):
         self.pull_configs({StateType.SIMULATOR: self.configs[StateType.SIMULATOR]})
 
     def push_selected_to_config_list(self, *events):
-        print("push_selected_to_config_list")
-        lg.info('push_selected_to_config_list %d', len(events))
+        lg.info("Push_selected_to_config_list %d", len(events))
         for e in events:
             if isinstance(e.obj, PanelConfig):
                 stype = panel_config_to_stype[type(e.obj)]
@@ -141,8 +143,4 @@ class PanelController(SimulatorController):
 
 if __name__ == '__main__':
     simulator = PanelController(client=SimulatorGRPCClient())
-    simulator.configs[StateType.AGENT][0] = 'black'
-    # TODO : Add a thing to check if there's a callback and see if the 
-
-    lg.info('Done')
     

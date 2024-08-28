@@ -1,20 +1,13 @@
-import time
-import threading
-import logging
-
-from contextlib import contextmanager
-
 import param
+import logging
+from contextlib import contextmanager
 
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.controllers.config import SimulatorConfig
-# from vivarium.simulator.states import StateType
 from vivarium.simulator.simulator_states import StateType
 from vivarium.controllers import converters
 
-
 lg = logging.getLogger(__name__)
-
 param.Dynamic.time_dependent = True
 
 
@@ -28,8 +21,6 @@ class SimulatorController(param.Parameterized):
         super().__init__(**params)
         self.client = client or SimulatorGRPCClient()
         self.state = self.client.state
-        print("\nSimulator Controller init")
-        print(f"{self.state = }")
         configs_dict = converters.set_configs_from_state(self.state)
         for stype, configs in configs_dict.items():
             self.configs[stype] = configs
@@ -49,20 +40,12 @@ class SimulatorController(param.Parameterized):
         return self.configs[StateType.SIMULATOR][0]
 
     def push_state(self, *events):
-        lg.debug("push_state")
-        print(f"\n XXXXXXXX")
-        print("PUSH STATE")
-        print(f"{events = }")
         if self._in_batch:
             self._event_list.extend(events)
             return
-        lg.info('push_state %d', len(events))
-        # lg.info(converters.events_to_state_changes(events))
-
+        lg.info("Push_state %d", len(events))
         state_changes = converters.events_to_state_changes(events, self.state)
-        print(f"{state_changes}")
         for sc in state_changes:
-            print(f"{sc = }")
             self.client.set_state(**sc._asdict())
     
     @contextmanager
@@ -77,7 +60,6 @@ class SimulatorController(param.Parameterized):
 
     @contextmanager
     def batch_set_state(self):
-        lg.debug("BATCH_SET_STATE")
         self._in_batch = True
         self._event_list = []
         try:
@@ -91,7 +73,7 @@ class SimulatorController(param.Parameterized):
         self.pull_configs()
 
     def pull_configs(self, configs=None):
-        lg.debug("pull_configs")
+        lg.debug(f"Pull_configs; {configs = }")
         configs = configs or self.configs
         state = self.state
         with self.dont_push_entity_configs():
@@ -117,9 +99,7 @@ class SimulatorController(param.Parameterized):
 
 
 if __name__ == "__main__":
-
     controller = SimulatorController()
     controller.configs[StateType.AGENT][2].x_position = 1.
     lg.info(controller.client.get_state())
-
     lg.info('Done')

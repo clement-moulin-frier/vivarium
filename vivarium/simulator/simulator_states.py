@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from jax_md.dataclasses import dataclass
 from jax_md import util, simulate, rigid_body
 
-### States definition : really ugly
+
 class EntityType(Enum):
     AGENT = 0
     OBJECT = 1
@@ -66,8 +66,6 @@ class ObjectState:
     color: util.Array
 
 
-# TODO : just need to convert the simulator state and the elements inside en_state (not inside agents, objects ...)
-# TODO : Make sure that when the update freq ... is updated on client side, the freq is updated on server side (check later when reestablished client server comm)
 @dataclass
 class SimulatorState:
     idx: util.Array
@@ -105,24 +103,12 @@ class SimState:
     object_state: ObjectState
 
     def field(self, stype_or_nested_fields):
-        print("\nfield function in SimState")
-        print(f"{stype_or_nested_fields = }")
-        print(f"{type(stype_or_nested_fields)}")
-        # TODO : Really weird bug where a fied was an enum of a StateType and thus this didn't work ...
-        # TODO : But shouldn't really be a problem because agent types stayed the same ... to investigate     
-        # if isinstance(stype_or_nested_fields, StateType):
         if isinstance(stype_or_nested_fields, StateType) or isinstance(stype_or_nested_fields, Enum):
-            print("is StateType")
             name = stype_or_nested_fields.name.lower()
             nested_fields = (f'{name}_state', )
         else:
-            print("is not StateType")
             nested_fields = stype_or_nested_fields
-
-        print(f"{nested_fields = }")
-        print(f"{type(nested_fields) = }")
-
-        # what does this line do ?
+        # TODO : what does this line do ?
         res = self
         for f in nested_fields:
             res = getattr(res, f)
@@ -130,8 +116,6 @@ class SimState:
         return res
 
     def ent_idx(self, etype, entity_idx):
-        print("\nent_idx in SimState")
-        print(f"{etype, entity_idx = }")
         return self.field(etype).ent_idx[entity_idx]
 
     def e_idx(self, etype):

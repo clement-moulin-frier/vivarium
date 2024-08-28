@@ -120,8 +120,6 @@ StateChangeTuple = namedtuple('StateChange', ['nested_field', 'ent_idx', 'column
 # TODO : Add documentation
 def events_to_nve_data(events, state):
     nve_data = defaultdict(list)
-    print(f"{events = }")
-    print("")
     for e in events:
         config = e.obj
         param = e.name
@@ -131,26 +129,16 @@ def events_to_nve_data(events, state):
         idx = config.idx
         val = state_field_info.config_to_state(e.new)
 
-        print("\n Slice state_field_info.column_idx")
-        print(f"{state_field_info.column_idx = }")
-        print(f"{val = }")
         if state_field_info.column_idx is None:
-            print("NONE")
             nve_data[nested_field].append(EntityTuple(idx, None, val))
         elif isinstance(state_field_info.column_idx, int):
-            print("INT")
             nve_data[nested_field].append(EntityTuple(idx, state_field_info.column_idx, val))
         elif isinstance(state_field_info.column_idx, slice):
-            print("SLICE")
-            print(f"{state_field_info.column_idx = }")
-            print(f"{val = }")
             nve_data[nested_field].append(EntityTuple(idx, state_field_info.column_idx, val))
         else:
             for c, v in zip(state_field_info.column_idx, val):
                 nve_data[nested_field].append(EntityTuple(idx, c, v))
     
-    print("\nfinal nve data")
-    print(f"{nve_data = }")
     return nve_data
 
 
@@ -158,21 +146,16 @@ def events_to_nve_data(events, state):
 def nve_data_to_state_changes(nve_data, state):
     value_data = dict()
     for nf, nve_tuples in nve_data.items():
-        for t in nve_tuples:
-            print(f"{t = }")
-            print(f"{t.idx = }")
         ent_idx = sorted(list(set([int(t.idx) for t in nve_tuples])))
         row_map = {idx: i for i, idx in enumerate(ent_idx)}
-        print(f"{t.col = }")
+        # Check if the colum is an int, a slice or None
         if nve_tuples[0].col is None:
             val = np.array(state.field(nf)[np.array(ent_idx)])
             col_map = None
             col_idx = None
-        # TODO : Added a condition for slice here
         elif isinstance(nve_tuples[0].col, slice):
             val = np.array(state.field(nf)[np.array(ent_idx)])
             col_map = nve_tuples[0].col
-            # col_map = None
             col_idx = None
         else:
             col_idx = sorted(list(set([t.col for t in nve_tuples])))
@@ -180,16 +163,14 @@ def nve_data_to_state_changes(nve_data, state):
             val = np.array(state.field(nf)[np.ix_(state.row_idx(nf[0], ent_idx), col_idx)])
         value_data[nf] = ValueTuple(ent_idx, col_idx, row_map, col_map, val)
 
-    print(f"\n{value_data = }")
     state_changes = []
     for nf, value_tuple in value_data.items():
         for nve_tuple in nve_data[nf]:
             row = value_tuple.row_map[nve_tuple.idx]
+            # Check if the colum is an int, a slice or None
             if nve_tuple.col is None:
                 value_tuple.val[row] = nve_tuple.val
-            # TODO : Add a condition for slice here
             elif isinstance(nve_tuple.col, slice):
-                print("SLICE")
                 value_tuple.val[row] = nve_tuple.val
             else:
                 col = value_tuple.col_map[nve_tuple.col]
@@ -199,7 +180,6 @@ def nve_data_to_state_changes(nve_data, state):
             value_data[nf].col_idx, value_tuple.val
         ))
 
-    print(f"\n{state_changes = }")
     return state_changes
 
 
