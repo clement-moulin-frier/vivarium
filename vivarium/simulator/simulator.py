@@ -18,7 +18,7 @@ from vivarium.environments.braitenberg.selective_sensing import State as EnvStat
 
 lg = logging.getLogger(__name__)
 
-# TODO : Remove use fori_loop and to_jit
+# TODO : Remove use fori_loop and to_jit as class attributes
 class Simulator:
     def __init__(
             self, 
@@ -78,9 +78,6 @@ class Simulator:
             use_fori_loop=jnp.array([1*use_fori_loop]),
             to_jit=jnp.array([1*jit_step])
         )
-
-        print("COMPILE")
-        print(f"{self.freq = }  ; {self.num_steps_lax = }")
 
         sim_state = SimState(
             agent_state=env_state.agents,
@@ -210,6 +207,7 @@ class Simulator:
         lg.info('Simulation run stops')
 
 
+    # TODO : could jit this function to make it even faster
     def update_sleep_time(self, frequency, elapsed_time):
         """Compute the time we need to sleep to respect the update frequency
 
@@ -355,8 +353,7 @@ class Simulator:
             self.run(threaded=True)
 
 
-    # TODO : Add documentation
-    # TODO : should surely also update the update freq, num_steps_lax ... in a similar function
+    # TODO : Update documentation
     def update_attr(self, attr, type_):
         """_summary_
 

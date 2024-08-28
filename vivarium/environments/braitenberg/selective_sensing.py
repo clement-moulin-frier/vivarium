@@ -449,7 +449,7 @@ class SelectiveSensorsEnv(BaseEnv):
 
     @partial(jax.jit, static_argnums=(0, 3))
     def _steps(self, state, neighbor_storage, num_updates):
-        lg.info('Compile _steps function')
+        lg.debug('Compile _steps function in SelectiveSensing environment')
 
         """Update the current state by doing a _step_env update num_updates times (this results in faster simulations) 
 
