@@ -18,7 +18,7 @@ from vivarium.environments.braitenberg.selective_sensing import State as EnvStat
 
 lg = logging.getLogger(__name__)
 
-
+# TODO : Remove use fori_loop and to_jit
 class Simulator:
     def __init__(
             self, 
@@ -60,7 +60,7 @@ class Simulator:
 
     # Done : Add a partial so if args of simulator change it will be changed in this fn
     @partial(jax.jit, static_argnums=(0,))
-    def env_to_sim_state(self, env_state):
+    def _env_to_sim_state(self, env_state, num_steps_lax, freq, use_fori_loop, jit_step):
         simulator_state = SimulatorState(
             # why 0 and not 2 ? Like in state types
             idx=jnp.array([0]),
@@ -72,12 +72,15 @@ class Simulator:
             neighbor_radius=jnp.array([env_state.neighbor_radius]),
             collision_alpha=jnp.array([env_state.collision_alpha]),
             collision_eps=jnp.array([env_state.collision_eps]),
-            num_steps_lax=jnp.array([self.num_steps_lax]),
-            freq=jnp.array([self.freq]),
+            num_steps_lax=jnp.array([num_steps_lax]),
+            freq=jnp.array([freq]),
             # convert bool to either 1 or 0
-            use_fori_loop=jnp.array([1*self.use_fori_loop]),
-            to_jit=jnp.array([1*self.jit_step])
+            use_fori_loop=jnp.array([1*use_fori_loop]),
+            to_jit=jnp.array([1*jit_step])
         )
+
+        print("COMPILE")
+        print(f"{self.freq = }  ; {self.num_steps_lax = }")
 
         sim_state = SimState(
             agent_state=env_state.agents,
@@ -87,6 +90,15 @@ class Simulator:
         )
 
         return sim_state
+    
+    def env_to_sim_state(self, env_state):
+        return self._env_to_sim_state(
+            env_state,
+            self.num_steps_lax,
+            self.freq,
+            self.use_fori_loop,
+            self.jit_step
+        )
         
     @partial(jax.jit, static_argnums=(0,))
     def sim_to_env_state(self, sim_state):
@@ -281,14 +293,30 @@ class Simulator:
             lg.info('Simulation loaded from %s', saving_path)
             return data
     
-
-
     def set_state(self, nested_field, ent_idx, column_idx, value):
-        lg.info(f"Set state : {nested_field = }; {ent_idx = }; {column_idx = }; {value = }")
+        """Set the current simulation state
+
+        :param nested_field: simulation field (e.g)
+        :param ent_idx: entity idx to modify
+        :param column_idx: column idx to modify
+        :param value: value to set
+        """
+        lg.debug(f"\nSet state :")
+        lg.debug(f"{nested_field = }; {ent_idx = }; {column_idx = }; {value = }")
         row_idx = self.state.row_idx(nested_field[0], jnp.array(ent_idx))
         col_idx = None if column_idx is None else jnp.array(column_idx)
         change = converters.rec_set_dataclass(self.state, nested_field, row_idx, col_idx, value)
         self.state = self.state.set(**change)   
+
+        #  Update the class field if it is in the simulator state (e.g num_steps_lax, freq)
+        if nested_field[0] == 'simulator_state':
+            print(f"{self.freq}")
+            self.update_attr(nested_field[1], SimulatorState.get_type(nested_field[1]))
+            print(f"{self.freq}")
+
+        # Chekc if there can be problems with nested fields that aren(t tuples
+        if nested_field[1] in ('box_size', 'neighbor_radius', 'dt'):
+            lg.warning("Impossible to change 'box size', 'dt', 'neighbor radius' during the simulation")
 
 
     def start(self):
@@ -328,13 +356,14 @@ class Simulator:
 
 
     # TODO : Add documentation
+    # TODO : should surely also update the update freq, num_steps_lax ... in a similar function
     def update_attr(self, attr, type_):
         """_summary_
 
         :param attr: _description_
         :param type_: _description_
         """
-        lg.info(f"Update attribute: {attr = }; {type_ = }")
+        lg.info(f"\nUpdate attribute: {attr = }; {type_ = }")
         setattr(self, attr, type_(getattr(self.state.simulator_state, attr)[0]))
 
 
