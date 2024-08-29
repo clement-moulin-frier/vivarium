@@ -1,36 +1,84 @@
-agents:
-  behavior: 1
-  color: blue
-  max_speed: 10.0
-  prox_cos_min: 0.0
-  prox_dist_max: 40.0
-  speed_mul: 1.0
-  theta_mul: 1.0
-  wheel_diameter: 2.0
+# Default scene is a prey predator one. This file shows how to init a simulation with multiple entities, as well as selective sensing for agents
 
-entities:
-  agents_positions: null
-  diameter: 5.0
-  existing_agents: null
-  existing_objects: null
-  friction: 0.1
-  mass_center: 1.0
-  mass_orientation: 0.125
-  objects_positions: null
-  seed: 0
+seed: 0
+n_dims: 2
+box_size: 100
+diameter: 5.0
+friction: 0.1
+mass_center: 1.0
+mass_orientation: 0.125
+neighbor_radius: 100  # Same as box_size
+collision_alpha: 0.5
+collision_eps: 0.1
+dt: 0.1
+wheel_diameter: 2.0
+speed_mul: 1.0
+max_speed: 10.0
+theta_mul: 1.0
+prox_dist_max: 40.0
+prox_cos_min: 0.0
+existing_agents: null
+existing_objects: null
 
-objects:
-  color: red
+# Entity data definitions
+entities_data:
+  # Define the different subtypes 
+  EntitySubTypes:
+    - PREYS
+    - PREDS
+    - RESSOURCES
+    - POISON
 
-simulator:
-  box_size: 100.0
-  collision_alpha: 0.5
-  collision_eps: 0.1
-  dt: 0.1
-  freq: 40.0
-  max_agents: 10
-  max_objects: 2
-  neighbor_radius: 100.0
-  num_steps_lax: 4
-  to_jit: true
-  use_fori_loop: false
+  # Define the different entities
+  Entities: 
+
+    # Preys data definition : 5 blue agents
+    PREYS:
+      type: AGENT
+      num: 5
+      color: blue
+      # They have two behaviors
+      selective_behaviors:
+        # They love other preys and ressources
+        love:
+          beh: LOVE
+          sensed: 
+            - PREYS
+            - RESSOURCES
+        # They fear predators and poison
+        fear:
+          beh: FEAR
+          sensed: 
+            - PREDS
+            - POISON
+
+    # Predators data definition : 5 red agents
+    PREDS:
+      type: AGENT
+      num: 5
+      color: red
+      # They have two behaviors (you have to fix the same number of behaviors for all agents)
+      selective_behaviors:
+        # They attack preys (you don't have to have a fixed number of sensed entities)
+        aggr:
+          beh: AGGRESSION
+          sensed: 
+            - PREYS
+        # They fear poison
+        fear:
+          beh: FEAR
+          sensed: 
+            - POISON
+
+    # Ressources data definition : 5 green objects
+    RESSOURCES:
+      type: OBJECT
+      num: 5
+      color: green
+
+    # Poison data definition : 5 purple objects
+    POISON:
+      type: OBJECT
+      num: 5
+      color: purple
+

@@ -12,13 +12,15 @@ lg = logging.getLogger(__name__)
 def main(cfg: DictConfig = None) -> None:
     logging.basicConfig(level=cfg.log_level)
 
-    # TODO : Update args and update them later
+    # init state and env
     args = OmegaConf.merge(cfg.default, cfg.scene)
-    
-    state = init_state()
+    state = init_state(**args)
     env = SelectiveSensorsEnv(state=state)
+
+    # init simulator
     simulator = Simulator(env_state=state, env=env)
 
+    # run it
     lg.info("Running simulation")
     simulator.run(threaded=False, num_steps=cfg.num_steps)
     lg.info("Simulation complete")

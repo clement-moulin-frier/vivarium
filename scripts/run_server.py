@@ -8,6 +8,8 @@ from vivarium.environments.braitenberg.selective_sensing import SelectiveSensors
 from vivarium.simulator.grpc_server.simulator_server import serve
 
 lg = logging.getLogger(__name__)
+
+# Define parameters of the simulator
 update_freq = 100
 num_steps_lax = 10
 
@@ -15,11 +17,9 @@ num_steps_lax = 10
 def main(cfg: DictConfig = None) -> None:
     logging.basicConfig(level=cfg.log_level)
 
-    # TODO : Update args and use them here later
-    args = OmegaConf.merge(cfg.default, cfg.scene)
-    
     # init state and env
-    state = init_state()
+    args = OmegaConf.merge(cfg.default, cfg.scene)
+    state = init_state(**args)
     env = SelectiveSensorsEnv(state=state)
 
     # init simulator
@@ -30,6 +30,7 @@ def main(cfg: DictConfig = None) -> None:
         num_steps_lax=num_steps_lax
     )
 
+    # host the simulation on a server
     lg.info('Simulator server started')
     serve(simulator)
 
