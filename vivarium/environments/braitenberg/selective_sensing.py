@@ -113,14 +113,6 @@ def get_relative_displacement(state, agents_neighs_idx, displacement_fn):
     proximity_map_theta = proximity_map_theta.at[senders, receivers].set(theta)
     return dist, theta, proximity_map_dist, proximity_map_theta
 
-# def linear_behavior(proxs, params):
-#     """Compute the activation of motors with a linear combination of proximeters and parameters
-
-#     :param proxs: proximeter values of an agent
-#     :param params: parameters of an agent (mapping proxs to motor values)
-#     :return: motor values
-#     """
-#     return params.dot(jnp.hstack((proxs, 1.)))
 
 def compute_motor(proxs, params, behaviors, motors):
     """Compute new motor values. If behavior is manual, keep same motor values. Else, compute new values with proximeters and params.
