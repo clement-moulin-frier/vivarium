@@ -12,8 +12,8 @@ from jax import random, ops, lax
 
 from flax import struct
 from jax_md.rigid_body import RigidBody
-from jax_md import simulate 
-from jax_md import space, rigid_body, partition, quantity
+from jax_md.dataclasses import dataclass as md_dataclass
+from jax_md import space, rigid_body, partition, quantity, simulate
 
 from vivarium.environments.utils import normal, distance, relative_position 
 from vivarium.environments.base_env import BaseState, BaseEnv
@@ -28,7 +28,7 @@ class EntityType(Enum):
     OBJECT = 1
 
 # Already incorporates position, momentum, force, mass and velocity
-@struct.dataclass
+@md_dataclass
 class EntityState(simulate.NVEState):
     entity_type: jnp.array
     entity_idx: jnp.array
@@ -36,12 +36,12 @@ class EntityState(simulate.NVEState):
     friction: jnp.array
     exists: jnp.array
     
-@struct.dataclass
+@md_dataclass
 class ParticleState:
     ent_idx: jnp.array
     color: jnp.array
 
-@struct.dataclass
+@md_dataclass
 class AgentState(ParticleState):
     prox: jnp.array
     motor: jnp.array
@@ -56,11 +56,11 @@ class AgentState(ParticleState):
     proxs_dist_max: jnp.array
     proxs_cos_min: jnp.array
 
-@struct.dataclass
+@md_dataclass
 class ObjectState(ParticleState):
     pass
 
-@struct.dataclass
+@md_dataclass
 class State(BaseState):
     max_agents: jnp.int32
     max_objects: jnp.int32
@@ -369,7 +369,7 @@ class BraitenbergEnv(BaseEnv):
 
         # 2 : Compute motor activations according to new proximeter values
         motor = compute_motor(prox, state.agents.params, state.agents.behavior, state.agents.motor)
-        agents = state.agents.replace(
+        agents = state.agents.set(
             prox=prox, 
             proximity_map_dist=proximity_dist_map, 
             proximity_map_theta=proximity_dist_theta,
@@ -377,11 +377,11 @@ class BraitenbergEnv(BaseEnv):
         )
 
         # 3 : Update the state with new agents proximeter and motor values
-        state = state.replace(agents=agents)
+        state = state.set(agents=agents)
 
         # 4 : Move the entities by applying forces on them (collision, friction and motor forces for agents)
         entities = self.apply_physics(state, neighbors)
-        state = state.replace(time=state.time+1, entities=entities)
+        state = state.set(time=state.time+1, entities=entities)
 
         # 5 : Update neighbors
         neighbors = neighbors.update(state.entities.position.center)
