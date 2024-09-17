@@ -865,9 +865,12 @@ def init_state(
                 # Init an empty mask
                 sensed_mask = np.zeros((len(ent_sub_types, )))
                 for sensed_type in behavior_data['sensed']:
-                    # Iteratively update it with specific sensed values
-                    sensed_id = ent_sub_types_enum[sensed_type].value
-                    sensed_mask[sensed_id] = 1
+                    try:
+                        # Iteratively update it with specific sensed values
+                        sensed_id = ent_sub_types_enum[sensed_type].value
+                        sensed_mask[sensed_id] = 1
+                    except KeyError:
+                        raise ValueError(f"Unknown sensed_type '{sensed_type}' encountered in sensed entities for {ent_sub_type}. Please select entities among {ent_sub_types}")
                 beh = define_behavior_map(behavior_id, sensed_mask)
                 behavior_list.append(beh)
             # stack the elements of the behavior list and update the agents_data dictionary

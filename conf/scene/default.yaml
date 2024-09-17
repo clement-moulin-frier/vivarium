@@ -1,5 +1,4 @@
 # Default scene is a prey predator one. This file shows how to init a simulation with multiple entities, as well as selective sensing for agents
-
 seed: 0
 n_dims: 2
 box_size: 100
@@ -20,65 +19,4 @@ prox_cos_min: 0.0
 existing_agents: null
 existing_objects: null
 
-# Entity data definitions
-entities_data:
-  # Define the different subtypes 
-  EntitySubTypes:
-    - PREYS
-    - PREDS
-    - RESSOURCES
-    - POISON
-
-  # Define the different entities
-  Entities: 
-
-    # Preys data definition : 5 blue agents
-    PREYS:
-      type: AGENT
-      num: 5
-      color: blue
-      # They have two behaviors
-      selective_behaviors:
-        # They love other preys and ressources
-        love:
-          beh: LOVE
-          sensed: 
-            - PREYS
-            - RESSOURCES
-        # They fear predators and poison
-        fear:
-          beh: FEAR
-          sensed: 
-            - PREDS
-            - POISON
-
-    # Predators data definition : 5 red agents
-    PREDS:
-      type: AGENT
-      num: 5
-      color: red
-      # They have two behaviors (you have to fix the same number of behaviors for all agents)
-      selective_behaviors:
-        # They attack preys (you don't have to have a fixed number of sensed entities)
-        aggr:
-          beh: AGGRESSION
-          sensed: 
-            - PREYS
-        # They fear poison
-        fear:
-          beh: FEAR
-          sensed: 
-            - POISON
-
-    # Ressources data definition : 5 green objects
-    RESSOURCES:
-      type: OBJECT
-      num: 5
-      color: green
-
-    # Poison data definition : 5 purple objects
-    POISON:
-      type: OBJECT
-      num: 5
-      color: purple
-
+entities_data: None
