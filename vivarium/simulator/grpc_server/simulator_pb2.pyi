@@ -81,7 +81,7 @@ class EntityState(_message.Message):
     def __init__(self, position: _Optional[_Union[RigidBody, _Mapping]] = ..., momentum: _Optional[_Union[RigidBody, _Mapping]] = ..., force: _Optional[_Union[RigidBody, _Mapping]] = ..., mass: _Optional[_Union[RigidBody, _Mapping]] = ..., diameter: _Optional[_Union[NDArray, _Mapping]] = ..., entity_type: _Optional[_Union[NDArray, _Mapping]] = ..., entity_idx: _Optional[_Union[NDArray, _Mapping]] = ..., friction: _Optional[_Union[NDArray, _Mapping]] = ..., exists: _Optional[_Union[NDArray, _Mapping]] = ..., ent_subtype: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class AgentState(_message.Message):
-    __slots__ = ("ent_idx", "prox", "motor", "behavior", "wheel_diameter", "speed_mul", "max_speed", "theta_mul", "proxs_dist_max", "proxs_cos_min", "color", "proximity_map_dist", "proximity_map_theta", "params", "sensed")
+    __slots__ = ("ent_idx", "prox", "motor", "behavior", "wheel_diameter", "speed_mul", "max_speed", "theta_mul", "proxs_dist_max", "proxs_cos_min", "color", "proximity_map_dist", "proximity_map_theta", "params", "sensed", "prox_sensed_ent")
     ENT_IDX_FIELD_NUMBER: _ClassVar[int]
     PROX_FIELD_NUMBER: _ClassVar[int]
     MOTOR_FIELD_NUMBER: _ClassVar[int]
@@ -97,6 +97,7 @@ class AgentState(_message.Message):
     PROXIMITY_MAP_THETA_FIELD_NUMBER: _ClassVar[int]
     PARAMS_FIELD_NUMBER: _ClassVar[int]
     SENSED_FIELD_NUMBER: _ClassVar[int]
+    PROX_SENSED_ENT_FIELD_NUMBER: _ClassVar[int]
     ent_idx: NDArray
     prox: NDArray
     motor: NDArray
@@ -112,7 +113,8 @@ class AgentState(_message.Message):
     proximity_map_theta: NDArray
     params: NDArray
     sensed: NDArray
-    def __init__(self, ent_idx: _Optional[_Union[NDArray, _Mapping]] = ..., prox: _Optional[_Union[NDArray, _Mapping]] = ..., motor: _Optional[_Union[NDArray, _Mapping]] = ..., behavior: _Optional[_Union[NDArray, _Mapping]] = ..., wheel_diameter: _Optional[_Union[NDArray, _Mapping]] = ..., speed_mul: _Optional[_Union[NDArray, _Mapping]] = ..., max_speed: _Optional[_Union[NDArray, _Mapping]] = ..., theta_mul: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_dist_max: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_cos_min: _Optional[_Union[NDArray, _Mapping]] = ..., color: _Optional[_Union[NDArray, _Mapping]] = ..., proximity_map_dist: _Optional[_Union[NDArray, _Mapping]] = ..., proximity_map_theta: _Optional[_Union[NDArray, _Mapping]] = ..., params: _Optional[_Union[NDArray, _Mapping]] = ..., sensed: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
+    prox_sensed_ent: NDArray
+    def __init__(self, ent_idx: _Optional[_Union[NDArray, _Mapping]] = ..., prox: _Optional[_Union[NDArray, _Mapping]] = ..., motor: _Optional[_Union[NDArray, _Mapping]] = ..., behavior: _Optional[_Union[NDArray, _Mapping]] = ..., wheel_diameter: _Optional[_Union[NDArray, _Mapping]] = ..., speed_mul: _Optional[_Union[NDArray, _Mapping]] = ..., max_speed: _Optional[_Union[NDArray, _Mapping]] = ..., theta_mul: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_dist_max: _Optional[_Union[NDArray, _Mapping]] = ..., proxs_cos_min: _Optional[_Union[NDArray, _Mapping]] = ..., color: _Optional[_Union[NDArray, _Mapping]] = ..., proximity_map_dist: _Optional[_Union[NDArray, _Mapping]] = ..., proximity_map_theta: _Optional[_Union[NDArray, _Mapping]] = ..., params: _Optional[_Union[NDArray, _Mapping]] = ..., sensed: _Optional[_Union[NDArray, _Mapping]] = ..., prox_sensed_ent: _Optional[_Union[NDArray, _Mapping]] = ...) -> None: ...
 
 class ObjectState(_message.Message):
     __slots__ = ("ent_idx", "custom_field", "color")

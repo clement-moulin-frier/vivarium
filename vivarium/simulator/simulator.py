@@ -31,6 +31,7 @@ class Simulator:
             seed=0
         ):
         self.env = env
+        assert self.env.occlusion == True, "You have to use an environment with occlusion sensors within the simulator"
 
         # First initialize fields in the class because they will be used to define the simulator state below
         self.key = jax.random.PRNGKey(seed)
@@ -224,6 +225,7 @@ class Simulator:
             lg.info('Simulation loaded from %s', saving_path)
             return data
     
+    # TODO : set the params to the correct values when a behavior is modified
     def set_state(self, nested_field, ent_idx, column_idx, value):
         """Set the current simulation state
 
@@ -241,11 +243,10 @@ class Simulator:
 
         #  Update the class field if it is in the simulator state (e.g num_steps_lax, freq)
         if nested_field[0] == 'simulator_state':
-            print(f"{self.freq}")
             self.update_attr(nested_field[1], SimulatorState.get_type(nested_field[1]))
-            print(f"{self.freq}")
 
-        # Chekc if there can be problems with nested fields that aren(t tuples
+        # Check if there can be problems with nested fields that aren't tuples
+        # TODO : Update the client to ensure those fields can't be modified 
         if nested_field[1] in ('box_size', 'neighbor_radius', 'dt'):
             lg.warning("Impossible to change 'box size', 'dt', 'neighbor radius' during the simulation")
 

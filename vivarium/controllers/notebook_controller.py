@@ -75,6 +75,11 @@ class Agent(Entity):
             motors = total_motor / total_weights
         self.left_motor, self.right_motor = motors
 
+    def proximeters(self, sensed=None):
+        sensed = array_ones if sensed is None 
+
+        return left, right
+
 
 # TODO : Add documentation
 class Object(Entity):

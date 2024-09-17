@@ -53,6 +53,7 @@ class ParticleState:
 @md_dataclass
 class AgentState(ParticleState):
     prox: jnp.array
+    prox_sensed_ent: jnp.array
     motor: jnp.array
     proximity_map_dist: jnp.array
     proximity_map_theta: jnp.array
@@ -220,13 +221,15 @@ def compute_occlusion_proxs_motors(state, agent_idx, params, sensed, behaviors, 
     agent_proxs = jnp.max(agent_raw_proxs, axis=0)
     argmax = jnp.argmax(agent_raw_proxs, axis=0)
     # Get the real entity idx of the left and right sensed entities from dense neighborhoods
-    sensed_ent_idx = ag_idx_dense_receivers[agent_idx][argmax]
+    # sensed_ent_idx = ag_idx_dense_receivers[agent_idx][argmax]
+    prox_sensed_ent = ag_idx_dense_receivers[agent_idx][argmax]
     
     # Compute the motor values for all behaviors and do a mean on it
-    motor_values = compute_all_behavior_motors(state, params, sensed, behavior, motor, agent_proxs, sensed_ent_idx)
+    motor_values = compute_all_behavior_motors(state, params, sensed, behavior, motor, agent_proxs, prox_sensed_ent)
     motors = jnp.mean(motor_values, axis=0)
 
-    return agent_proxs, motors
+    # TODO : return agent_proxs, but also the sensed_ent_idx
+    return agent_proxs, prox_sensed_ent, motors
 
 compute_all_agents_proxs_motors_occl = vmap(compute_occlusion_proxs_motors, in_axes=(None, 0, 0, 0, 0, 0, None, None, None))
 
@@ -323,7 +326,7 @@ compute_all_agents_proxs_motors = vmap(compute_agent_proxs_motors, in_axes=(None
 
 
 
-
+# TODO : Fix the non occlusion error in the step
 class SelectiveSensorsEnv(BaseEnv):
     def __init__(self, state, occlusion=True, seed=42):
         """Init the selective sensors braitenberg env 
@@ -403,7 +406,7 @@ class SelectiveSensorsEnv(BaseEnv):
         raw_proxs = sensor_fn(dist, relative_theta, dist_max, cos_min, target_exist_mask)
 
         # Compute real agents proximeters and motors
-        agent_proxs, mean_agent_motors = self.compute_all_agents_proxs_motors(
+        agent_proxs, prox_sensed_ent, mean_agent_motors = self.compute_all_agents_proxs_motors(
             state,
             state.agents.ent_idx,
             state.agents.params,
@@ -418,6 +421,7 @@ class SelectiveSensorsEnv(BaseEnv):
         # Update agents state
         agents = state.agents.set(
             prox=agent_proxs, 
+            prox_sensed_ent=prox_sensed_ent,
             proximity_map_dist=proximity_dist_map, 
             proximity_map_theta=proximity_dist_theta,
             motor=mean_agent_motors
@@ -746,7 +750,8 @@ def init_agents(
     return AgentState(
         # idx in the entities (ent_idx) state to map agents information in the different data structures
         ent_idx=jnp.arange(max_agents, dtype=int), 
-        prox=jnp.zeros((max_agents, 2)),
+        prox=jnp.zeros((max_agents, 2), dtype=float),
+        prox_sensed_ent=jnp.zeros((max_agents, 2), dtype=int),
         motor=jnp.zeros((max_agents, 2)),
         behavior=behaviors,
         params=params,

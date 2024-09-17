@@ -30,7 +30,7 @@ class Config(Parameterized):
 
 class AgentConfig(Config):
     idx = param.Integer()
-    ent_sensedtype = param.Integer()
+    # ent_sensedtype = param.Integer()
     x_position = param.Number(0.)
     y_position = param.Number(0.)
     orientation = param.Number(0.)
@@ -44,6 +44,7 @@ class AgentConfig(Config):
     # TODO : Except if we only consider the non occlusion case where the sensors information is just the sensor of closest entity
     left_prox = param.Number(0., bounds=(0., 1.))
     right_prox = param.Number(0., bounds=(0., 1.))
+    prox_sensed_ent = param.Array(np.array([0.]))
     proximity_map_dist = param.Array(np.array([0.]))
     proximity_map_theta = param.Array(np.array([0.]))
     params = param.Array(np.array([0.]))
@@ -65,7 +66,7 @@ class AgentConfig(Config):
 
 class ObjectConfig(Config):
     idx = param.Integer()
-    ent_sensedtype = param.Integer()
+    # ent_sensedtype = param.Integer()
     x_position = param.Number(0.)
     y_position = param.Number(0.)
     orientation = param.Number(0.)
