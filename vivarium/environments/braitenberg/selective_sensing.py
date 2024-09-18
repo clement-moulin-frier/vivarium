@@ -221,15 +221,14 @@ def compute_occlusion_proxs_motors(state, agent_idx, params, sensed, behaviors, 
     agent_proxs = jnp.max(agent_raw_proxs, axis=0)
     argmax = jnp.argmax(agent_raw_proxs, axis=0)
     # Get the real entity idx of the left and right sensed entities from dense neighborhoods
-    # sensed_ent_idx = ag_idx_dense_receivers[agent_idx][argmax]
-    prox_sensed_ent = ag_idx_dense_receivers[agent_idx][argmax]
+    sensed_ent_idx = ag_idx_dense_receivers[agent_idx][argmax]
+    prox_sensed_ent_types = state.entities.ent_subtype[sensed_ent_idx]
     
     # Compute the motor values for all behaviors and do a mean on it
-    motor_values = compute_all_behavior_motors(state, params, sensed, behavior, motor, agent_proxs, prox_sensed_ent)
+    motor_values = compute_all_behavior_motors(state, params, sensed, behavior, motor, agent_proxs, sensed_ent_idx)
     motors = jnp.mean(motor_values, axis=0)
 
-    # TODO : return agent_proxs, but also the sensed_ent_idx
-    return agent_proxs, prox_sensed_ent, motors
+    return agent_proxs, prox_sensed_ent_types, motors
 
 compute_all_agents_proxs_motors_occl = vmap(compute_occlusion_proxs_motors, in_axes=(None, 0, 0, 0, 0, 0, None, None, None))
 
@@ -402,8 +401,8 @@ class SelectiveSensorsEnv(BaseEnv):
 
         dist_max = state.agents.proxs_dist_max[senders]
         cos_min = state.agents.proxs_cos_min[senders]
-        # TODO : shouldn't the agents_neighs_idx[1, :] be receivers ?
-        target_exist_mask = state.entities.exists[agents_neighs_idx[1, :]]
+        # changed agents_neighs_idx[1, :] to receivers in line below (check if it works)
+        target_exist_mask = state.entities.exists[receivers]
         # Compute agents raw proximeters (proximeters for all neighbors)
         raw_proxs = sensor_fn(dist, relative_theta, dist_max, cos_min, target_exist_mask)
 
