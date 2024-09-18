@@ -320,7 +320,9 @@ def compute_agent_proxs_motors(state, agent_idx, params, sensed, behavior, motor
     agent_proxs, agent_motors = compute_all_behavior_proxs_motors(state, params, sensed, behavior, motor, agent_raw_proxs, ent_neighbors_idx)
     mean_agent_motors = jnp.mean(agent_motors, axis=0)
 
-    return agent_proxs, mean_agent_motors
+    # need to return a dummy array as 2nd argument to match the compute_agent_proxs_motors function returns with occlusion
+    dummy = jnp.zeros(1)
+    return agent_proxs, dummy,  mean_agent_motors
 
 compute_all_agents_proxs_motors = vmap(compute_agent_proxs_motors, in_axes=(None, 0, 0, 0, 0, 0, None, None, None))
 
@@ -486,6 +488,7 @@ class SelectiveSensorsEnv(BaseEnv):
         # Because momentum is initialized to None, need to initialize it with init_fn from jax_md
         if state.entities.momentum is None:
              state = self.init_fn(state, self.init_key)
+             state, neighbors_storage = self._step_env(state, self.neighbors_storage)
         
          # Save the first state
         current_state = state

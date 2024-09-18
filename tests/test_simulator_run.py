@@ -9,4 +9,3 @@ def test_simulator_run():
     simulator = Simulator(env_state=state, env=env)
 
     assert simulator
-
