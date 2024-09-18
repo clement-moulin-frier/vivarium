@@ -596,10 +596,10 @@ entities_data = {
         'POISON': poison_data
     }}
 
-### Helper functions to generate the state
+### Helper functions to generate elements of sub states
 
 # Helper function to transform a color string into rgb with matplotlib colors
-def _string_to_rgb(color_str):
+def _string_to_rgb_array(color_str):
     return jnp.array(list(mcolors.to_rgb(color_str)))
 
 # Helper functions to define behaviors of agents in selecting sensing case
@@ -678,6 +678,23 @@ def get_agents_params_and_sensed_arr(agents_stacked_behaviors_list):
 
     return params, sensed, behaviors
 
+def validate_positions(positions, n, box_size):
+    if positions is None:
+        return [None] * n
+    assert len(positions) == n, f"The number of positions: {len(positions)} must match the number of entities: {n}"
+    for pos in positions:
+        assert len(pos) == 2, f"You have to provide position with 2 coordinates, {pos} has {len(pos)}"
+        assert (min(pos) > 0 and max(pos) < box_size), f"Coordinates must be floats between 0 and box_size: {box_size}, found coordinates = {pos}"
+    return positions
+
+def set_to_none_if_all_none(positions):
+    if not any(p is not None for p in positions):
+        return None
+    return positions
+
+
+### Helper functions to generate elements sub states of the state
+
 def init_entities(
     max_agents,
     max_objects,
@@ -690,11 +707,13 @@ def init_entities(
     mass_orientation=mass_orientation,
     diameter=diameter,
     friction=friction,
+    agents_pos=None,
+    objects_pos=None,
     key_agents_pos=random.PRNGKey(seed),
     key_objects_pos=random.PRNGKey(seed+1),
     key_orientations=random.PRNGKey(seed+2)
 ):
-    """Init the sub entities state"""
+    """Init the sub entities state (field of state)"""
     existing_agents = max_agents if not existing_agents else existing_agents
     existing_objects = max_objects if not existing_objects else existing_objects
 
@@ -702,13 +721,29 @@ def init_entities(
     # Assign random positions to each entity in the environment
     agents_positions = random.uniform(key_agents_pos, (max_agents, n_dims)) * box_size
     objects_positions = random.uniform(key_objects_pos, (max_objects, n_dims)) * box_size
+
+    # TODO cet aprem
+    # Replace random positions with predefined ones if they exist:
+    if agents_pos:
+        defined_pos = jnp.array([p if p is not None else [-1, -1] for p in agents_pos])
+        mask = defined_pos[:, 0] != -1
+        agents_positions = jnp.where(mask[:, None], defined_pos, agents_positions)
+
+    if objects_pos:
+        defined_pos = jnp.array([p if p is not None else [-1, -1] for p in objects_pos])
+        mask = defined_pos[:, 0] != -1
+        objects_positions = jnp.where(mask[:, None], defined_pos, objects_positions)
+
     positions = jnp.concatenate((agents_positions, objects_positions))
+
     # Assign random orientations between 0 and 2*pi to each entity
     orientations = random.uniform(key_orientations, (n_entities,)) * 2 * jnp.pi
+
     # Assign types to the entities
     agents_entities = jnp.full(max_agents, EntityType.AGENT.value)
     object_entities = jnp.full(max_objects, EntityType.OBJECT.value)
     entity_types = jnp.concatenate((agents_entities, object_entities), dtype=int)
+
     # Define arrays with existing entities
     exists_agents = jnp.concatenate((jnp.ones((existing_agents)), jnp.zeros((max_agents - existing_agents))))
     exists_objects = jnp.concatenate((jnp.ones((existing_objects)), jnp.zeros((max_objects - existing_objects))))
@@ -749,7 +784,7 @@ def init_agents(
     prox_dist_max=prox_dist_max,
     prox_cos_min=prox_cos_min
 ):
-    """Init the sub agents state"""
+    """Init the sub agents state (field of state)"""
     return AgentState(
         # idx in the entities (ent_idx) state to map agents information in the different data structures
         ent_idx=jnp.arange(max_agents, dtype=int), 
@@ -776,7 +811,7 @@ def init_objects(
     max_objects,
     objects_color
 ):
-    """Init the sub objects state"""
+    """Init the sub objects state (field of state)"""
     start_idx, stop_idx = max_agents, max_agents + max_objects 
     objects_ent_idx = jnp.arange(start_idx, stop_idx, dtype=int)
 
@@ -838,6 +873,7 @@ def init_state(
     prox_dist_max=prox_dist_max,
     prox_cos_min=prox_cos_min,
 ) -> State:
+    """ Init the jax state of the simulation from classical python / yaml scene arguments """
     key = random.PRNGKey(seed)
     key, key_agents_pos, key_objects_pos, key_orientations = random.split(key, 4)
     
@@ -854,14 +890,18 @@ def init_state(
     agents_data = {}
     objects_data = {}
 
+    # create agents and objects positions lists
+    agents_pos = []
+    objects_pos = []
+
     # iterate over the entities subtypes
     for ent_sub_type in ent_sub_types:
         # get their data in the ent_data
         data = ent_data[ent_sub_type]
         color_str = data['color']
-        color = _string_to_rgb(color_str)
+        color = _string_to_rgb_array(color_str)
         n = data['num']
-
+        
         # Check if the entity is an agent or an object
         if data['type'] == 'AGENT':
             max_agents += n
@@ -884,18 +924,26 @@ def init_state(
             # stack the elements of the behavior list and update the agents_data dictionary
             stacked_behaviors = stack_behaviors(behavior_list)
             agents_data[ent_sub_type] = {'n': n, 'color': color, 'stacked_behs': stacked_behaviors}
+            positions = validate_positions(data.get('positions'), n, box_size)
+            agents_pos.extend(positions)
 
         # only updated object counters and color if entity is an object
         elif data['type'] == 'OBJECT':
             max_objects += n
             objects_data[ent_sub_type] = {'n': n, 'color': color}
+            positions = validate_positions(data.get('positions'), n, box_size)
+            objects_pos.extend(positions)
+
+    agents_pos = set_to_none_if_all_none(agents_pos)
+    objects_pos = set_to_none_if_all_none(objects_pos)
 
     # Create the params, sensed, behaviors and colors arrays 
 
     # init empty lists
-    colors = []
+    ag_colors_list = []
     agents_stacked_behaviors_list = []
     total_ent_sub_types = {}
+    # iterate over agent types
     for agent_type, data in agents_data.items():
         n = data['n']
         stacked_behavior = data['stacked_behs']
@@ -903,22 +951,23 @@ def init_state(
         tiled_color = list(np.tile(data['color'], (n, 1)))
         # update the lists with behaviors and color elements
         agents_stacked_behaviors_list = agents_stacked_behaviors_list + n_stacked_behavior
-        colors = colors + tiled_color
+        ag_colors_list = ag_colors_list + tiled_color
         total_ent_sub_types[agent_type] = (ent_sub_types_enum[agent_type].value, n)
 
     # create the final jnp arrays
-    agents_colors = jnp.concatenate(jnp.array([colors]), axis=0)
+    agents_colors = jnp.concatenate(jnp.array([ag_colors_list]), axis=0)
     params, sensed, behaviors = get_agents_params_and_sensed_arr(agents_stacked_behaviors_list)
 
     # do the same for objects colors
-    colors = []
+    obj_colors_list = []
+    # iterate over object types
     for objecy_type, data in objects_data.items():
         n = data['n']
         tiled_color = list(np.tile(data['color'], (n, 1)))
-        colors = colors + tiled_color
+        obj_colors_list = obj_colors_list + tiled_color
         total_ent_sub_types[objecy_type] = (ent_sub_types_enum[objecy_type].value, n)
 
-    objects_colors = jnp.concatenate(jnp.array([colors]), axis=0)
+    objects_colors = jnp.concatenate(jnp.array([obj_colors_list]), axis=0)
     # print(total_ent_sub_types)
 
     # Init sub states and total state
@@ -934,6 +983,8 @@ def init_state(
         mass_orientation=mass_orientation,
         diameter=diameter,
         friction=friction,
+        agents_pos=agents_pos,
+        objects_pos=objects_pos,
         key_agents_pos=key_agents_pos,
         key_objects_pos=key_objects_pos,
         key_orientations=key_orientations
