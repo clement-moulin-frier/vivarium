@@ -2,8 +2,8 @@ from vivarium.environments.braitenberg.selective_sensing import init_state, Sele
 
 NUM_STEPS = 10
 
-def test_env_occlusion():
-    """ Test the initialization of state without arguments """
+def test_env_running_occlusion():
+    """ Test the stepping mechanism of the env with occlusion (default) """
     state = init_state()
     env = SelectiveSensorsEnv(state=state, occlusion=True)
 
@@ -13,8 +13,8 @@ def test_env_occlusion():
     assert env
     assert state
 
-def test_env_no_occlusion():
-    """ Test the initialization of state without arguments """
+def test_env_running_no_occlusion():
+    """ Test the stepping mechanism of the env without occlusion """
     state = init_state()
     env = SelectiveSensorsEnv(state=state, occlusion=False)
 
