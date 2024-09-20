@@ -1,4 +1,5 @@
 from enum import Enum
+from collections import defaultdict
 
 import numpy as np
 import jax.numpy as jnp
@@ -119,6 +120,18 @@ def set_to_none_if_all_none(positions):
     if not any(p is not None for p in positions):
         return None
     return positions
+
+def check_position_redundancies(agents_pos, objects_pos):
+    positions = agents_pos + objects_pos
+    position_indices = defaultdict(list)
+
+    for idx, position in enumerate(positions):
+        if position is not None:
+            position_indices[tuple(position)].append(idx)
+
+    redundant_positions = {position: indices for position, indices in position_indices.items() if len(indices) > 1}
+
+    return redundant_positions if (len(redundant_positions) > 0) else False
 
 
 ### Helper functions to generate elements sub states of the state
@@ -362,12 +375,16 @@ def init_state(
             positions = validate_positions(data.get('positions'), n, box_size)
             objects_pos.extend(positions)
 
+    # Check for redundant positions
+    redundant_positions = check_position_redundancies(agents_pos, objects_pos)
+    if redundant_positions:
+        redundant_positions_list = list(redundant_positions.keys())
+        raise ValueError(f"Impossible to initialize the simulation state with redundant positions : {redundant_positions_list}. This would lead to collision errors in the physics engine of the environment")
+    # Set positions to None lists if they don't contain any positions 
     agents_pos = set_to_none_if_all_none(agents_pos)
     objects_pos = set_to_none_if_all_none(objects_pos)
 
     # Create the params, sensed, behaviors and colors arrays 
-
-    # init empty lists
     ag_colors_list = []
     agents_stacked_behaviors_list = []
     total_ent_sub_types = {}
