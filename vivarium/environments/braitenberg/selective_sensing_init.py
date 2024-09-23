@@ -107,18 +107,13 @@ def get_agents_params_and_sensed_arr(agents_stacked_behaviors_list):
 
     return params, sensed, behaviors
 
-def validate_positions(positions, n, box_size):
+def get_positions(positions, n, box_size):
     if positions is None:
         return [None] * n
     assert len(positions) == n, f"The number of positions: {len(positions)} must match the number of entities: {n}"
     for pos in positions:
         assert len(pos) == 2, f"You have to provide position with 2 coordinates, {pos} has {len(pos)}"
         assert (min(pos) > 0 and max(pos) < box_size), f"Coordinates must be floats between 0 and box_size: {box_size}, found coordinates = {pos}"
-    return positions
-
-def set_to_none_if_all_none(positions):
-    if not any(p is not None for p in positions):
-        return None
     return positions
 
 def check_position_redundancies(agents_pos, objects_pos):
@@ -133,6 +128,17 @@ def check_position_redundancies(agents_pos, objects_pos):
 
     return redundant_positions if (len(redundant_positions) > 0) else False
 
+def get_exists(exists, n):
+    if exists is None:
+        return [1] * n
+    assert isinstance(exists, int) and (exists < n), f"Exists must be an int inferior than {n}, {exists} is not"
+    exists = [1] * exists + [None] * (n - exists)
+    return exists
+
+def set_to_none_if_all_none(lst):
+    if not any(element is not None for element in lst):
+        return None
+    return lst
 
 ### Helper functions to generate elements sub states of the state
 
@@ -155,9 +161,6 @@ def init_entities(
     key_orientations=random.PRNGKey(config.seed+2)
 ):
     """Init the sub entities state (field of state)"""
-    existing_agents = max_agents if not existing_agents else existing_agents
-    existing_objects = max_objects if not existing_objects else existing_objects
-
     n_entities = max_agents + max_objects # we store the entities data in jax arrays of length max_agents + max_objects 
     # Assign random positions to each entity in the environment
     agents_positions = random.uniform(key_agents_pos, (max_agents, n_dims)) * box_size
@@ -178,7 +181,7 @@ def init_entities(
     positions = jnp.concatenate((agents_positions, objects_positions))
 
     # Assign random orientations between 0 and 2*pi to each entity
-    orientations = random.uniform(key_orientations, (n_entities,)) * 2 * jnp.pi
+    orientations = random.uniform(key_orientations, (n_entities,)) * 2 * jnp.pi 
 
     # Assign types to the entities
     agents_entities = jnp.full(max_agents, EntityType.AGENT.value)
@@ -186,8 +189,17 @@ def init_entities(
     entity_types = jnp.concatenate((agents_entities, object_entities), dtype=int)
 
     # Define arrays with existing entities
-    exists_agents = jnp.concatenate((jnp.ones((existing_agents)), jnp.zeros((max_agents - existing_agents))))
-    exists_objects = jnp.concatenate((jnp.ones((existing_objects)), jnp.zeros((max_objects - existing_objects))))
+    exists_agents = jnp.ones((max_agents))
+    exists_objects = jnp.ones((max_objects))
+
+    if existing_agents is not None:
+        mask = jnp.array([e if e is not None else 0 for e in existing_agents])
+        exists_agents = jnp.where(mask != 0, 1, 0)
+
+    if existing_objects is not None:
+        mask = jnp.array([e if e is not None else 0 for e in existing_objects])
+        exists_objects = jnp.where(mask != 0, 1, 0)
+
     exists = jnp.concatenate((exists_agents, exists_objects), dtype=int)
 
     # Works because dictionaries are ordered in Python
@@ -334,6 +346,8 @@ def init_state(
     # create agents and objects positions lists
     agents_pos = []
     objects_pos = []
+    agents_exist = []
+    objects_exist = []
 
     # iterate over the entities subtypes
     for ent_sub_type in ent_sub_types:
@@ -365,15 +379,19 @@ def init_state(
             # stack the elements of the behavior list and update the agents_data dictionary
             stacked_behaviors = stack_behaviors(behavior_list)
             agents_data[ent_sub_type] = {'n': n, 'color': color, 'stacked_behs': stacked_behaviors}
-            positions = validate_positions(data.get('positions'), n, box_size)
+            positions = get_positions(data.get('positions'), n, box_size)
             agents_pos.extend(positions)
+            exists = get_exists(data.get('existing'), n)
+            agents_exist.extend(exists)
 
         # only updated object counters and color if entity is an object
         elif data['type'] == 'OBJECT':
             max_objects += n
             objects_data[ent_sub_type] = {'n': n, 'color': color}
-            positions = validate_positions(data.get('positions'), n, box_size)
+            positions = get_positions(data.get('positions'), n, box_size)
             objects_pos.extend(positions)
+            exists = get_exists(data.get('existing'), n)
+            objects_exist.extend(exists)
 
     # Check for redundant positions
     redundant_positions = check_position_redundancies(agents_pos, objects_pos)
@@ -383,6 +401,8 @@ def init_state(
     # Set positions to None lists if they don't contain any positions 
     agents_pos = set_to_none_if_all_none(agents_pos)
     objects_pos = set_to_none_if_all_none(objects_pos)
+    agents_exist = set_to_none_if_all_none(agents_exist)
+    objects_exist = set_to_none_if_all_none(objects_exist)
 
     # Create the params, sensed, behaviors and colors arrays 
     ag_colors_list = []
@@ -422,8 +442,8 @@ def init_state(
         ent_sub_types=total_ent_sub_types,
         n_dims=n_dims,
         box_size=box_size,
-        existing_agents=existing_agents,
-        existing_objects=existing_objects,
+        existing_agents=agents_exist,
+        existing_objects=objects_exist,
         mass_center=mass_center,
         mass_orientation=mass_orientation,
         diameter=diameter,
