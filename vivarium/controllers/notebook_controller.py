@@ -27,8 +27,8 @@ class Entity:
 
     def __setattr__(self, item, val):
         if item != 'config' and item in self.config.param_names():
-            self.user_events[item] = val
-            return
+            self.user_events[item] = val # ensures the event is set during the run loop
+            # return setattr(self.config, item, val) # ensures the event is set if the simulator is not running
         else:
             return super().__setattr__(item, val)
         
@@ -125,10 +125,15 @@ class Agent(Entity):
         """
         Returns a string that provides a detailed overview of the agent's key attributes.
         """
+        dict_infos = self.config.to_dict()
+
         info_lines = []
         info_lines.append(f"Agent Overview:")
         info_lines.append(f"{'-' * 20}")
         info_lines.append(f"Entity Type: {self.etype.name}")
+
+        # Position
+        info_lines.append(f"Position: x={dict_infos['x_position']:.2f}, y={dict_infos['y_position']:.2f}")
         
         # List behaviors
         if self.behaviors:
@@ -144,9 +149,10 @@ class Agent(Entity):
         info_lines.append(f"Motors: Left={self.left_motor:.2f}, Right={self.right_motor:.2f}")
 
         if full_infos:
-            info_lines.append("Configuration Details:")
-            for attr, value in self.config.__dict__.items():
-                info_lines.append(f"  - {attr}: {value}")
+            info_lines.append("\nConfiguration Details:")
+            for k, v in dict_infos.items():
+                if k not in ['x_position', 'y_position', 'behavior', 'left_motor', 'right_motor', 'params', 'sensed']:
+                    info_lines.append(f"  - {k}: {v}")
         
         return print("\n".join(info_lines))
 
