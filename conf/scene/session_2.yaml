@@ -22,5 +22,5 @@ entities_data:
       
     OBJECTS:
       type: OBJECT
-      num: 5
+      num: 10
       color: red

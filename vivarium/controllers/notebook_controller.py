@@ -63,9 +63,10 @@ class Agent(Entity):
 
     def set_manual(self):
         self.behavior = np.full(shape=self.behavior.shape, fill_value=Behaviors.MANUAL.value)
-        self.left_motor = self.right_motor = 0
+        self.stop_motors()
 
-    def sensors(self):
+    def sensors(self, sensed=None):
+        # TODO : use sensed flag later according to sensed types
         return [self.config.left_prox, self.config.right_prox]
 
     def attach_behavior(self, behavior_fn, name=None, weight=1.):
@@ -98,29 +99,33 @@ class Agent(Entity):
         if len(self.behaviors) == 0:
             print("No behaviors attached")
         else:
-            print(f"available behaviors: {self.behaviors.keys()}")
-
-    def check_active_behaviors(self):
-        if len(self.active_behaviors) == 0:
-            print("No active behaviors")
-        else:
-            print(f"active behaviors: {self.active_behaviors.keys()}")
+            print(f"Available behaviors: {list(self.behaviors.keys())}")
+            if len(self.active_behaviors) == 0:
+                print("No active behaviors")
+            else:
+                print(f"active behaviors: {list(self.active_behaviors.keys())}")
 
     def behave(self):
-        if len(self.behaviors) == 0:
+        if len(self.active_behaviors) == 0:
             return
         else:
-            total_weights = 0.
-            total_motor = np.zeros(2)
-            for fn, w in self.behaviors.values():
-                total_motor += w * np.array(fn(self))
-                total_weights += w
-            motors = total_motor / total_weights
+            # add a try to prevent the simulator from crashing when a bad behavior function is attached
+            try:
+                total_weights = 0.
+                total_motor = np.zeros(2)
+                for fn, w in self.active_behaviors.values():
+                    total_motor += w * np.array(fn(self))
+                    total_weights += w
+                motors = total_motor / total_weights
+            except Exception as e:
+                lg.error(f"Error while computing motor commands: {e}")
+                motors = np.zeros(2)
         self.left_motor, self.right_motor = motors
 
-    def proximeters(self, sensed=None):
-        raise NotImplemented()
-    
+    def stop_motors(self):
+        self.left_motor = 0
+        self.right_motor = 0
+
     def infos(self, full_infos=False):
         """
         Returns a string that provides a detailed overview of the agent's key attributes.
