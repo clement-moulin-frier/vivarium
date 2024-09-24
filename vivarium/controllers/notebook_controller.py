@@ -65,9 +65,18 @@ class Agent(Entity):
         self.behavior = np.full(shape=self.behavior.shape, fill_value=Behaviors.MANUAL.value)
         self.stop_motors()
 
-    def sensors(self, sensed=None):
-        # TODO : use sensed flag later according to sensed types
-        return [self.config.left_prox, self.config.right_prox]
+    def sensors(self, sensed_entities=None):
+        left, right = self.config.left_prox, self.config.right_prox
+        if sensed_entities is not None:
+            sensed_type_left, sensed_type_right = self.prox_sensed_ent
+            left = left if sensed_type_left in sensed_entities else 0
+            right = right if sensed_type_right in sensed_entities else 0
+        return [left, right]
+    
+    # TODO : 
+    def sense_agents_attributes(self, sensed_agents_ids, sensed_attributes):
+        pass
+        
 
     def attach_behavior(self, behavior_fn, name=None, weight=1.):
         self.behaviors[name or behavior_fn.__name__] = (behavior_fn, weight)
@@ -133,7 +142,7 @@ class Agent(Entity):
         dict_infos = self.config.to_dict()
 
         info_lines = []
-        info_lines.append(f"Agent Overview:")
+        info_lines.append("Agent Overview:")
         info_lines.append(f"{'-' * 20}")
         info_lines.append(f"Entity Type: {self.etype.name}")
 
@@ -215,6 +224,9 @@ class NotebookController(SimulatorController):
             self.pull_configs()
             t += 1
         self.stop()
+
+    def start_food_apparition(self, period=5):
+        pass
 
     def stop(self):
         self._is_running = False
