@@ -12,7 +12,9 @@ from vivarium.simulator.simulator_states import StateType, EntityType
 lg = logging.getLogger(__name__)
 
 
+
 # TODO : Add documentation
+# TODO : Add a default infos method for the Entity class --> Use it in agents and objects 
 class Entity:
     def __init__(self, config):
         self.config = config
@@ -25,6 +27,7 @@ class Entity:
         else:
             return super().__getattr__(item)
 
+    # TODO : Add a check to ensure that the attribute's value is authorized (according to params bounds)
     def __setattr__(self, item, val):
         if item != 'config' and item in self.config.param_names():
             self.user_events[item] = val # ensures the event is set during the run loop
@@ -197,6 +200,76 @@ class NotebookController(SimulatorController):
         self.configs[StateType.SIMULATOR][0].freq = -1
         self.set_all_user_events()
         self._is_running = False
+        self.existing_objects, self.non_existing_objects = self.init_objects_lists()
+        self.stop_objects_apparition = False
+
+    def init_objects_lists(self):
+        existing_objects = {}
+        non_existing_objects = {}
+        for i, obj in enumerate(self.objects):
+            if obj.exists:
+                existing_objects[i] = obj.subtype
+            else:
+                non_existing_objects[i] = obj.subtype
+        return existing_objects, non_existing_objects
+   
+    def spawn_object(self, object_id, position=None):
+        if object_id in self.existing_objects:
+            print("Object already exists")
+            return
+        obj = self.objects[object_id]
+        if position is not None:
+            # TODO : Add a check to prevent from having a similar position among other entities
+            obj.x_position = position[0]
+            obj.y_position = position[1]
+        obj.exists = True
+        self.existing_objects[object_id] = obj.subtype
+        del self.non_existing_objects[object_id]
+
+    def remove_object(self, object_id):
+        if object_id in self.non_existing_objects:
+            print("Object already removed")
+            return
+        obj = self.objects[object_id]
+        obj.exists = False
+        self.non_existing_objects[object_id] = obj.subtype
+        del self.existing_objects[object_id]
+
+    def object_apparition(self, period, object_type=None, position_range=None):
+        if object_type is not None:
+            non_ex_objects = {id: subtype for id, subtype in self.non_existing_objects.items() if subtype == object_type}
+        else:
+            non_ex_objects = self.non_existing_objects.copy()
+        while not self.stop_objects_apparition and non_ex_objects:
+            ids = list(non_ex_objects.keys())
+            id = np.random.choice(ids)
+            if position_range is not None:
+                x = np.random.uniform(position_range[0][0], position_range[0][1], 1)
+                y = np.random.uniform(position_range[1][0], position_range[1][1], 1)
+                position = (x, y)
+                # TODO : try to fix positions problems
+                position = None
+            else:
+                position = None
+            self.spawn_object(id, position)
+            del non_ex_objects[id]
+            time.sleep(period)
+
+        if not non_ex_objects:
+            print("The maximum number of objects has been reached")
+
+    def start_object_apparition(self, period=5, object_type=None, position_range=None):
+        self.stop_objects_apparition = False
+        thread = threading.Thread(target=self.object_apparition, args=(period, object_type, position_range))
+        thread.start()
+
+    def stop_object_apparition(self):
+        self.stop_objects_apparition = True
+
+    def remove_objects(self, object_type):
+        for id in list(self.existing_objects.keys()):
+            if self.existing_objects[id] == object_type:
+                self.remove_object(id)
 
     def set_all_user_events(self):
         for e in self.all_entities:

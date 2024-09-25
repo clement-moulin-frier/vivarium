@@ -1,6 +1,6 @@
 box_size: 200
 neighbor_radius: 200
-prox_dist_max: 300
+prox_dist_max: 200
 
 # Entity data definitions
 entities_data:
