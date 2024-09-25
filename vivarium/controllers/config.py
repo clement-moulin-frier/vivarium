@@ -59,6 +59,7 @@ class AgentConfig(Config):
     color = param.Color('blue')
     friction = param.Number(1e-1)
     exists = param.Boolean(True)
+    subtype = param.Integer(0)
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -76,6 +77,7 @@ class ObjectConfig(Config):
     color = param.Color('red')
     friction = param.Number(0.1)
     exists = param.Boolean(True)
+    subtype = param.Integer(0)
 
     def __init__(self, **params):
         super().__init__(**params)

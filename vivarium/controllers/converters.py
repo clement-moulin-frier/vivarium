@@ -46,7 +46,8 @@ color_s_to_c = lambda x, typ: mcolors.to_hex(np.array(x))  # Warning : temporary
 color_c_to_s = lambda x: mcolors.to_rgb(x)
 mass_center_s_to_c = lambda x, typ: typ(x)
 mass_center_c_to_s = lambda x: [x]
-exists_c_to_s = lambda x: int(x)
+# exists_c_to_s = lambda x: int(x)
+int_c_to_s = lambda x: int(x)
 array_map_s_to_c = lambda x, typ: x
 
 
@@ -76,7 +77,8 @@ agent_configs_to_state_dict = {
     #'behavior': StateFieldInfo(('agent_state', 'behavior',), None, behavior_s_to_c, behavior_c_to_s),
     'color': StateFieldInfo(('agent_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
     'idx': StateFieldInfo(('agent_state', 'ent_idx',), None, identity_s_to_c, identity_c_to_s),
-    'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
+    'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, int_c_to_s),
+    'subtype': StateFieldInfo(('entity_state', 'ent_subtype'), None, identity_s_to_c, int_c_to_s)
 }
 
 agent_configs_to_state_dict.update(
@@ -94,7 +96,8 @@ object_configs_to_state_dict = {
     'friction': StateFieldInfo(('entity_state', 'friction'), None, identity_s_to_c, identity_c_to_s),
     'color': StateFieldInfo(('object_state', 'color',), np.arange(3), color_s_to_c, color_c_to_s),
     'idx': StateFieldInfo(('object_state', 'ent_idx',), None, identity_s_to_c, identity_c_to_s),
-    'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, exists_c_to_s)
+    'exists': StateFieldInfo(('entity_state', 'exists'), None, identity_s_to_c, int_c_to_s),
+    'subtype': StateFieldInfo(('entity_state', 'ent_subtype'), None, identity_s_to_c, int_c_to_s)
 }
 
 object_configs_to_state_dict.update(
