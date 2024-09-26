@@ -140,6 +140,8 @@ def set_to_none_if_all_none(lst):
         return None
     return lst
 
+
+
 ### Helper functions to generate elements sub states of the state
 
 def init_entities(
@@ -192,6 +194,12 @@ def init_entities(
     exists_agents = jnp.ones((max_agents))
     exists_objects = jnp.ones((max_objects))
 
+    if isinstance(diameter, int) or isinstance(diameter, float):
+        diameter = jnp.full((n_entities), diameter)
+    else:
+        assert len(diameter) == n_entities, f"Length of diameter array must be equal to the number of entities: {n_entities}"
+        diameter = jnp.array(diameter)
+
     if existing_agents is not None:
         mask = jnp.array([e if e is not None else 0 for e in existing_agents])
         exists_agents = jnp.where(mask != 0, 1, 0)
@@ -218,7 +226,7 @@ def init_entities(
         entity_type=entity_types,
         ent_subtype=ent_subtypes,
         entity_idx = jnp.array(list(range(max_agents)) + list(range(max_objects))),
-        diameter=jnp.full((n_entities), diameter),
+        diameter=diameter,
         friction=jnp.full((n_entities), friction),
         exists=exists
     )
@@ -304,6 +312,17 @@ def init_complete_state(
     )   
 
 
+def process_entity(data, box_size):
+    n = data['num']
+    color_str = data['color']
+    color = _string_to_rgb_array(color_str)
+    positions = get_positions(data.get('positions'), n, box_size)
+    exists = get_exists(data.get('existing'), n)
+    diameter = data.get('diameter', config.diameter) # add default diamter if not provided
+    diameter_lst = [diameter] * n
+    return {'n': n, 'color': color}, positions, exists, diameter_lst
+
+
 def init_state(
     entities_data=config.entities_data,
     box_size=config.box_size,
@@ -343,23 +362,24 @@ def init_state(
     agents_data = {}
     objects_data = {}
 
-    # create agents and objects positions lists
+    # create agents and objects attributes lists
     agents_pos = []
     objects_pos = []
     agents_exist = []
     objects_exist = []
+    diameters = []
 
     # iterate over the entities subtypes
     for ent_sub_type in ent_sub_types:
         # get their data in the ent_data
+        if ent_sub_type not in ent_data:
+            raise ValueError(f"Entity subtype '{ent_sub_type}' not found in the entities data. Please select entities among {ent_sub_types}")
         data = ent_data[ent_sub_type]
-        color_str = data['color']
-        color = _string_to_rgb_array(color_str)
-        n = data['num']
+        entity_data, positions, exists, diameter_lst = process_entity(data, box_size)
+        diameters.extend(diameter_lst)
         
         # Check if the entity is an agent or an object
         if data['type'] == 'AGENT':
-            max_agents += n
             behavior_list = []
             # create a behavior list for all behaviors of the agent
             for beh_name, behavior_data in data['selective_behaviors'].items():
@@ -378,26 +398,29 @@ def init_state(
                 behavior_list.append(beh)
             # stack the elements of the behavior list and update the agents_data dictionary
             stacked_behaviors = stack_behaviors(behavior_list)
-            agents_data[ent_sub_type] = {'n': n, 'color': color, 'stacked_behs': stacked_behaviors}
-            positions = get_positions(data.get('positions'), n, box_size)
+            entity_data['stacked_behs'] = stacked_behaviors
+            agents_data[ent_sub_type] = entity_data
             agents_pos.extend(positions)
-            exists = get_exists(data.get('existing'), n)
             agents_exist.extend(exists)
+            max_agents += entity_data['n']
 
         # only updated object counters and color if entity is an object
         elif data['type'] == 'OBJECT':
-            max_objects += n
-            objects_data[ent_sub_type] = {'n': n, 'color': color}
-            positions = get_positions(data.get('positions'), n, box_size)
+            objects_data[ent_sub_type] = entity_data
             objects_pos.extend(positions)
-            exists = get_exists(data.get('existing'), n)
             objects_exist.extend(exists)
+            max_objects += entity_data['n']
 
     # Check for redundant positions
+    # redundant_positions = check_position_redundancies(agents_pos, objects_pos)
+    # if redundant_positions:
+    #     redundant_positions_list = list(redundant_positions.keys())
+    #     raise ValueError(f"Impossible to initialize the simulation state with redundant positions : {redundant_positions_list}. This would lead to collision errors in the physics engine of the environment")
+    
     redundant_positions = check_position_redundancies(agents_pos, objects_pos)
     if redundant_positions:
-        redundant_positions_list = list(redundant_positions.keys())
-        raise ValueError(f"Impossible to initialize the simulation state with redundant positions : {redundant_positions_list}. This would lead to collision errors in the physics engine of the environment")
+        raise ValueError(f"Collision detected at positions: {list(redundant_positions.keys())}")
+
     # Set positions to None lists if they don't contain any positions 
     agents_pos = set_to_none_if_all_none(agents_pos)
     objects_pos = set_to_none_if_all_none(objects_pos)
@@ -446,7 +469,7 @@ def init_state(
         existing_objects=objects_exist,
         mass_center=mass_center,
         mass_orientation=mass_orientation,
-        diameter=diameter,
+        diameter=diameters,
         friction=friction,
         agents_pos=agents_pos,
         objects_pos=objects_pos,

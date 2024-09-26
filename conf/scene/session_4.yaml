@@ -1,19 +1,21 @@
 seed: 42
-box_size: 200
-neighbor_radius: 200
+box_size: 300
+neighbor_radius: 300
 prox_dist_max: 100
 
 # Entity data definitions
 entities_data:
   EntitySubTypes:
+  ## Care : make sure to order entities in a good order (first the agents and then the objects) ...
     - robots
     - ressources
-    - obstacles
+    - s_obstacles
+    - b_obstacles
 
   Entities:
     robots:
       type: AGENT
-      num: 2
+      num: 3
       existing: 1
       color: blue
       selective_behaviors:
@@ -22,16 +24,22 @@ entities_data:
           sensed: 
             - robots
             - ressources
-            - obstacles
+            - s_obstacles
+            - b_obstacles
       
     ressources:
       type: OBJECT
-      num: 12
-      existing: 3
+      num: 10
       color: green
 
-    obstacles:
+    s_obstacles:
       type: OBJECT
-      num: 12
+      num: 10
+      color: orange
+      diameter: 3
+
+    b_obstacles:
+      type: OBJECT
+      num: 10
       color: red
-      diameter: 8
+      diameter: 10
