@@ -12,7 +12,6 @@ from vivarium.simulator.simulator_states import StateType, EntityType
 lg = logging.getLogger(__name__)
 
 
-
 # TODO : Add documentation
 # TODO : Add a default infos method for the Entity class --> Use it in agents and objects 
 class Entity:
@@ -62,6 +61,10 @@ class Agent(Entity):
 
         self.behaviors = {}
         self.active_behaviors = {}
+        self.can_eat = False
+        self.eating_range = 10
+        self.diet = []
+        self.ate = False
         self.set_manual()
 
     def set_manual(self):
@@ -71,7 +74,7 @@ class Agent(Entity):
     def sensors(self, sensed_entities=None):
         left, right = self.config.left_prox, self.config.right_prox
         if sensed_entities is not None:
-            sensed_type_left, sensed_type_right = self.prox_sensed_ent
+            sensed_type_left, sensed_type_right = self.prox_sensed_ent_type
             left = left if sensed_type_left in sensed_entities else 0
             right = right if sensed_type_right in sensed_entities else 0
         return [left, right]
@@ -126,17 +129,23 @@ class Agent(Entity):
                 total_weights = 0.
                 total_motor = np.zeros(2)
                 for fn, w in self.active_behaviors.values():
+                    # problem here 
                     total_motor += w * np.array(fn(self))
                     total_weights += w
                 motors = total_motor / total_weights
             except Exception as e:
-                lg.error(f"Error while computing motor commands: {e}")
+                lg.error(f"Error while computing motor values: {e}")
                 motors = np.zeros(2)
         self.left_motor, self.right_motor = motors
 
     def stop_motors(self):
         self.left_motor = 0
         self.right_motor = 0
+
+    def has_eaten(self):
+        val = self.ate
+        self.ate = False
+        return val
 
     def infos(self, full_infos=False):
         """
@@ -187,6 +196,7 @@ etype_to_class = {
 }
 
 
+# TODO : maybe add helper functions outside the class to make the code more readable
 # TODO : Add documentation
 class NotebookController(SimulatorController):
     def __init__(self, **params):
@@ -200,10 +210,12 @@ class NotebookController(SimulatorController):
         self.configs[StateType.SIMULATOR][0].freq = -1
         self.set_all_user_events()
         self._is_running = False
-        self.existing_objects, self.non_existing_objects = self.init_objects_lists()
+        self.update_objects_lists()
         self.stop_objects_apparition = False
+        # TODO : --> have something to associate the object type with the object id (ideally a string)
 
-    def init_objects_lists(self):
+    # TOOD : could maybe generalize this to all the entities instead of just the objects
+    def update_objects_lists(self):
         existing_objects = {}
         non_existing_objects = {}
         for i, obj in enumerate(self.objects):
@@ -211,7 +223,9 @@ class NotebookController(SimulatorController):
                 existing_objects[i] = obj.subtype
             else:
                 non_existing_objects[i] = obj.subtype
-        return existing_objects, non_existing_objects
+
+        self.existing_objects = existing_objects
+        self.non_existing_objects = non_existing_objects
    
     def spawn_object(self, object_id, position=None):
         if object_id in self.existing_objects:
@@ -271,6 +285,20 @@ class NotebookController(SimulatorController):
             if self.existing_objects[id] == object_type:
                 self.remove_object(id)
 
+    def eat_ressource(self, agent):
+        # Or could do if agent.diet is None
+        if not agent.can_eat or not agent.exists:
+            return
+        # TODO : could optimize this and not recompute the ressources idx at each iteration
+        for object_type in agent.diet:
+            ressources_idx = [ent.idx for ent in self.all_entities if ent.subtype == object_type]
+            distances = agent.config.proximity_map_dist[ressources_idx]
+            in_range = distances < agent.eating_range
+            for ress_idx, ent_idx in enumerate(ressources_idx):
+                if in_range[ress_idx] and self.all_entities[ent_idx].exists:
+                    self.remove_object(ent_idx - len(self.agents)) # we give this idx because it is the idx in objects lists (!= idx in all entities)
+                    agent.ate = True
+
     def set_all_user_events(self):
         for e in self.all_entities:
             e.set_events()
@@ -288,11 +316,15 @@ class NotebookController(SimulatorController):
         t = 0
         while t < num_steps and self._is_running:
             with self.batch_set_state():
-                for e in self.all_entities:
-                    e.routine_step()
-                    e.set_events()
-                for ag in self.agents:
-                    ag.behave()
+                # TODO : should just add a condition to check if entity is an agent or not 
+                # to prevent iterating twice over all agents
+                for entity in self.all_entities:
+                    entity.routine_step()
+                    entity.set_events()
+                    if entity.etype == EntityType.AGENT:
+                        entity.behave()
+                        self.eat_ressource(entity)
+
             self.state = self.client.step()
             self.pull_configs()
             t += 1
