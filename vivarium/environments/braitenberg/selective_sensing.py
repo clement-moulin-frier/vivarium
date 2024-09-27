@@ -159,7 +159,7 @@ def compute_occlusion_proxs_motors(state, agent_idx, params, sensed, behaviors, 
     motor_values = compute_all_behavior_motors(state, params, sensed, behavior, motor, agent_proxs, sensed_ent_idx)
     motors = jnp.mean(motor_values, axis=0)
 
-    return agent_proxs, prox_sensed_ent_types, motors
+    return agent_proxs, (sensed_ent_idx, prox_sensed_ent_types), motors
 
 compute_all_agents_proxs_motors_occl = vmap(compute_occlusion_proxs_motors, in_axes=(None, 0, 0, 0, 0, 0, None, None, None))
 
@@ -251,7 +251,7 @@ def compute_agent_proxs_motors(state, agent_idx, params, sensed, behavior, motor
     mean_agent_motors = jnp.mean(agent_motors, axis=0)
 
     # need to return a dummy array as 2nd argument to match the compute_agent_proxs_motors function returns with occlusion
-    dummy = jnp.zeros(1)
+    dummy = (jnp.zeros(1), jnp.zeros(1))
     return agent_proxs, dummy,  mean_agent_motors
 
 compute_all_agents_proxs_motors = vmap(compute_agent_proxs_motors, in_axes=(None, 0, 0, 0, 0, 0, None, None, None))
@@ -338,7 +338,7 @@ class SelectiveSensorsEnv(BaseEnv):
         raw_proxs = sensor_fn(dist, relative_theta, dist_max, cos_min, target_exist_mask)
 
         # Compute real agents proximeters and motors
-        agent_proxs, prox_sensed_ent, mean_agent_motors = self.compute_all_agents_proxs_motors(
+        agent_proxs, prox_sensed_ent_tuple, mean_agent_motors = self.compute_all_agents_proxs_motors(
             state,
             state.agents.ent_idx,
             state.agents.params,
@@ -350,10 +350,13 @@ class SelectiveSensorsEnv(BaseEnv):
             ag_idx_dense_receivers,
         )
 
+        prox_sensed_ent_idx, prox_sensed_ent_type = prox_sensed_ent_tuple
+
         # Update agents state
         agents = state.agents.set(
             prox=agent_proxs, 
-            prox_sensed_ent=prox_sensed_ent,
+            prox_sensed_ent_type=prox_sensed_ent_type,
+            prox_sensed_ent_idx=prox_sensed_ent_idx,
             proximity_map_dist=proximity_dist_map, 
             proximity_map_theta=proximity_dist_theta,
             motor=mean_agent_motors
@@ -462,7 +465,6 @@ class SelectiveSensorsEnv(BaseEnv):
 
         neighbor_storage = Neighbors(neighbors=neighbors, agents_neighs_idx=agents_neighs_idx, agents_idx_dense=agents_idx_dense)
         return neighbor_storage
-
 
 
 if __name__ == "__main__":

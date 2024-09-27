@@ -100,7 +100,8 @@ message AgentState {
   NDArray proximity_map_theta = 13;
   NDArray params = 14;
   NDArray sensed = 15;
-  NDArray prox_sensed_ent = 16;
+  NDArray prox_sensed_ent_type = 16;
+  NDArray prox_sensed_ent_idx = 17;
 }
 
 message ObjectState {

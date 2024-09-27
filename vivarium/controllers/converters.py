@@ -65,8 +65,9 @@ agent_configs_to_state_dict = {
     'right_motor': StateFieldInfo(('agent_state', 'motor',), 1, identity_s_to_c, identity_c_to_s),
     'left_prox': StateFieldInfo(('agent_state', 'prox',), 0, identity_s_to_c, identity_c_to_s),
     'right_prox': StateFieldInfo(('agent_state', 'prox',), 1, identity_s_to_c, identity_c_to_s),
-    # prox_sensed_ent
-    'prox_sensed_ent': StateFieldInfo(('agent_state', 'prox_sensed_ent',), slice(None), array_map_s_to_c, identity_c_to_s),
+    # prox_sensed_ent_type
+    'prox_sensed_ent_type': StateFieldInfo(('agent_state', 'prox_sensed_ent_type',), slice(None), array_map_s_to_c, identity_c_to_s),
+    'prox_sensed_ent_idx': StateFieldInfo(('agent_state', 'prox_sensed_ent_idx',), slice(None), array_map_s_to_c, identity_c_to_s),
     'proximity_map_dist': StateFieldInfo(('agent_state', 'proximity_map_dist',), slice(None), array_map_s_to_c, identity_c_to_s),
     'proximity_map_theta': StateFieldInfo(('agent_state', 'proximity_map_theta',), slice(None), array_map_s_to_c, identity_c_to_s),
     # TODO : Think params and sensed should be like that but not sure (because it returns a list and not just a single value)

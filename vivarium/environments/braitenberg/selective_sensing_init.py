@@ -250,7 +250,8 @@ def init_agents(
         # idx in the entities (ent_idx) state to map agents information in the different data structures
         ent_idx=jnp.arange(max_agents, dtype=int), 
         prox=jnp.zeros((max_agents, 2), dtype=float),
-        prox_sensed_ent=jnp.zeros((max_agents, 2), dtype=int),
+        prox_sensed_ent_type=jnp.zeros((max_agents, 2), dtype=int),
+        prox_sensed_ent_idx=jnp.zeros((max_agents, 2), dtype=int),
         motor=jnp.zeros((max_agents, 2)),
         behavior=behaviors,
         params=params,

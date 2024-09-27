@@ -46,7 +46,9 @@ class EntityState(simulate.NVEState):
 class AgentState:
     ent_idx: util.Array  # idx in EntityState
     prox: util.Array
-    prox_sensed_ent: util.Array
+    prox_sensed_ent_type: util.Array
+    prox_sensed_ent_idx: util.Array
+    # prox_sensed_type: util.Array
     motor: util.Array
     proximity_map_dist: util.Array
     proximity_map_theta: util.Array

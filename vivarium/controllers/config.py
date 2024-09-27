@@ -44,7 +44,8 @@ class AgentConfig(Config):
     # TODO : Except if we only consider the non occlusion case where the sensors information is just the sensor of closest entity
     left_prox = param.Number(0., bounds=(0., 1.))
     right_prox = param.Number(0., bounds=(0., 1.))
-    prox_sensed_ent = param.Array(np.array([0.]))
+    prox_sensed_ent_type = param.Array(np.array([0]))
+    prox_sensed_ent_idx = param.Array(np.array([0]))
     proximity_map_dist = param.Array(np.array([0.]))
     proximity_map_theta = param.Array(np.array([0.]))
     params = param.Array(np.array([0.]))

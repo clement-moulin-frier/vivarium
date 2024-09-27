@@ -30,7 +30,8 @@ class ParticleState:
 @md_dataclass
 class AgentState(ParticleState):
     prox: jnp.array
-    prox_sensed_ent: jnp.array
+    prox_sensed_ent_type: jnp.array
+    prox_sensed_ent_idx: jnp.array
     motor: jnp.array
     proximity_map_dist: jnp.array
     proximity_map_theta: jnp.array
