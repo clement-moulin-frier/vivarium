@@ -173,6 +173,9 @@ behavior_params = {
     Behaviors.NOOP.value: jnp.array(
         [[0., 0., 0.], 
          [0., 0., 0.]]),
+    Behaviors.MANUAL.value: jnp.array(
+        [[0., 0., 0.], 
+         [0., 0., 0.]])
 }
 
 def behavior_to_params(behavior):
