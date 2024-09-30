@@ -52,6 +52,24 @@ class Entity:
         for fn in self._routines.values():
             fn(self)
 
+    def infos(self):
+        """
+        Returns a string that provides a detailed overview of the agent's key attributes.
+        """
+        dict_infos = self.config.to_dict()
+
+        info_lines = []
+        info_lines.append("Entity Overview:")
+        info_lines.append(f"{'-' * 20}")
+        info_lines.append(f"Entity Type: {self.etype.name}")
+        info_lines.append(f"Entity Idx: {self.idx}")
+
+        # Position
+        info_lines.append(f"Position: x={dict_infos['x_position']:.2f}, y={dict_infos['y_position']:.2f}")
+        info_lines.append("")
+        
+        return print("\n".join(info_lines))
+
 
 # TODO : Add documentation
 class Agent(Entity):
@@ -65,6 +83,7 @@ class Agent(Entity):
         self.eating_range = 10
         self.diet = []
         self.ate = False
+        self.simulation_entities = None
         self.set_manual()
 
     def set_manual(self):
@@ -78,11 +97,15 @@ class Agent(Entity):
             left = left if sensed_type_left in sensed_entities else 0
             right = right if sensed_type_right in sensed_entities else 0
         return [left, right]
+
+    # temporary method to return the sensed entities
+    def return_sensed_entities(self):
+        left_idx, right_idx = self.prox_sensed_ent_idx
+        return [self.simulation_entities[left_idx], self.simulation_entities[right_idx]]
     
-    # TODO : 
-    def sense_agents_attributes(self, sensed_agents_ids, sensed_attributes):
-        pass
-        
+    def sense_entities_attributes(self, sensed_attributes_lst):
+        left_idx, right_idx = self.prox_sensed_ent_idx
+        # TODO : iterate and add only elements of the lst 
 
     def attach_behavior(self, behavior_fn, name=None, weight=1.):
         self.behaviors[name or behavior_fn.__name__] = (behavior_fn, weight)
@@ -146,20 +169,17 @@ class Agent(Entity):
         val = self.ate
         self.ate = False
         return val
+    
 
     def infos(self, full_infos=False):
         """
         Returns a string that provides a detailed overview of the agent's key attributes.
         """
-        dict_infos = self.config.to_dict()
-
+        super().infos()
         info_lines = []
-        info_lines.append("Agent Overview:")
-        info_lines.append(f"{'-' * 20}")
-        info_lines.append(f"Entity Type: {self.etype.name}")
-
-        # Position
-        info_lines.append(f"Position: x={dict_infos['x_position']:.2f}, y={dict_infos['y_position']:.2f}")
+        sensors = self.sensors()
+        info_lines.append(f"Sensors: Left={sensors[0]:.2f}, Right={sensors[1]:.2f}")
+        info_lines.append(f"Motors: Left={self.left_motor:.2f}, Right={self.right_motor:.2f}")
         
         # List behaviors
         if self.behaviors:
@@ -168,17 +188,21 @@ class Agent(Entity):
                 info_lines.append(f"  - {name}: Function={behavior_fn.__name__}, Weight={weight}")
         else:
             info_lines.append("Behaviors: None")
-        # Sensor configurations
-        sensors = self.sensors()
-        info_lines.append(f"Sensors: Left={sensors[0]:.2f}, Right={sensors[1]:.2f}")
-        # Motor states
-        info_lines.append(f"Motors: Left={self.left_motor:.2f}, Right={self.right_motor:.2f}")
 
+        # See if we print that by default
+        info_lines.append(f"Can eat: {self.can_eat}")
+        info_lines.append(f"Diet: {self.diet}")
+        info_lines.append(f"Eating range: {self.eating_range}")
+        
+        dict_infos = self.config.to_dict()
         if full_infos:
+
             info_lines.append("\nConfiguration Details:")
             for k, v in dict_infos.items():
                 if k not in ['x_position', 'y_position', 'behavior', 'left_motor', 'right_motor', 'params', 'sensed']:
                     info_lines.append(f"  - {k}: {v}")
+
+        info_lines.append("")
         
         return print("\n".join(info_lines))
 
@@ -208,10 +232,11 @@ class NotebookController(SimulatorController):
             self.all_entities.extend(getattr(self, f'{etype.name.lower()}s'))
         self.from_stream = True
         self.configs[StateType.SIMULATOR][0].freq = -1
-        self.set_all_user_events()
-        self._is_running = False
-        self.update_objects_lists()
         self.stop_objects_apparition = False
+        self._is_running = False
+        self.set_all_user_events()
+        self.update_objects_lists()
+        self.update_agents_entities_list()
         # TODO : --> have something to associate the object type with the object id (ideally a string)
 
     # TOOD : could maybe generalize this to all the entities instead of just the objects
@@ -226,6 +251,10 @@ class NotebookController(SimulatorController):
 
         self.existing_objects = existing_objects
         self.non_existing_objects = non_existing_objects
+
+    def update_agents_entities_list(self):
+        for agent in self.agents:
+            agent.simulation_entities = self.all_entities
    
     def spawn_object(self, object_id, position=None):
         if object_id in self.existing_objects:
