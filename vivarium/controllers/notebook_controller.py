@@ -69,7 +69,7 @@ class Entity:
         info_lines.append("")
         
         return print("\n".join(info_lines))
-
+    
 
 # TODO : Add documentation
 class Agent(Entity):
@@ -99,14 +99,19 @@ class Agent(Entity):
         return [left, right]
 
     # temporary method to return the sensed entities
-    def return_sensed_entities(self):
+    def sensed_entities(self):
         left_idx, right_idx = self.prox_sensed_ent_idx
-        return [self.simulation_entities[left_idx], self.simulation_entities[right_idx]]
+        return [
+            self.simulation_entities[left_idx], 
+            self.simulation_entities[right_idx]
+        ]
     
-    def sense_entities_attributes(self, sensed_attributes_lst):
-        left_idx, right_idx = self.prox_sensed_ent_idx
-        # TODO : iterate and add only elements of the lst 
-
+    def sense_attributes(self, sensed_attribute, default_value=None):
+        left_ent, right_ent = self.sensed_entities()
+        return (
+            getattr(left_ent, sensed_attribute, default_value), 
+            getattr(right_ent, sensed_attribute, default_value)
+        )
     def attach_behavior(self, behavior_fn, name=None, weight=1.):
         self.behaviors[name or behavior_fn.__name__] = (behavior_fn, weight)
 

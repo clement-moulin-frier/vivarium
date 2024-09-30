@@ -16,7 +16,6 @@ entities_data:
     robots:
       type: AGENT
       num: 3
-      existing: 1
       color: blue
       selective_behaviors:
         aggr:
@@ -29,17 +28,18 @@ entities_data:
       
     ressources:
       type: OBJECT
-      num: 10
+      num: 15
+      existing: 7
       color: green
 
     s_obstacles:
       type: OBJECT
-      num: 10
+      num: 7
       color: orange
       diameter: 3
 
     b_obstacles:
       type: OBJECT
-      num: 10
+      num: 7
       color: red
       diameter: 10
