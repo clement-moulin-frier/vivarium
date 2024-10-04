@@ -294,7 +294,7 @@ class Simulator:
         :param attr: _description_
         :param type_: _description_
         """
-        lg.info(f"\nUpdate attribute: {attr = }; {type_ = }")
+        lg.debug(f"\nUpdate attribute: {attr = }; {type_ = }")
         setattr(self, attr, type_(getattr(self.state.simulator_state, attr)[0]))
 
 

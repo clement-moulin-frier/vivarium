@@ -115,16 +115,20 @@ class Agent(Entity):
     def attach_behavior(self, behavior_fn, name=None, weight=1.):
         self.behaviors[name or behavior_fn.__name__] = (behavior_fn, weight)
 
-    def detach_behavior(self, name):
+    def detach_behavior(self, name, stop_motors=False):
         n = name.__name__ if hasattr(name, "__name__") else name
         if n in self.behaviors:
             del self.behaviors[n]
         if n in self.active_behaviors:
             del self.active_behaviors[n]
+        if stop_motors:
+            self.stop_motors()
 
-    def detach_all_behaviors(self):
+    def detach_all_behaviors(self, stop_motors=False):
         self.behaviors = {}
         self.active_behaviors = {}
+        if stop_motors:
+            self.stop_motors()
 
     def start_behavior(self, name):
         n = name.__name__ if hasattr(name, "__name__") else name
@@ -193,8 +197,10 @@ class Agent(Entity):
                 info_lines.append(f"  - {name}: Function={behavior_fn.__name__}, Weight={weight}")
         else:
             info_lines.append("Behaviors: None")
+        # TODO : might add active behaviors here as well
 
         # See if we print that by default
+        info_lines.append('') # add a space between other infos and eating infos atm
         info_lines.append(f"Can eat: {self.can_eat}")
         info_lines.append(f"Diet: {self.diet}")
         info_lines.append(f"Eating range: {self.eating_range}")
@@ -356,6 +362,7 @@ class NotebookController(SimulatorController):
                     entity.routine_step()
                     entity.set_events()
                     if entity.etype == EntityType.AGENT:
+                        # TODO : might be a cleaner way to do this
                         entity.behave()
                         self.eat_ressource(entity)
 

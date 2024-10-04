@@ -1,7 +1,7 @@
 seed: 42
 box_size: 300
 neighbor_radius: 300
-prox_dist_max: 100
+prox_dist_max: 60
 
 # Entity data definitions
 entities_data:
@@ -17,6 +17,7 @@ entities_data:
       type: AGENT
       num: 3
       color: blue
+      diameter: 10
       selective_behaviors:
         aggr:
           beh: MANUAL
