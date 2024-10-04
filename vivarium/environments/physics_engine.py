@@ -110,7 +110,7 @@ def verlet_force_fn(displacement):
     return force_fn
 
 
-def dynamics_fn(displacement, shift, force_fn=None):
+def dynamics_fn(displacement, shift, force_fn=None):    
     force_fn = force_fn(displacement) if force_fn else verlet_force_fn(displacement)
     
     def init_fn(state, key, kT=0.):

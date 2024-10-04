@@ -14,15 +14,9 @@ lg = logging.getLogger(__name__)
 update_freq = 100
 num_steps_lax = 10
 
-@hydra.main(version_base=None, config_path="../conf", config_name="config")
-def main(cfg: DictConfig = None) -> None:
-    logging.basicConfig(level=cfg.log_level)
-
+def start_simulator(scene_config: DictConfig) -> None:
     # init state and env
-    hydra_cfg = HydraConfig.get()
-    lg.info(f"Scene running: {OmegaConf.to_container(hydra_cfg.runtime.choices)['scene']}")
-    args = OmegaConf.merge(cfg.default, cfg.scene)
-    state = init_state(**args)
+    state = init_state(**scene_config)
     env = SelectiveSensorsEnv(state=state)
 
     # init simulator
@@ -36,6 +30,17 @@ def main(cfg: DictConfig = None) -> None:
     # host the simulation on a server
     lg.info('Simulator server started')
     serve(simulator)
+
+@hydra.main(version_base=None, config_path="../conf", config_name="config")
+def main(cfg: DictConfig = None) -> None:
+    logging.basicConfig(level=cfg.log_level)
+
+    # retrieve args from config
+    hydra_cfg = HydraConfig.get()
+    lg.info(f"Scene running: {OmegaConf.to_container(hydra_cfg.runtime.choices)['scene']}")
+    args = OmegaConf.merge(cfg.default, cfg.scene)
+    # start the simulator
+    start_simulator(args)
 
 if __name__ == '__main__':
     main()
