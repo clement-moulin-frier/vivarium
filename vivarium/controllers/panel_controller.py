@@ -1,3 +1,5 @@
+import time
+import threading
 import param
 import logging
 import numpy as np
@@ -71,6 +73,14 @@ class PanelController(SimulatorController):
         for selected in self.selected_entities.values():
             selected.param.watch(self.pull_selected_configs, ['selection'], onlychanged=True, precedence=1)
             selected.param.watch(self.pull_selected_panel_configs, ['selection'], onlychanged=True)
+        # Add this to force non existing entities to be hidden at the initialization of the interface 
+        threading.Timer(0.1, self.trigger_hide_non_existing).start()
+
+    def trigger_hide_non_existing(self):
+        """Triggers the hide_non_existing parameter change"""
+        self.panel_simulator_config.hide_non_existing = False
+        time.sleep(0.1)
+        self.panel_simulator_config.hide_non_existing = True
 
     def watch_selected_configs(self):
         watchers = {etype: config.param.watch(self.push_selected_to_config_list, config.param_names(), onlychanged=True)
