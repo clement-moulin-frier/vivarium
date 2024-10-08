@@ -21,8 +21,8 @@ class PanelEntityConfig(PanelConfig):
 
 
 class PanelAgentConfig(PanelEntityConfig):
-    visible_wheels = param.Boolean(False)
-    visible_proxs = param.Boolean(False)
+    visible_wheels = param.Boolean(True)
+    visible_proxs = param.Boolean(True)
 
 
 class PanelObjectConfig(PanelEntityConfig):
