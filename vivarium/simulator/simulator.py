@@ -31,7 +31,7 @@ class Simulator:
             seed=0
         ):
         self.env = env
-        assert self.env.occlusion == True, "You have to use an environment with occlusion sensors within the simulator"
+        assert self.env.occlusion, "You have to use an environment with occlusion sensors within the simulator"
 
         # First initialize fields in the class because they will be used to define the simulator state below
         self.key = jax.random.PRNGKey(seed)

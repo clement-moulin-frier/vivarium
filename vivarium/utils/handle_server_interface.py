@@ -3,6 +3,10 @@ import time
 import multiprocessing
 import subprocess
 import signal
+import logging
+
+lg = logging.getLogger(__name__)
+
 
 # TODO : Later remove print statements and add logging instead
 def get_process_pid(process_name: str):
@@ -11,7 +15,7 @@ def get_process_pid(process_name: str):
     for line in out.splitlines():
         if process_name.encode('utf-8') in line:
             pid = line.split()[1]
-            print(f"{process_name} PID: {pid.decode()}")
+            lg.info(f"{process_name} PID: {pid.decode()}")
             return pid.decode()
 
 def kill_process(pid):
@@ -44,17 +48,22 @@ def start_server_and_interface(scene_name: str):
     interface_process.start()
 
 def stop_server_and_interface():
+    stopped = False
     interface_process_name = "vivarium/scripts/run_interface.py"
     interface_pid = get_process_pid(interface_process_name)
     if interface_pid is not None:
         kill_process(interface_pid)
+        stopped = True
     else: 
-        print("Interface process not found")
+        lg.info("Interface process not found")
 
     server_process_name = "vivarium/scripts/run_server.py"
     server_pid = get_process_pid(server_process_name)
     if server_pid is not None:
         kill_process(server_pid)
+        stopped = True
     else:
-        print("Server process not found")
-    print("Server and Interface Stopped")
+        lg.info("Server process not found")
+
+    if stopped:
+        print("Server and Interface Stopped")
