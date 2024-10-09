@@ -23,6 +23,6 @@ entities_data:
       
     OBJECTS:
       type: OBJECT
-      num: 10
+      num: 13
       color: orange
       diamter: 8

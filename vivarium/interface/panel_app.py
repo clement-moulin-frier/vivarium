@@ -13,7 +13,6 @@ from vivarium.controllers.panel_controller import PanelController
 from vivarium.simulator.simulator_states import EntityType
 
 lg = logging.getLogger(__name__)
-
 pn.extension()
 
 def normal(array):

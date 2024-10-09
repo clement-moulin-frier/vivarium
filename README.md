@@ -1,5 +1,7 @@
 # vivarium
 
+**Vivarium** is a project that lets you run predefined or custom multi-agent simulations, and interact with them in real time using a web interface or Jupyter notebooks.
+
 ![Vivarium demo](images/vivarium.gif)
 
 See a preliminary demo of the project on [this video](https://youtu.be/dnO-wo6Ns-8).
@@ -52,18 +54,33 @@ Any parameters not specified in the custom scene file will be inherited from the
 
 ### Interact with it from a web interface
 
-When the server is started, you can launch a web interface from another terminal to interact with the simulation:
+When the server is started, you can launch a web interface from another terminal to observe the simulation and interact with it:
 
 ```bash
 panel serve scripts/run_interface.py --autoreload
 ```
 
-Once this command will have completed, it will output a URL looking like `http://localhost:5006/run_interface`, that you can open in your browser.
+Once this command will have completed, it will output a URL looking like `http://localhost:5006/run_interface`. Just click on it, and it will open the web interface in your browser. From there you can start the simulation and play with it.
 
 
 ### Interact with it from a jupyter notebook
 
-You will find explanations of the web interface and how to control the simulator programmatically in the Jupyter Notebook `vivarium/notebooks/quickstart_tutorial.ipynb`
+You can also choose to control the simulator programmatically in Jupyter Notebook. We first recommend you to do first tutorial listed below ... then you can select a notebook in the [sessions]() directory and start playing with it !
+
+### Create a custom scene
+
+We explained how to launch a simulation from a scene, but you can also define your own scene ... TODO see tutorials below
+
+## Tutorials
+
+To help you get started and explore the project, we provide a set of Jupyter notebook tutorials located in the [notebooks folder](https://github.com/clement-moulin-frier/vivarium/tree/main/notebooks). These tutorials cover various aspects of the project, from using the graphical interface to interacting with simulations and understanding the backend.
+
+- **Web Interface Tutorial**: Begin with the [web interface tutorial](https://github.com/clement-moulin-frier/vivarium/tree/main/notebooks/web_interface_tutorial.md) to gain a basic understanding of the project and learn how to use the graphical interface.
+- **Quickstart Tutorial**: To learn how to interact with a simulation from a Jupyter notebook, follow the [quickstart tutorial](notebooks/quickstart_tutorial.ipynb). This tutorial will guide you through creating, running, and manipulating simulations within a notebook environment.
+- **Create a custom Scene**: TODO 
+- **Simulator tutorial**: TODO
+<!-- - **Simulator Tutorial**: For a deeper understanding of the simulator backend and its capabilities, check out the [simulator tutorial](notebooks/simulator_tutorial.ipynb). This tutorial provides insights into the underlying mechanics of the simulator and demonstrates how to leverage its features for advanced use cases. -->
+
 
 ## Development
 
@@ -77,7 +94,6 @@ To do so, just run :
 ```bash
 python3 scripts/generate_default_config.py 
 ```
-
 
 ### grpc
 
@@ -94,13 +110,5 @@ If you want to test your changes locally, you can run the following command in t
 ```bash
 pytest
 ```
-
 You can add your own tests in the tests/ subdirector. Make sure that the name or your files and test functions start with "test".
 
-## Tutorials
-
-To help you get started and explore the project, we provide a set of Jupyter notebook tutorials located in the [notebooks folder](https://github.com/clement-moulin-frier/vivarium/tree/main/notebooks). These tutorials cover various aspects of the project, from using the graphical interface to interacting with simulations and understanding the backend.
-
-- **Web Interface Tutorial**: Begin with the [web interface tutorial](https://github.com/clement-moulin-frier/vivarium/tree/main/notebooks/web_interface_tutorial.md) to gain a basic understanding of the project and learn how to use the graphical interface.
-- **Quickstart Tutorial**: To learn how to interact with a simulation from a Jupyter notebook, follow the [quickstart tutorial](notebooks/quickstart_tutorial.ipynb). This tutorial will guide you through creating, running, and manipulating simulations within a notebook environment.
-- **Simulator Tutorial**: For a deeper understanding of the simulator backend and its capabilities, check out the [simulator tutorial](notebooks/simulator_tutorial.ipynb). This tutorial provides insights into the underlying mechanics of the simulator and demonstrates how to leverage its features for advanced use cases.

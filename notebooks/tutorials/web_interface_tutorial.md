@@ -4,7 +4,7 @@ The web interface has two main components:
 - The simulator plot on the left (in blue)
 - The configurations on the right (in red)
 
-![web_interface](img/web_interface.png "Interface")
+![web_interface](../../images/web_interface.png "Interface")
 
 ## Simulator plot
 
