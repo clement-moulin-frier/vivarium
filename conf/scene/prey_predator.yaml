@@ -14,6 +14,9 @@ entities_data:
       type: AGENT
       num: 5
       color: blue
+      diameter: 5.0
+      prox_dist_max: 20.0
+      prox_cos_min: -0.80
       selective_behaviors:
         love:
           beh: LOVE
@@ -30,6 +33,9 @@ entities_data:
       type: AGENT
       num: 5
       color: red
+      diameter: 10.0
+      prox_dist_max: 50.0
+      prox_cos_min: 0.80
       selective_behaviors:
         aggr:
           beh: AGGRESSION

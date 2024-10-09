@@ -246,6 +246,21 @@ def init_agents(
     prox_cos_min=config.prox_cos_min
 ):
     """Init the sub agents state (field of state)"""
+    # transform prox_dist_max into a jnp array
+    if isinstance(prox_dist_max, int) or isinstance(prox_dist_max, float):
+        proxs_dist_max=jnp.full((max_agents), prox_dist_max)
+    elif isinstance(prox_dist_max, list):
+        proxs_dist_max=jnp.array(prox_dist_max)
+    # transform prox_cos_min into a jnp array
+    if isinstance(prox_cos_min, int) or isinstance(prox_cos_min, float):
+        proxs_cos_min=jnp.full((max_agents), prox_cos_min)
+    elif isinstance(prox_cos_min, list):
+        proxs_cos_min=jnp.array(prox_cos_min)
+    # transform wheel diameter into a jnp array
+    if isinstance(wheel_diameter, int) or isinstance(wheel_diameter, float):
+        wheel_diameters=jnp.full((max_agents), wheel_diameter)
+    elif isinstance(wheel_diameter, list):
+        wheel_diameters=jnp.array(wheel_diameter)
     return AgentState(
         # idx in the entities (ent_idx) state to map agents information in the different data structures
         ent_idx=jnp.arange(max_agents, dtype=int), 
@@ -256,12 +271,12 @@ def init_agents(
         behavior=behaviors,
         params=params,
         sensed=sensed,
-        wheel_diameter=jnp.full((max_agents), wheel_diameter),
+        wheel_diameter=wheel_diameters,
         speed_mul=jnp.full((max_agents), speed_mul),
         max_speed=jnp.full((max_agents), max_speed),
         theta_mul=jnp.full((max_agents), theta_mul),
-        proxs_dist_max=jnp.full((max_agents), prox_dist_max),
-        proxs_cos_min=jnp.full((max_agents), prox_cos_min),
+        proxs_dist_max=proxs_dist_max,
+        proxs_cos_min=proxs_cos_min,
         # Change shape of these maps so they stay constant (jax.lax.scan problem otherwise)
         proximity_map_dist=jnp.zeros((max_agents, max_agents + max_objects)),
         proximity_map_theta=jnp.zeros((max_agents, max_agents + max_objects)),
@@ -365,11 +380,15 @@ def init_state(
 
     # create agents and objects attributes lists
     agents_pos = []
-    objects_pos = []
     agents_exist = []
+    agents_proxs_dist_max = []
+    agents_proxs_cos_min = []
+    agents_wheel_diameter = []
+    objects_pos = []
     objects_exist = []
     diameters = []
 
+    # TODO : clean this part of the function to encapsulate the behavior and proximeter data in another helper fn
     # iterate over the entities subtypes
     for ent_sub_type in ent_sub_types:
         # get their data in the ent_data
@@ -381,6 +400,12 @@ def init_state(
         
         # Check if the entity is an agent or an object
         if data['type'] == 'AGENT':
+            # handle proximeter infos
+            prox_dist_max_val = data['prox_dist_max'] if 'prox_dist_max' in data else prox_dist_max
+            prox_cos_min_val = data['prox_cos_min'] if 'prox_cos_min' in data else prox_cos_min
+            wheel_diameter_val = data['wheel_diameter'] if 'wheel_diameter' in data else wheel_diameter
+            assert prox_cos_min_val < 1.0, f"prox_cos_min must be inferior to 1.0, {prox_cos_min_val} is not"
+            # handle behaviors
             behavior_list = []
             # create a behavior list for all behaviors of the agent
             for beh_name, behavior_data in data['selective_behaviors'].items():
@@ -403,6 +428,10 @@ def init_state(
             agents_data[ent_sub_type] = entity_data
             agents_pos.extend(positions)
             agents_exist.extend(exists)
+            agents_proxs_dist_max.extend([prox_dist_max_val] * entity_data['n'])
+            agents_proxs_cos_min.extend([prox_cos_min_val] * entity_data['n'])
+            agents_wheel_diameter.extend([wheel_diameter_val] * entity_data['n'])
+            
             max_agents += entity_data['n']
 
         # only updated object counters and color if entity is an object
@@ -412,12 +441,6 @@ def init_state(
             objects_exist.extend(exists)
             max_objects += entity_data['n']
 
-    # Check for redundant positions
-    # redundant_positions = check_position_redundancies(agents_pos, objects_pos)
-    # if redundant_positions:
-    #     redundant_positions_list = list(redundant_positions.keys())
-    #     raise ValueError(f"Impossible to initialize the simulation state with redundant positions : {redundant_positions_list}. This would lead to collision errors in the physics engine of the environment")
-    
     redundant_positions = check_position_redundancies(agents_pos, objects_pos)
     if redundant_positions:
         raise ValueError(f"Collision detected at positions: {list(redundant_positions.keys())}")
@@ -486,12 +509,12 @@ def init_state(
         sensed=sensed,
         behaviors=behaviors,
         agents_color=agents_colors,
-        wheel_diameter=wheel_diameter,
+        wheel_diameter=agents_wheel_diameter,
         speed_mul=speed_mul,
         max_speed=max_speed,
         theta_mul=theta_mul,
-        prox_dist_max=prox_dist_max,
-        prox_cos_min=prox_cos_min
+        prox_dist_max=agents_proxs_dist_max,
+        prox_cos_min=agents_proxs_cos_min
     )
 
     objects = init_objects(

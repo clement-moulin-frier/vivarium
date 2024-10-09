@@ -11,8 +11,8 @@ from vivarium.simulator.grpc_server.simulator_server import serve
 lg = logging.getLogger(__name__)
 
 # Define parameters of the simulator
-update_freq = 100
-num_steps_lax = 10
+update_freq = 60
+num_steps_lax = 6
 
 def start_simulator(scene_config: DictConfig) -> None:
     # init state and env

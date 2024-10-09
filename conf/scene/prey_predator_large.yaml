@@ -1,54 +1,126 @@
-box_size: 300
-neighbor_radius: 300
+box_size: 400
+neighbor_radius: 400
 
 # Entity data definitions
 entities_data:
   # Define the different subtypes 
   EntitySubTypes:
-    - PREYS
-    - PREDS
+    - MEDIUM_PREYS
+    - MEDIUM_PREDS
+    - SMALL_PREYS
+    - BIG_PREDS
     - RESSOURCES
     - POISON
+    - OBSTCALES
 
   # Define the different entities
   Entities:
   
-    PREYS:
+    MEDIUM_PREYS:
       type: AGENT
-      num: 20
+      num: 15
       color: blue
+      diameter: 7.0
+      prox_dist_max: 20.0
+      prox_cos_min: -0.70
       selective_behaviors:
         love:
           beh: LOVE
           sensed: 
-            - PREYS
+            - MEDIUM_PREYS
             - RESSOURCES
         fear:
           beh: FEAR
           sensed: 
-            - PREDS
+            - MEDIUM_PREDS
+            - BIG_PREDS
             - POISON
+            - OBSTCALES
 
-    PREDS:
+    MEDIUM_PREDS:
       type: AGENT
-      num: 20
-      color: red
+      num: 10
+      color: orange
+      diameter: 10.0
+      prox_dist_max: 50.0
+      prox_cos_min: 0.60
       selective_behaviors:
         aggr:
           beh: AGGRESSION
           sensed: 
-            - PREYS
+            - MEDIUM_PREYS
+            - SMALL_PREYS
         fear:
-          beh: FEAR
+          beh: SHY
+          sensed: 
+            - POISON
+            - BIG_PREDS
+            - OBSTCALES
+
+    BIG_PREDS:
+      type: AGENT
+      num: 5
+      color: red
+      diameter: 15.0
+      prox_dist_max: 50.0
+      prox_cos_min: 0.30
+      wheel_diameter: 1.0
+      selective_behaviors:
+        aggr:
+          beh: AGGRESSION
+          sensed: 
+            - MEDIUM_PREYS
+            - SMALL_PREYS
+            - MEDIUM_PREDS
+        shy:
+          beh: SHY
           sensed: 
             - POISON
 
+    SMALL_PREYS:
+      type: AGENT
+      num: 15
+      color: cyan
+      diameter: 5.0
+      prox_dist_max: 15.0
+      prox_cos_min: -0.90
+      wheel_diameter: 3.0
+      selective_behaviors:
+        fear:
+          beh: FEAR
+          sensed: 
+            - MEDIUM_PREYS
+            - MEDIUM_PREDS
+            - BIG_PREDS
+            - SMALL_PREYS
+            - RESSOURCES
+            - POISON
+            - OBSTCALES
+        shy:
+          beh: SHY
+          sensed: 
+            - MEDIUM_PREYS
+            - MEDIUM_PREDS
+            - BIG_PREDS
+            - SMALL_PREYS
+            - RESSOURCES
+            - POISON
+            - OBSTCALES
+
     RESSOURCES:
       type: OBJECT
-      num: 20
+      num: 15
+      diameter: 7.0
       color: green
       
     POISON:
       type: OBJECT
-      num: 20
+      num: 15
+      diameter: 5.0
       color: purple
+
+    OBSTCALES:
+      type: OBJECT
+      num: 4
+      diameter: 20.0
+      color: grey
