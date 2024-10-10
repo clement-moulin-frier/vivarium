@@ -8,6 +8,7 @@ from vivarium.simulator.simulator_states import StateType
 from vivarium.controllers import converters
 
 lg = logging.getLogger(__name__)
+
 param.Dynamic.time_dependent = True
 
 
@@ -30,9 +31,7 @@ class SimulatorController(param.Parameterized):
         self._in_batch = False
 
     def watch_configs(self):
-        watchers = {etype: [config.param.watch(self.push_state, config.param_names(), onlychanged=True)
-                            for config in configs]
-                    for etype, configs in self.configs.items()}
+        watchers = {etype: [config.param.watch(self.push_state, config.param_names(), onlychanged=True) for config in configs] for etype, configs in self.configs.items()}
         return watchers
 
     @property
@@ -43,7 +42,7 @@ class SimulatorController(param.Parameterized):
         if self._in_batch:
             self._event_list.extend(events)
             return
-        lg.info("Push_state %d", len(events))
+        # lg.debug("Push_state %d", len(events))
         state_changes = converters.events_to_state_changes(events, self.state)
         for sc in state_changes:
             self.client.set_state(**sc._asdict())
@@ -73,9 +72,9 @@ class SimulatorController(param.Parameterized):
         self.pull_configs()
 
     def pull_configs(self, configs=None):
-        lg.debug(f"Pull_configs; {configs = }")
         configs = configs or self.configs
         state = self.state
+        # lg.debug(f"Pull_configs; {state = }  {configs = }")
         with self.dont_push_entity_configs():
             converters.set_configs_from_state(state, configs)
         return state

@@ -33,6 +33,6 @@ entities_data:
 
     obstacles:
       type: OBJECT
-      num: 12
+      num: 15
       color: orange
       diameter: 8

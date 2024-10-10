@@ -10,10 +10,13 @@ from vivarium.controllers.simulator_controller import SimulatorController
 from vivarium.simulator.simulator_states import StateType, EntityType
 
 lg = logging.getLogger(__name__)
+    
+if logging.root.handlers:
+    lg.setLevel(logging.root.level)
+else:
+    lg.setLevel(logging.WARNING)
 
 
-# TODO : Add documentation
-# TODO : Add a default infos method for the Entity class --> Use it in agents and objects 
 class Entity:
     def __init__(self, config):
         self.config = config
@@ -30,7 +33,6 @@ class Entity:
     def __setattr__(self, item, val):
         if item != 'config' and item in self.config.param_names():
             self.user_events[item] = val # ensures the event is set during the run loop
-            # return setattr(self.config, item, val) # ensures the event is set if the simulator is not running
         else:
             return super().__setattr__(item, val)
         
@@ -71,7 +73,6 @@ class Entity:
         return print("\n".join(info_lines))
     
 
-# TODO : Add documentation
 class Agent(Entity):
     def __init__(self, config):
         super().__init__(config)
@@ -178,7 +179,6 @@ class Agent(Entity):
         val = self.ate
         self.ate = False
         return val
-    
 
     def infos(self, full_infos=False):
         """
@@ -218,7 +218,6 @@ class Agent(Entity):
         return print("\n".join(info_lines))
 
 
-# TODO : Add documentation
 class Object(Entity):
     def __init__(self, config):
         super().__init__(config)
@@ -231,99 +230,78 @@ etype_to_class = {
 }
 
 
-# TODO : maybe add helper functions outside the class to make the code more readable
-# TODO : Add documentation
 class NotebookController(SimulatorController):
     def __init__(self, **params):
         super().__init__(**params)
         self.all_entities = []
+        # add agents and objects to the global entities list
         for etype in list(EntityType):
-            # set the attributes for agents and objects
             setattr(self, f'{etype.name.lower()}s', [etype_to_class[etype](c) for c in self.configs[etype.to_state_type()]])
             self.all_entities.extend(getattr(self, f'{etype.name.lower()}s'))
         self.from_stream = True
         self.configs[StateType.SIMULATOR][0].freq = -1
-        self.stop_objects_apparition = False
+        self.stop_apparition_flag = False
         self._is_running = False
+        self._routines = {}
         self.set_all_user_events()
-        self.update_objects_lists()
         self.update_agents_entities_list()
-        # TODO : --> have something to associate the object type with the object id (ideally a string)
-
-    # TOOD : could maybe generalize this to all the entities instead of just the objects
-    def update_objects_lists(self):
-        existing_objects = {}
-        non_existing_objects = {}
-        for i, obj in enumerate(self.objects):
-            if obj.exists:
-                existing_objects[i] = obj.subtype
-            else:
-                non_existing_objects[i] = obj.subtype
-
-        self.existing_objects = existing_objects
-        self.non_existing_objects = non_existing_objects
+        # TODO :associate the entities subtypes ids with their actual names
 
     def update_agents_entities_list(self):
         for agent in self.agents:
             agent.simulation_entities = self.all_entities
-   
-    def spawn_object(self, object_id, position=None):
-        if object_id in self.existing_objects:
-            print("Object already exists")
-            return
-        obj = self.objects[object_id]
+
+    def spawn_entity(self, entity_idx, position=None):
+        entity = self.all_entities[entity_idx]
+        if entity.exists:
+            lg.warning(f"Entity {entity_idx} already exists")
         if position is not None:
-            # TODO : Add a check to prevent from having a similar position among other entities
-            obj.x_position = position[0]
-            obj.y_position = position[1]
-        obj.exists = True
-        self.existing_objects[object_id] = obj.subtype
-        del self.non_existing_objects[object_id]
+            # TODO : test updating the config first
+            # configs[StateType.AGENT][2].x_position = 1.
+            entity.x_position = position[0]
+            entity.y_position = position[1]
+        entity.exists = True
+        lg.info(f"Entity {entity_idx} spawned at {entity.x_position, entity.y_position}")
 
-    def remove_object(self, object_id):
-        if object_id in self.non_existing_objects:
-            print("Object already removed")
-            return
-        obj = self.objects[object_id]
-        obj.exists = False
-        self.non_existing_objects[object_id] = obj.subtype
-        del self.existing_objects[object_id]
+    def remove_entity(self, entity_idx):
+        entity = self.all_entities[entity_idx]
+        if not entity.exists:
+            lg.warning(f"Entity {entity_idx} already removed")
+        entity.exists = False
 
-    def object_apparition(self, period, object_type=None, position_range=None):
-        if object_type is not None:
-            non_ex_objects = {id: subtype for id, subtype in self.non_existing_objects.items() if subtype == object_type}
-        else:
-            non_ex_objects = self.non_existing_objects.copy()
-        while not self.stop_objects_apparition and non_ex_objects:
-            ids = list(non_ex_objects.keys())
-            id = np.random.choice(ids)
-            if position_range is not None:
+    def remove_all_entities(self, entity_type):
+        for ent in self.all_entities:
+            if ent.etype == entity_type:
+                self.remove_entity(ent.idx)
+
+    def periodic_entity_apparition(self, period, entity_type=None, position_range=None):
+        assert entity_type is not None, "Please specify the entity type"
+        # transform the position range if not specified
+        if position_range is None:
+            box_size = self.state.simulator_state.box_size[0]
+            position_range = ((0, box_size), (0, box_size)) 
+        while not self.stop_apparition_flag:
+            non_existing_ent_list = [ent.idx for ent in self.all_entities if not ent.exists and ent.subtype == entity_type]
+            lg.debug(f"{non_existing_ent_list = }")
+            if non_existing_ent_list:
+                # there are entities of this type that are not spawned
+                idx = np.random.choice(non_existing_ent_list)
                 x = np.random.uniform(position_range[0][0], position_range[0][1], 1)
                 y = np.random.uniform(position_range[1][0], position_range[1][1], 1)
-                position = (x, y)
-                # TODO : try to fix positions problems
-                position = None
+                # self.spawn_entity(idx, position=(x, y))
+                # TODO : at the moment don't set random positions because hard problem to debug
+                self.spawn_entity(idx, position=None)
             else:
-                position = None
-            self.spawn_object(id, position)
-            del non_ex_objects[id]
+                lg.info(f'All entities of type {entity_type} are spawned')
             time.sleep(period)
 
-        if not non_ex_objects:
-            print("The maximum number of objects has been reached")
-
-    def start_object_apparition(self, period=5, object_type=None, position_range=None):
-        self.stop_objects_apparition = False
-        thread = threading.Thread(target=self.object_apparition, args=(period, object_type, position_range))
+    def start_entity_apparition(self, period=5, entity_type=None, position_range=None):
+        self.stop_apparition_flag = False
+        thread = threading.Thread(target=self.periodic_entity_apparition, args=(period, entity_type, position_range))
         thread.start()
-
-    def stop_object_apparition(self):
-        self.stop_objects_apparition = True
-
-    def remove_objects(self, object_type):
-        for id in list(self.existing_objects.keys()):
-            if self.existing_objects[id] == object_type:
-                self.remove_object(id)
+                
+    def stop_entity_apparition(self):
+        self.stop_apparition_flag = True
 
     def eat_ressource(self, agent):
         # Or could do if agent.diet is None
@@ -336,7 +314,7 @@ class NotebookController(SimulatorController):
             in_range = distances < agent.eating_range
             for ress_idx, ent_idx in enumerate(ressources_idx):
                 if in_range[ress_idx] and self.all_entities[ent_idx].exists:
-                    self.remove_object(ent_idx - len(self.agents)) # we give this idx because it is the idx in objects lists (!= idx in all entities)
+                    self.remove_entity(ent_idx) 
                     agent.ate = True
 
     def set_all_user_events(self):
@@ -356,14 +334,14 @@ class NotebookController(SimulatorController):
         t = 0
         while t < num_steps and self._is_running:
             with self.batch_set_state():
-                # TODO : should just add a condition to check if entity is an agent or not 
-                # to prevent iterating twice over all agents
+                # execute routines
+                self.execute_simulator_routines()
                 for entity in self.all_entities:
                     entity.routine_step()
                     entity.set_events()
                     if entity.etype == EntityType.AGENT:
-                        # TODO : might be a cleaner way to do this
                         entity.behave()
+                        # check how to do this
                         self.eat_ressource(entity)
 
             self.state = self.client.step()
@@ -371,12 +349,14 @@ class NotebookController(SimulatorController):
             t += 1
         self.stop()
 
-    def start_food_apparition(self, period=5):
-        pass
-
     def stop(self):
         self._is_running = False
 
     def wait(self, seconds):
         time.sleep(seconds)
+
+    # TODO : clean redundancy
+    def execute_simulator_routines(self):
+        for fn in self._routines.values():
+            fn(self)
 
