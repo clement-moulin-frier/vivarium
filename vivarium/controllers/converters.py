@@ -1,4 +1,5 @@
 import typing
+import logging
 import dataclasses
 from collections import namedtuple, defaultdict
 
@@ -9,6 +10,11 @@ import matplotlib.colors as mcolors
 
 from vivarium.controllers.config import AgentConfig, ObjectConfig, SimulatorConfig, stype_to_config, config_to_stype
 from vivarium.simulator.simulator_states import SimulatorState, AgentState, ObjectState, StateType
+
+lg = logging.getLogger(__name__)
+    
+if logging.root.handlers:
+    lg.setLevel(logging.root.level)
 
 
 # Define config fields for agents, objects and simulator
@@ -238,6 +244,7 @@ def set_configs_from_state(state, config_dict=None):
                     value_to_set = value[row_idx]
                 else:
                     value_to_set = value[row_idx, state_field_info.column_idx]
+                # lg.debug(f"Setting {param} to {value_to_set} for {stype} {config.idx}")
                 value_to_set = state_field_info.state_to_config(value_to_set, t)
                 config.param.update(**{param: value_to_set})
     return config_dict
