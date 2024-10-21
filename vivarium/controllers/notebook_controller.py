@@ -16,6 +16,8 @@ if logging.root.handlers:
 else:
     lg.setLevel(logging.WARNING)
 
+N_DIGITS = 3
+
 
 class Entity:
     """Entity class that represents an entity in the simulation
@@ -356,11 +358,11 @@ class NotebookController(SimulatorController):
         entity = self.all_entities[entity_idx]
         if entity.exists:
             lg.warning(f"Entity {entity_idx} already exists")
+            return
         if position is not None:
-            # TODO : test updating the config first
-            # configs[StateType.AGENT][2].x_position = 1.
-            entity.x_position = position[0]
-            entity.y_position = position[1]
+            # TODO : rounding doesn't prevent from error 
+            entity.x_position = np.round(position[0], N_DIGITS)
+            entity.y_position = np.round(position[1], N_DIGITS)
         entity.exists = True
         lg.info(f"Entity {entity_idx} spawned at {entity.x_position, entity.y_position}")
 
