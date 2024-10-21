@@ -81,8 +81,16 @@ class Entity:
     def routine_step(self):
         """Execute the entity's routines
         """
-        for fn in self._routines.values():
-            fn(self)
+        to_remove = []
+        for name, fn in self._routines.items():
+            try:
+                fn(self)
+            except Exception as e:
+                lg.error(f"Error while executing routine: {e}, removing routine {name}")
+                to_remove.append(name)
+        
+        for name in to_remove:
+            del self._routines[name]
 
     def infos(self):
         """Print the entity's infos
@@ -120,6 +128,7 @@ class Agent(Entity):
         self.diet = []
         self.ate = False
         self.simulation_entities = None
+        self.logger = Logger()
         self.set_manual()
 
     def set_manual(self):
@@ -265,6 +274,29 @@ class Agent(Entity):
         val = self.ate
         self.ate = False
         return val
+    
+    def add_log(self, log_field, data):
+        """Add a log to the agent's logger (e.g robot.add_log("left_prox", left_prox_value))
+
+        :param log_field: log_field of the log
+        :param data: data logged
+        """
+        self.logger.add(log_field, data)
+
+    def get_log(self, log_field):
+        """Get the log of the agent's logger for a specific log_field
+
+        :param log_field: desired log_field
+        :return: associated log_field data
+        """
+        return self.logger.get_log(log_field)
+
+    def clear_all_logs(self):
+        """Clear all logs of the agent's logger
+
+        :return: cleared logs
+        """
+        return self.logger.clear()
 
     def infos(self, full_infos=False):
         """Print the agent's infos
@@ -517,3 +549,40 @@ def eating(controller):
                 if in_range[ress_idx] and controller.all_entities[ent_idx].exists:
                     controller.remove_entity(ent_idx) 
                     agent.ate = True
+
+
+# Logger class from pyvrep epuck (see if need to modify it)
+class Logger(object):
+    def __init__(self):
+        """Logger class that logs data for the agents
+        """
+        self.logs = {}
+
+    def add(self, log_field, data):
+        """Add data to the log_field of the logger
+
+        :param log_field: log_field
+        :param data: data
+        """
+        if log_field not in self.logs:
+            self.logs[log_field] = [data]
+        else:
+            self.logs[log_field].append(data)
+
+    def get_log(self, log_field):
+        """Get the log of the logger for a specific log_field
+
+        :param log_field: log_field
+        :return: data associated with the log_field
+        """
+        if log_field not in self.logs:
+            print("No data in " + log_field)
+            return []
+        else:
+            return self.logs[log_field]
+        
+    def clear(self):
+        """Clear all logs of the logger
+        """
+        del self.logs
+        self.logs = {}
