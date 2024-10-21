@@ -58,13 +58,14 @@ class Entity:
             setattr(self.config, k, v)
         self.user_events = {}
 
-    def attach_routine(self, routine_fn, name=None):
+    def attach_routine(self, routine_fn, name=None, interval=1):
         """Attach a routine to the entity
 
         :param routine_fn: routine_fn
         :param name: routine name, defaults to None
+        :param interval: routine execution interval, defaults to 1
         """
-        self._routines[name or routine_fn.__name__] = routine_fn
+        self._routines[name or routine_fn.__name__] = (routine_fn, interval)
 
     def detach_routine(self, name):
         """Detach a routine from the entity
@@ -78,19 +79,20 @@ class Entity:
         """
         self._routines = {}
 
-    def routine_step(self):
-        """Execute the entity's routines
+    def routine_step(self, time):
+        """Execute the entity's routines with their corresponding execution intervals
         """
         to_remove = []
-        for name, fn in self._routines.items():
-            try:
-                fn(self)
-            except Exception as e:
-                lg.error(f"Error while executing routine: {e}, removing routine {name}")
-                to_remove.append(name)
-        
-        for name in to_remove:
-            del self._routines[name]
+        for name, (fn, interval) in self._routines.items():
+            if time % interval == 0:
+                try:
+                    fn(self)
+                except Exception as e:
+                    lg.error(f"Error while executing routine: {e}, removing routine {name}")
+                    to_remove.append(name)
+            
+            for name in to_remove:
+                del self._routines[name]
 
     def infos(self):
         """Print the entity's infos
@@ -123,7 +125,6 @@ class Agent(Entity):
 
         self.behaviors = {}
         self.active_behaviors = {}
-        self.can_eat = False
         self.eating_range = 10
         self.diet = []
         self.ate = False
@@ -321,7 +322,6 @@ class Agent(Entity):
 
         # See if we print that by default
         info_lines.append('') # add a space between other infos and eating infos atm
-        info_lines.append(f"Can eat: {self.can_eat}")
         info_lines.append(f"Diet: {self.diet}")
         info_lines.append(f"Eating range: {self.eating_range}")
         
@@ -504,7 +504,7 @@ class NotebookController(SimulatorController):
                 # execute routines
                 self.execute_simulator_routines()
                 for entity in self.all_entities:
-                    entity.routine_step()
+                    entity.routine_step(t)
                     entity.set_events()
                     if entity.etype == EntityType.AGENT:
                         entity.behave()
@@ -538,8 +538,8 @@ def eating(controller):
     :param controller: NotebookController
     """
     for agent in controller.agents:
-        # skip to next agent if the agent cannot eat or does not exist
-        if not agent.can_eat or not agent.exists:
+        # skip to next agent if the agent does not exist
+        if not agent.exists:
             continue
         for object_type in agent.diet:
             ressources_idx = [ent.idx for ent in controller.all_entities if ent.subtype == object_type]
