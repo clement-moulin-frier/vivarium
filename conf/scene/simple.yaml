@@ -1,7 +1,3 @@
-box_size: 200
-neighbor_radius: 200
-prox_dist_max: 60
-
 # Entity data definitions
 entities_data:
   EntitySubTypes:
@@ -11,16 +7,16 @@ entities_data:
   Entities:
     AGENTS:
       type: AGENT
-      num: 1
+      num: 5
       color: blue
       selective_behaviors:
         aggr:
-          beh: MANUAL
+          beh: AGGRESSION
           sensed: 
             - AGENTS
             - OBJECTS
       
     OBJECTS:
       type: OBJECT
-      num: 8
+      num: 5
       color: red

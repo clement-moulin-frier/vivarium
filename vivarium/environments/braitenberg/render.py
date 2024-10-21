@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import matplotlib.colors as colors
 
-from vivarium.experimental.environments.utils import normal
+from vivarium.environments.utils import normal
 
 
 def _string_to_rgb(color_str):

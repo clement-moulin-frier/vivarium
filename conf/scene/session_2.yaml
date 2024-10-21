@@ -13,6 +13,7 @@ entities_data:
       type: AGENT
       num: 1
       color: blue
+      diameter: 10
       selective_behaviors:
         aggr:
           beh: MANUAL
@@ -22,5 +23,6 @@ entities_data:
       
     OBJECTS:
       type: OBJECT
-      num: 8
-      color: red
+      num: 13
+      color: orange
+      diamter: 8

@@ -1,0 +1,38 @@
+seed: 42
+box_size: 200
+neighbor_radius: 200
+prox_dist_max: 60
+
+# Entity data definitions
+entities_data:
+  EntitySubTypes:
+    - robots
+    - ressources
+    - obstacles
+
+  Entities:
+    robots:
+      type: AGENT
+      num: 2
+      existing: 1
+      color: blue
+      diameter: 10
+      selective_behaviors:
+        aggr:
+          beh: MANUAL
+          sensed: 
+            - robots
+            - ressources
+            - obstacles
+      
+    ressources:
+      type: OBJECT
+      num: 12
+      existing: 3
+      color: green
+
+    obstacles:
+      type: OBJECT
+      num: 15
+      color: orange
+      diameter: 8

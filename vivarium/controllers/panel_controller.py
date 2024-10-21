@@ -1,16 +1,18 @@
-from vivarium.controllers import converters
-from vivarium.controllers.config import AgentConfig, ObjectConfig, config_to_stype, Config
-from vivarium.controllers.simulator_controller import SimulatorController
-from vivarium.simulator.states import EntityType, StateType
-from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
-
+import time
+import threading
 import param
+import logging
 import numpy as np
 from contextlib import contextmanager
 
-import logging
+from vivarium.controllers import converters
+from vivarium.controllers.config import AgentConfig, ObjectConfig, config_to_stype, Config
+from vivarium.controllers.simulator_controller import SimulatorController
+from vivarium.simulator.simulator_states import EntityType, StateType
+from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 
 lg = logging.getLogger(__name__)
+
 
 class PanelConfig(Config):
     pass
@@ -21,8 +23,8 @@ class PanelEntityConfig(PanelConfig):
 
 
 class PanelAgentConfig(PanelEntityConfig):
-    visible_wheels = param.Boolean(False)
-    visible_proxs = param.Boolean(False)
+    visible_wheels = param.Boolean(True)
+    visible_proxs = param.Boolean(True)
 
 
 class PanelObjectConfig(PanelEntityConfig):
@@ -34,8 +36,12 @@ class PanelSimulatorConfig(Config):
     config_update = param.Boolean(False)
 
 
-panel_config_to_stype = {PanelSimulatorConfig: StateType.SIMULATOR, PanelAgentConfig: StateType.AGENT,
-                         PanelObjectConfig: StateType.OBJECT}
+panel_config_to_stype = {
+    PanelSimulatorConfig: StateType.SIMULATOR, 
+    PanelAgentConfig: StateType.AGENT,
+    PanelObjectConfig: StateType.OBJECT
+}
+
 stype_to_panel_config = {stype: config_class for config_class, stype in panel_config_to_stype.items()}
 
 
@@ -47,6 +53,7 @@ class Selected(param.Parameterized):
 
     def __len__(self):
         return len(self.selection)
+
 
 class PanelController(SimulatorController):
 
@@ -66,6 +73,14 @@ class PanelController(SimulatorController):
         for selected in self.selected_entities.values():
             selected.param.watch(self.pull_selected_configs, ['selection'], onlychanged=True, precedence=1)
             selected.param.watch(self.pull_selected_panel_configs, ['selection'], onlychanged=True)
+        # Add this to force non existing entities to be hidden at the initialization of the interface 
+        threading.Timer(0.1, self.trigger_hide_non_existing).start()
+
+    def trigger_hide_non_existing(self):
+        """Triggers the hide_non_existing parameter change"""
+        self.panel_simulator_config.hide_non_existing = False
+        time.sleep(0.1)
+        self.panel_simulator_config.hide_non_existing = True
 
     def watch_selected_configs(self):
         watchers = {etype: config.param.watch(self.push_selected_to_config_list, config.param_names(), onlychanged=True)
@@ -122,7 +137,7 @@ class PanelController(SimulatorController):
         self.pull_configs({StateType.SIMULATOR: self.configs[StateType.SIMULATOR]})
 
     def push_selected_to_config_list(self, *events):
-        lg.info('push_selected_to_config_list %d', len(events))
+        lg.info("Push_selected_to_config_list %d", len(events))
         for e in events:
             if isinstance(e.obj, PanelConfig):
                 stype = panel_config_to_stype[type(e.obj)]
@@ -138,5 +153,4 @@ class PanelController(SimulatorController):
 
 if __name__ == '__main__':
     simulator = PanelController(client=SimulatorGRPCClient())
-    lg.info('Done')
     

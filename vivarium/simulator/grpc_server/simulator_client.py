@@ -1,14 +1,10 @@
-import json
-
 import grpc
-from vivarium.simulator.grpc_server import simulator_pb2_grpc
+from numproto.numproto import ndarray_to_proto
 import vivarium.simulator.grpc_server.simulator_pb2 as simulator_pb2
 
-from vivarium.simulator.grpc_server.converters import proto_to_state, proto_to_nve_state, proto_to_agent_state, \
-    proto_to_object_state
+from vivarium.simulator.grpc_server import simulator_pb2_grpc
 from vivarium.simulator.grpc_server.simulator_client_abc import SimulatorClient
-
-from numproto.numproto import ndarray_to_proto
+from vivarium.simulator.grpc_server.converters import proto_to_state, proto_to_nve_state, proto_to_agent_state, proto_to_object_state
 
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
@@ -31,8 +27,11 @@ class SimulatorGRPCClient(SimulatorClient):
         return self.stub.GetChangeTime(Empty()).time
 
     def set_state(self, nested_field, ent_idx, column_idx, value):
-        state_change = simulator_pb2.StateChange(nested_field=nested_field, ent_idx=ent_idx, col_idx=column_idx,
-                                                 value=ndarray_to_proto(value))
+        state_change = simulator_pb2.StateChange(
+            nested_field=nested_field, 
+            ent_idx=ent_idx, col_idx=column_idx,
+            value=ndarray_to_proto(value)
+        )
         self.stub.SetState(state_change)
 
     def get_state(self):

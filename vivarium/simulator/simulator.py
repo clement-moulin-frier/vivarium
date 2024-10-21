@@ -12,173 +12,78 @@ from contextlib import contextmanager
 import jax
 import jax.numpy as jnp
 
-from jax import jit
-from jax import lax
-from jax_md import space, partition, dataclasses
-
 from vivarium.controllers import converters
-from vivarium.simulator.states import EntityType, SimulatorState
+from vivarium.simulator.simulator_states import SimState, SimulatorState
+from vivarium.environments.braitenberg.selective_sensing import State as EnvState
 
 lg = logging.getLogger(__name__)
 
-
+# TODO : Remove use fori_loop and to_jit as class attributes
 class Simulator:
-    def __init__(self, state, behavior_bank, dynamics_fn):
+    def __init__(
+            self, 
+            env, 
+            env_state, 
+            num_steps_lax=4, 
+            update_freq=-1, 
+            jit_step=True, 
+            use_fori_loop=True, 
+            seed=0
+        ):
+        self.env = env
+        assert self.env.occlusion, "You have to use an environment with occlusion sensors within the simulator"
 
-        self.state = state
-        self.behavior_bank = behavior_bank
-        self.dynamics_fn = dynamics_fn
+        # First initialize fields in the class because they will be used to define the simulator state below
+        self.key = jax.random.PRNGKey(seed)
+        self.num_steps_lax = num_steps_lax
+        self.freq = update_freq
+        self.jit_step = jit_step
+        self.use_fori_loop = use_fori_loop
+        self.ent_sub_types = env_state.ent_sub_types # information about entities sub types in a dictionary, can't be given client side at the moment
 
-        # TODO: explicitely copy the attributes of simulator_state (prevents linting errors and easier to understand which element is an attriute of the class)
-        all_attrs = [f.name for f in dataclasses.fields(SimulatorState)]
-        for attr in all_attrs:
-            self.update_attr(attr, SimulatorState.get_type(attr))
+        # transform the env state (only used in env class) into a simulator state with a simulator state (used only in client server communication)
+        self.state = self.env_to_sim_state(env_state)
 
+        # Attributes to start or stop the simulation
         self._is_started = False
         self._to_stop = False
-        self.key = jax.random.PRNGKey(0)
 
         # Attributes to record simulation
         self.recording = False
         self.records = None
         self.saving_dir = None
-
-        # TODO: Define which attributes are affected but these functions
-        self.update_space(self.box_size)
-        self.update_function_update()
-        self.init_state(state)
-        self.update_neighbor_fn(self.box_size, self.neighbor_radius)
-        self.allocate_neighbors()
-        self.simulation_loop = self.select_simulation_loop_type()
-
-
-    def classic_simulation_loop(self, state, neighbors, num_iterations):
-        """Update the state and the neighbors on a few iterations with a classic python loop
-
-        :param state: current_state of the simulation
-        :param neighbors: array of neighbors for simulation entities
-        :return: state, neighbors
-        """
-        for i in range(0, num_iterations):
-            state, neighbors = self.update_fn(i, (state, neighbors))
-        return state, neighbors
-
-    def lax_simulation_loop(self, state, neighbors, num_iterations):
-        """Update the state and the neighbors on a few iterations with lax loop
-
-        :param state: current_state of the simulation
-        :param neighbors: array of neighbors for simulation entities
-        :return: state, neighbors
-        """
-        state, neighbors = lax.fori_loop(0, num_iterations, self.update_fn, (state, neighbors))
-        return state, neighbors
-
-    def select_simulation_loop_type(self):
-        """Choose wether to use a lax or a classic simulation loop in function step
-
-        :return: appropriate simulation loop
-        """
-        if self.state.simulator_state.use_fori_loop:
-            return self.lax_simulation_loop
-        else:
-            return self.classic_simulation_loop
         
-    def start_recording(self, saving_name):
-        """Start the recording of the simulation
-        :param saving_name: optional name of the saving file
-        """
-        if self.recording:
-            lg.warning('Already recording')
-        self.recording = True
-        self.records = []
+        # Do a first step to initialize the momentum of the state
+        self.step()
+        lg.info("Simulator initialized")
 
-        # Either create a savinf_dir with the given name or one with the current datetime
-        if saving_name:
-            saving_dir = f"Results/{saving_name}"
-        else:
-            current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            saving_dir = f"Results/experiment_{current_time}"
 
-        self.saving_dir = saving_dir
-        # Create a saving dir if it doesn't exist yet, TODO : Add a warning if risk of overwritting already existing content
-        os.makedirs(self.saving_dir, exist_ok=True)
-        lg.info('Saving directory %s created', self.saving_dir)
-
-    def record(self, data):
-        """Record the desired data during a step
-        :param data: saved data (e.g simulator.state)
-        """
-        if not self.recording:
-            lg.warning('Recording not started yet.')
-            return
-        self.records.append(data)
-
-    def save_records(self):
-        """Save the recorded steps in a pickle file"""
-        if not self.records:
-            lg.warning('No records to save.')
-            return
-
-        saving_path = f"{self.saving_dir}/frames.pkl"
-        with open(saving_path, 'wb') as f:
-            pickle.dump(self.records, f)
-            lg.info('Simulation frames saved in %s', saving_path)
-
-    def stop_recording(self):
-        """Stop the recording, save the recorded steps and reset recording information"""
-        if not self.recording:
-            lg.warning('Recording not started yet.')
-            return
-
-        self.save_records()
-        self.recording = False
-        self.records = []
-
-    def load(self, saving_name):
-        """Load data corresponding to saving_name 
-        :param saving_name: name used while saving the data
-        :return: loaded data
-        """
-        saving_path = f"Results/{saving_name}/frames.pkl"
-        with open(saving_path, 'rb') as f:
-            data = pickle.load(f)
-            lg.info('Simulation loaded from %s', saving_path)
-            return data
-    
-    def _step(self, state, neighbors, num_iterations):
-        """Do a step in the simulation by applying the update function a few iterations on the state and the neighbors
+    def _step(self, state, num_updates):
+        """Do num_updates jitted steps in the simulation. This is done by converting state into environment state, and convert it back to simulation state during return
 
         :param state: current simulation state 
-        :param neighbors: current simulation neighbors array 
-        :return: updated state and neighbors
+        :param num_updates: current simulation neighbors array 
+        :return: updated state
         """
-        # Create a copy of the current state in case of neighbor buffer overflow
-        current_state = state
-        # TODO : find a more explicit name than num_steps_lax and modify it in all the pipeline
-        new_state, neighbors = self.simulation_loop(state=current_state, neighbors=neighbors, num_iterations=num_iterations)
+        # convert the sim_state into env state to call env.step()
+        new_env_state = self.env.step(state=self.sim_to_env_state(state), num_updates=num_updates)
 
-        # If the neighbor list can't fit in the allocation, rebuild it but bigger.
-        if neighbors.did_buffer_overflow:
-            lg.warning('REBUILDING NEIGHBORS ARRAY')
-            neighbors = self.allocate_neighbors(current_state.entity_state.position.center)
-            # Because there was an error, we need to re-run this simulation loop from the copy of the current_state we created
-            new_state, neighbors = self.simulation_loop(state=current_state, neighbors=neighbors, num_iterations=num_iterations)
-            # Check that neighbors array is now ok but should be the case (allocate neighbors tries to compute a new list that is large enough according to the simulation state)
-            assert not neighbors.did_buffer_overflow
-
+        # TODO : Remove this weird thing and just save the env state --> Because it is with this one that we can plot state in server side
         if self.recording:
-            self.record((new_state.entity_state, new_state.agent_state, new_state.object_state, new_state.simulator_state))
+            self.record(new_env_state)
 
-        return new_state, neighbors
+        # return the next sim state (convert new env state)
+        return self.env_to_sim_state(new_env_state)
     
+
     def step(self):
         """Do a step in the simulation by calling _step"""
-        state, neighbors = self.state, self.neighbors
-        num_iterations = self.num_steps_lax
-        self.state, self.neighbors = self._step(state, neighbors, num_iterations)
+        self.state = self._step(self.state, self.num_steps_lax)
+        return self.state
+
 
     def run(self, threaded=False, num_steps=math.inf, save=False, saving_name=None):
-        """Run the simulator for the desired number of timesteps, either in a separate thread or not 
+        """Run the simulator for the desired number of timesteps, either in a separate thread or not. Return the final state
 
         :param threaded: wether to run the simulation in a thread or not, defaults to False
         :param num_steps: number of step loops before stopping the simulation run, defaults to math.inf
@@ -194,6 +99,8 @@ class Simulator:
             threading.Thread(target=_run).start()
         else:
             self._run(num_steps=num_steps, save=save, saving_name=saving_name)
+        return self.state
+
 
     def _run(self, num_steps, save, saving_name):
         """Function that runs the simulator for the desired number of steps. Used to be called either normally or in a thread.
@@ -202,7 +109,7 @@ class Simulator:
         """
         # Encode that the simulation is started in the class
         self._is_started = True
-        lg.info('Run starts')
+        lg.info('Simulation run starts')
 
         loop_count = 0
         sleep_time = 0
@@ -217,7 +124,8 @@ class Simulator:
                 self._to_stop = False
                 break
 
-            self.state, self.neighbors = self._step(state=self.state, neighbors=self.neighbors, num_iterations=self.num_steps_lax)
+            # self.state = self._step(state=self.state, num_iterations=self.num_steps_lax)
+            self.state = self.step()
             loop_count += 1
 
             # Sleep for updated sleep_time seconds
@@ -230,8 +138,10 @@ class Simulator:
 
         # Encode that the simulation isn't started anymore 
         self._is_started = False
-        lg.info('Run stops')
+        lg.info('Simulation run stops')
 
+
+    # TODO : could jit this function to make it even faster
     def update_sleep_time(self, frequency, elapsed_time):
         """Compute the time we need to sleep to respect the update frequency
 
@@ -247,33 +157,109 @@ class Simulator:
         else:
             sleep_time = 0
         return sleep_time
+        
 
+    def start_recording(self, saving_name):
+        """Start the recording of the simulation
+        :param saving_name: optional name of the saving file
+        """
+        if self.recording:
+            lg.warning("You called start_recording but the simulation is already being recorded")
+        self.recording = True
+        self.records = []
+
+        # Either create a saving_dir with the given name or one with the current datetime
+        if saving_name:
+            saving_dir = f"Results/{saving_name}"
+        else:
+            current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            saving_dir = f"Results/experiment_{current_time}"
+
+        self.saving_dir = saving_dir
+        # Create a saving dir if it doesn't exist yet, TODO : Add a warning if risk of overwritting already existing content
+        os.makedirs(self.saving_dir, exist_ok=True)
+        lg.info('Saving directory %s created', self.saving_dir)
+
+
+    def record(self, data):
+        """Record the desired data during a step
+        :param data: saved data (e.g simulator.state)
+        """
+        if not self.recording:
+            lg.warning('Recording not started yet.')
+            return
+        self.records.append(data)
+
+
+    def save_records(self):
+        """Save the recorded steps in a pickle file"""
+        if not self.records:
+            lg.warning('No records to save.')
+            return
+
+        saving_path = f"{self.saving_dir}/frames.pkl"
+        with open(saving_path, 'wb') as f:
+            pickle.dump(self.records, f)
+            lg.info('Simulation frames saved in %s', saving_path)
+
+
+    def stop_recording(self):
+        """Stop the recording, save the recorded steps and reset recording information"""
+        if not self.recording:
+            lg.warning('Recording not started yet.')
+            return
+
+        self.save_records()
+        self.recording = False
+        self.records = []
+
+
+    def load(self, saving_name):
+        """Load data corresponding to saving_name 
+        :param saving_name: name used while saving the data
+        :return: loaded data
+        """
+        saving_path = f"Results/{saving_name}/frames.pkl"
+        with open(saving_path, 'rb') as f:
+            data = pickle.load(f)
+            lg.info('Simulation loaded from %s', saving_path)
+            return data
+    
+    # TODO : set the params to the correct values when a behavior is modified
     def set_state(self, nested_field, ent_idx, column_idx, value):
-        lg.info(f'set_state {nested_field} {ent_idx} {column_idx} {value}')
+        """Set the current simulation state
+
+        :param nested_field: simulation field (e.g)
+        :param ent_idx: entity idx to modify
+        :param column_idx: column idx to modify
+        :param value: value to set
+        """
+        lg.debug("\nSet state :")
+        lg.debug(f"{nested_field = }; {ent_idx = }; {column_idx = }; {value = }")
         row_idx = self.state.row_idx(nested_field[0], jnp.array(ent_idx))
         col_idx = None if column_idx is None else jnp.array(column_idx)
         change = converters.rec_set_dataclass(self.state, nested_field, row_idx, col_idx, value)
         self.state = self.state.set(**change)   
 
+        #  Update the class field if it is in the simulator state (e.g num_steps_lax, freq)
         if nested_field[0] == 'simulator_state':
             self.update_attr(nested_field[1], SimulatorState.get_type(nested_field[1]))
 
-        if nested_field == ('simulator_state', 'box_size'):
-            self.update_space(self.box_size)
+        # Check if there can be problems with nested fields that aren't tuples
+        # TODO : Update the client to ensure those fields can't be modified 
+        if nested_field[1] in ('box_size', 'neighbor_radius', 'dt'):
+            lg.warning("Impossible to change 'box size', 'dt', 'neighbor radius' during the simulation")
 
-        if nested_field in (('simulator_state', 'box_size'), ('simulator_state', 'neighbor_radius')):
-            self.update_neighbor_fn(box_size=self.box_size, neighbor_radius=self.neighbor_radius)
-
-        if nested_field in (('simulator_state', 'box_size'), ('simulator_state', 'dt'), ('simulator_state', 'to_jit')):
-            self.update_function_update()
-
-
-    # Functions to start, stop, pause
 
     def start(self):
+        """Start the simulation"""
         self.run(threaded=True)
 
     def stop(self, blocking=True):
+        """Stop the simulation
+
+        :param blocking: TODO, defaults to True
+        """
         self._to_stop = True
         if blocking:
             while self._is_started:
@@ -282,10 +268,18 @@ class Simulator:
             lg.info('now stopped')
 
     def is_started(self):
+        """Check if simulation is started
+
+        :return: True if started else False
+        """
         return self._is_started
 
     @contextmanager
     def pause(self):
+        """Pause the simulation
+
+        :yield: dummy self
+        """
         self.stop(blocking=True)
         try:
             yield self
@@ -293,61 +287,124 @@ class Simulator:
             self.run(threaded=True)
 
 
-    # Other update functions
-
+    # TODO : Update documentation
     def update_attr(self, attr, type_):
-        lg.info('update_attr')
+        """_summary_
+
+        :param attr: _description_
+        :param type_: _description_
+        """
+        lg.debug(f"\nUpdate attribute: {attr = }; {type_ = }")
         setattr(self, attr, type_(getattr(self.state.simulator_state, attr)[0]))
 
-    def update_space(self, box_size):
-        lg.info('update_space')
-        self.displacement, self.shift = space.periodic(box_size)
-
-    def update_function_update(self):
-        lg.info('update_function_update')
-        self.init_fn, self.step_fn = self.dynamics_fn(self.displacement, self.shift, self.behavior_bank)
-
-        def update_fn(_, state_and_neighbors):
-            state, neighs = state_and_neighbors
-            neighs = neighs.update(state.entity_state.position.center)
-            return (self.step_fn(state=state, neighbor=neighs, agent_neighs_idx=self.agent_neighs_idx),
-                    neighs)
-
-        if self.to_jit:
-            self.update_fn = jit(update_fn)
-        else:
-            self.update_fn = update_fn
-
-    def init_state(self, state):
-        lg.info('init_state')
-        self.state = self.init_fn(state, self.key)
-
-
-    # Neighbor functions
-
-    def update_neighbor_fn(self, box_size, neighbor_radius):
-        lg.info('update_neighbor_fn')
-        self.neighbor_fn = partition.neighbor_list(self.displacement, box_size,
-                                                   r_cutoff=neighbor_radius,
-                                                   dr_threshold=10.,
-                                                   capacity_multiplier=1.5,
-                                                   # custom_mask_function=neigh_idx_mask,
-                                                   format=partition.Sparse)
-
-    def allocate_neighbors(self, position=None):
-        lg.info('allocate_neighbors')
-        position = self.state.entity_state.position.center if position is None else position
-        self.neighbors = self.neighbor_fn.allocate(position)
-        mask = self.state.entity_state.entity_type[self.neighbors.idx[0]] == EntityType.AGENT.value
-        self.agent_neighs_idx = self.neighbors.idx[:, mask]
-        return self.neighbors
-    
-
-    # Other functions
-
-    def get_change_time(self):
-        return 0
 
     def get_state(self):
+        """Get current simulation state
+
+        :return: simulation state
+        """
         return self.state
     
+    
+    @partial(jax.jit, static_argnums=(0,))
+    def _env_to_sim_state(self, env_state, num_steps_lax, freq, use_fori_loop, jit_step):
+        """Jitted function that transform environment state (used in self.env) into a simulator state for the client-server interaction
+
+        :param env_state: env_state
+        :param num_steps_lax: num_steps_lax
+        :param freq: freq
+        :param use_fori_loop: use_fori_loop
+        :param jit_step: jit_step
+        :return: simulator state
+        """
+        simulator_state = SimulatorState(
+            # why 0 and not 2 ? Like in state types
+            idx=jnp.array([0]),
+            time=jnp.array([env_state.time]),
+            box_size=jnp.array([env_state.box_size]),
+            max_agents=jnp.array([env_state.max_agents]),
+            max_objects=jnp.array([env_state.max_objects]),
+            dt=jnp.array([env_state.dt]),
+            neighbor_radius=jnp.array([env_state.neighbor_radius]),
+            collision_alpha=jnp.array([env_state.collision_alpha]),
+            collision_eps=jnp.array([env_state.collision_eps]),
+            num_steps_lax=jnp.array([num_steps_lax]),
+            freq=jnp.array([freq]),
+            # convert bool to either 1 or 0
+            use_fori_loop=jnp.array([1*use_fori_loop]),
+            to_jit=jnp.array([1*jit_step])
+        )
+
+        sim_state = SimState(
+            agent_state=env_state.agents,
+            entity_state=env_state.entities,
+            object_state=env_state.objects,
+            simulator_state = simulator_state
+        )
+
+        return sim_state
+    
+    def env_to_sim_state(self, env_state):
+        """Transform environment state (used in self.env) into a simulator state for the client-server interactoon
+
+        :param env_state: env_state
+        :return: simulator state
+        """
+        return self._env_to_sim_state(
+            env_state,
+            self.num_steps_lax,
+            self.freq,
+            self.use_fori_loop,
+            self.jit_step
+        )
+        
+    @partial(jax.jit, static_argnums=(0,))
+    def sim_to_env_state(self, sim_state):
+        """Transform the simulator state used for client server connection into env state (used in self.env)
+
+        :param sim_state: simulator state
+        :return: environment state
+        """
+        sim = sim_state.simulator_state
+
+        env_state = EnvState(
+            time=sim.time[0],
+            ent_sub_types=self.ent_sub_types,
+            box_size=sim.box_size[0],
+            max_agents=sim.max_agents[0],
+            max_objects=sim.max_objects[0],
+            dt=sim.dt[0],
+            neighbor_radius=sim.neighbor_radius[0],
+            collision_alpha=sim.collision_alpha[0],
+            collision_eps=sim.collision_eps[0],
+            entities=sim_state.entity_state,
+            agents=sim_state.agent_state,
+            objects=sim_state.object_state
+        )
+
+        return env_state
+    
+    # Add a method to directly get env state
+    @property
+    def env_state(self):
+        return self.sim_to_env_state(self.state)
+    
+    
+if __name__ == "__main__":
+    # Test for init, run and convertion functions
+    from vivarium.environments.braitenberg.selective_sensing import SelectiveSensorsEnv, init_state
+
+    env_state = init_state()
+    env = SelectiveSensorsEnv(state=env_state)
+
+    simulator = Simulator(env=env, env_state=env_state)
+
+    num_steps = 10
+    sim_state = simulator.run(num_steps=num_steps)
+
+    env_state = simulator.sim_to_env_state(sim_state)
+    assert isinstance(env_state, EnvState)
+    sim_state = simulator.env_to_sim_state(env_state)
+
+    sim_state = simulator.run(num_steps=num_steps)
+    assert isinstance(sim_state, SimState)

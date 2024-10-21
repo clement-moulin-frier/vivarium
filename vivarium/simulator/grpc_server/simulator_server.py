@@ -16,9 +16,7 @@ from vivarium.simulator.grpc_server.converters import nve_state_to_proto
 from vivarium.simulator.grpc_server.converters import agent_state_to_proto
 from vivarium.simulator.grpc_server.converters import object_state_to_proto
 
-
 lg = logging.getLogger(__name__)
-
 Empty = simulator_pb2.google_dot_protobuf_dot_empty__pb2.Empty
 
 
@@ -72,9 +70,10 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         with self._lock:
             ent_idx = request.ent_idx
             col_idx = request.col_idx
-            # with self.simulator.pause():
-            self.simulator.set_state(request.nested_field, ent_idx, col_idx,
-                                                   proto_to_ndarray(request.value))
+            self.simulator.set_state(
+                request.nested_field, ent_idx, col_idx,
+                proto_to_ndarray(request.value)
+            )
         return Empty()
 
     def Step(self, request, context):
@@ -85,8 +84,7 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
 
 def serve(simulator):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    simulator_pb2_grpc.add_SimulatorServerServicer_to_server(
-        SimulatorServerServicer(simulator), server)
+    simulator_pb2_grpc.add_SimulatorServerServicer_to_server(SimulatorServerServicer(simulator), server)
     server.add_insecure_port('[::]:50051')
     server.start()
     server.wait_for_termination()
