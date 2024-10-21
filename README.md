@@ -2,7 +2,7 @@
 
 **Vivarium** is a project that lets you run predefined or custom multi-agent simulations, and interact with them in real time using a web interface or Jupyter notebooks.
 
-![Vivarium demo](images/vivarium.gif)
+![Vivarium demo](images/simulation.gif)
 
 See a preliminary demo of the project on [this video](https://youtu.be/dnO-wo6Ns-8).
 
@@ -65,11 +65,8 @@ Once this command will have completed, it will output a URL looking like `http:/
 
 ### Interact with it from a jupyter notebook
 
-You can also choose to control the simulator programmatically in Jupyter Notebook. We first recommend you to do first tutorial listed below ... then you can select a notebook in the [sessions]() directory and start playing with it !
+You can also choose to control the simulator programmatically in Jupyter Notebook. We first recommend you to do the first tutorials listed below. Then you can select a notebook in the [sessions](notebooks/sessions/) directory and start playing with it !
 
-### Create a custom scene
-
-We explained how to launch a simulation from a scene, but you can also define your own scene ... TODO see tutorials below
 
 ## Tutorials
 
@@ -84,20 +81,11 @@ To help you get started and explore the project, we provide a set of Jupyter not
 
 ## Development
 
-### Default scene generation
-
-If you wish to make changes to the state of the simulation and change the init functions in `vivarium/simulator/states.py`, 
-you can automatically generate a default yaml config file from the default parameters of the functions. 
-
-To do so, just run : 
-
-```bash
-python3 scripts/generate_default_config.py 
-```
 
 ### grpc
 
-grpc compilation command line (normally only needed if modifying the .proto file for communication between server and controllers, e.g. the web interface):
+The projecte uses gRPC to communicate between server and clients. If you made any changes in the .proto file, you will need to recompile the gRPC files. Here is the command line instruction to do so:
+
 
 ```bash
 python -m grpc_tools.protoc -I./vivarium/simulator/grpc_server/protos --python_out=./vivarium/simulator/grpc_server/ --pyi_out=./vivarium/simulator/grpc_server/ --grpc_python_out=./vivarium/simulator/grpc_server/ ./vivarium/simulator/grpc_server/protos/simulator.proto
@@ -110,5 +98,6 @@ If you want to test your changes locally, you can run the following command in t
 ```bash
 pytest
 ```
+
 You can add your own tests in the tests/ subdirector. Make sure that the name or your files and test functions start with "test".
 
