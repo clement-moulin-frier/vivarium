@@ -58,13 +58,14 @@ class Entity:
             setattr(self.config, k, v)
         self.user_events = {}
 
-    def attach_routine(self, routine_fn, name=None):
+    def attach_routine(self, routine_fn, name=None, interval=1):
         """Attach a routine to the entity
 
         :param routine_fn: routine_fn
         :param name: routine name, defaults to None
+        :param interval: routine execution interval, defaults to 1
         """
-        self._routines[name or routine_fn.__name__] = routine_fn
+        self._routines[name or routine_fn.__name__] = (routine_fn, interval)
 
     def detach_routine(self, name):
         """Detach a routine from the entity
@@ -78,11 +79,20 @@ class Entity:
         """
         self._routines = {}
 
-    def routine_step(self):
-        """Execute the entity's routines
+    def routine_step(self, time):
+        """Execute the entity's routines with their corresponding execution intervals
         """
-        for fn in self._routines.values():
-            fn(self)
+        to_remove = []
+        for name, (fn, interval) in self._routines.items():
+            if time % interval == 0:
+                try:
+                    fn(self)
+                except Exception as e:
+                    lg.error(f"Error while executing routine: {e}, removing routine {name}")
+                    to_remove.append(name)
+            
+            for name in to_remove:
+                del self._routines[name]
 
     def infos(self):
         """Print the entity's infos
@@ -115,11 +125,11 @@ class Agent(Entity):
 
         self.behaviors = {}
         self.active_behaviors = {}
-        self.can_eat = False
         self.eating_range = 10
         self.diet = []
         self.ate = False
         self.simulation_entities = None
+        self.logger = Logger()
         self.set_manual()
 
     def set_manual(self):
@@ -265,6 +275,29 @@ class Agent(Entity):
         val = self.ate
         self.ate = False
         return val
+    
+    def add_log(self, log_field, data):
+        """Add a log to the agent's logger (e.g robot.add_log("left_prox", left_prox_value))
+
+        :param log_field: log_field of the log
+        :param data: data logged
+        """
+        self.logger.add(log_field, data)
+
+    def get_log(self, log_field):
+        """Get the log of the agent's logger for a specific log_field
+
+        :param log_field: desired log_field
+        :return: associated log_field data
+        """
+        return self.logger.get_log(log_field)
+
+    def clear_all_logs(self):
+        """Clear all logs of the agent's logger
+
+        :return: cleared logs
+        """
+        return self.logger.clear()
 
     def infos(self, full_infos=False):
         """Print the agent's infos
@@ -289,7 +322,6 @@ class Agent(Entity):
 
         # See if we print that by default
         info_lines.append('') # add a space between other infos and eating infos atm
-        info_lines.append(f"Can eat: {self.can_eat}")
         info_lines.append(f"Diet: {self.diet}")
         info_lines.append(f"Eating range: {self.eating_range}")
         
@@ -472,7 +504,7 @@ class NotebookController(SimulatorController):
                 # execute routines
                 self.execute_simulator_routines()
                 for entity in self.all_entities:
-                    entity.routine_step()
+                    entity.routine_step(t)
                     entity.set_events()
                     if entity.etype == EntityType.AGENT:
                         entity.behave()
@@ -506,8 +538,8 @@ def eating(controller):
     :param controller: NotebookController
     """
     for agent in controller.agents:
-        # skip to next agent if the agent cannot eat or does not exist
-        if not agent.can_eat or not agent.exists:
+        # skip to next agent if the agent does not exist
+        if not agent.exists:
             continue
         for object_type in agent.diet:
             ressources_idx = [ent.idx for ent in controller.all_entities if ent.subtype == object_type]
@@ -517,3 +549,40 @@ def eating(controller):
                 if in_range[ress_idx] and controller.all_entities[ent_idx].exists:
                     controller.remove_entity(ent_idx) 
                     agent.ate = True
+
+
+# Logger class from pyvrep epuck (see if need to modify it)
+class Logger(object):
+    def __init__(self):
+        """Logger class that logs data for the agents
+        """
+        self.logs = {}
+
+    def add(self, log_field, data):
+        """Add data to the log_field of the logger
+
+        :param log_field: log_field
+        :param data: data
+        """
+        if log_field not in self.logs:
+            self.logs[log_field] = [data]
+        else:
+            self.logs[log_field].append(data)
+
+    def get_log(self, log_field):
+        """Get the log of the logger for a specific log_field
+
+        :param log_field: log_field
+        :return: data associated with the log_field
+        """
+        if log_field not in self.logs:
+            print("No data in " + log_field)
+            return []
+        else:
+            return self.logs[log_field]
+        
+    def clear(self):
+        """Clear all logs of the logger
+        """
+        del self.logs
+        self.logs = {}
