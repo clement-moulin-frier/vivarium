@@ -368,6 +368,7 @@ class NotebookController(SimulatorController):
             self.all_entities.extend(getattr(self, f'{etype.name.lower()}s'))
         self.from_stream = True
         self.configs[StateType.SIMULATOR][0].freq = -1
+        self.box_size = self.configs[StateType.SIMULATOR][0].box_size
         self.stop_apparition_flag = False
         self._is_running = False
         self._routines = {}
@@ -388,15 +389,18 @@ class NotebookController(SimulatorController):
         :param position: position, defaults to None
         """
         entity = self.all_entities[entity_idx]
-        if entity.exists:
-            lg.warning(f"Entity {entity_idx} already exists")
-            return
-        if position is not None:
-            # TODO : rounding doesn't prevent from error 
-            entity.x_position = np.round(position[0], N_DIGITS)
-            entity.y_position = np.round(position[1], N_DIGITS)
-        entity.exists = True
-        lg.info(f"Entity {entity_idx} spawned at {entity.x_position, entity.y_position}")
+        try:
+            if entity.exists:
+                lg.warning(f"Entity {entity_idx} already exists")
+                return
+            if position is not None:
+                # TODO : rounding doesn't prevent from error 
+                entity.x_position = float(position[0])
+                entity.y_position = float(position[1])
+            entity.exists = True
+            lg.info(f"Entity {entity_idx} spawned at {entity.x_position, entity.y_position}")
+        except Exception as e:
+            lg.error(f"Error while spawning entity {entity_idx}: {e}")
 
     def remove_entity(self, entity_idx):
         """Remove an entity
@@ -433,13 +437,10 @@ class NotebookController(SimulatorController):
             non_existing_ent_list = [ent.idx for ent in self.all_entities if not ent.exists and ent.subtype == entity_type]
             lg.debug(f"{non_existing_ent_list = }")
             if non_existing_ent_list:
-                # there are entities of this type that are not spawned
-                idx = np.random.choice(non_existing_ent_list)
+                ent_idx = np.random.choice(non_existing_ent_list)
                 x = np.random.uniform(position_range[0][0], position_range[0][1], 1)
                 y = np.random.uniform(position_range[1][0], position_range[1][1], 1)
-                # self.spawn_entity(idx, position=(x, y))
-                # TODO : at the moment don't set random positions because hard problem to debug
-                self.spawn_entity(idx, position=None)
+                self.spawn_entity(ent_idx, position=(x, y))
             else:
                 lg.info(f'All entities of type {entity_type} are spawned')
             time.sleep(period)
