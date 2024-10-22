@@ -457,6 +457,14 @@ class NotebookController(SimulatorController):
         thread = threading.Thread(target=self.periodic_entity_apparition, args=(period, entity_type, position_range))
         thread.start()
 
+    def attach_routine(self, routine_fn, name=None):
+        """Attach a routine to the simulator
+
+        :param routine_fn: routine_fn
+        :param name: routine name, defaults to None
+        """
+        self._routines[name or routine_fn.__name__] = routine_fn
+
     # TODO : fix the hardcoded ressources id --> need the entities subtypes from server
     def start_ressources_apparition(self, period=5, position_range=None):
         """Start the ressources apparition process
@@ -467,7 +475,9 @@ class NotebookController(SimulatorController):
         ressources_id = 1
         self.start_entity_apparition(period, entity_type=ressources_id, position_range=position_range)
         # attach the eating ressources routine
-        self._routines[eating.__name__] = eating
+        # TODO : check if this works : 
+        # self._routines[eating.__name__] = eating
+        self.attach_routine(eating)
                 
     def stop_entity_apparition(self):
         """Stop any entities apparition process
@@ -544,11 +554,13 @@ def eating(controller):
         if not agent.exists:
             continue
         for entity_type in agent.diet:
-            eatable_entities_idx = [ent.idx for ent in controller.all_entities if ent.subtype == entity_type]
+            # get the idx of entities that are eatable by the agent (by precaution remove the agent itself)
+            eatable_entities_idx = [ent.idx for ent in controller.all_entities if ent.subtype == entity_type and ent.idx != agent.idx]
             distances = agent.config.proximity_map_dist[eatable_entities_idx]
             in_range = distances < agent.eating_range
-            for ress_idx, ent_idx in enumerate(eatable_entities_idx):
-                if in_range[ress_idx] and controller.all_entities[ent_idx].exists:
+            # arr_idx is the index of the in_range array
+            for arr_idx, ent_idx in enumerate(eatable_entities_idx):
+                if in_range[arr_idx] and controller.all_entities[ent_idx].exists:
                     controller.remove_entity(ent_idx) 
                     agent.ate = True
 

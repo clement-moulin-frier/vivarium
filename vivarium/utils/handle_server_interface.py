@@ -42,6 +42,8 @@ def start_server_and_interface(scene_name: str):
     def start_interface_process():
         subprocess.run(["panel", "serve", interface_script])
 
+    time.sleep(2)
+
     # start the interface 
     print("STARTING INTERFACE")
     interface_process = multiprocessing.Process(target=start_interface_process)
