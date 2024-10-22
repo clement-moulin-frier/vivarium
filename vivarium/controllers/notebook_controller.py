@@ -58,6 +58,7 @@ class Entity:
             setattr(self.config, k, v)
         self.user_events = {}
 
+    # TODO : create a routine class
     def attach_routine(self, routine_fn, name=None, interval=1):
         """Attach a routine to the entity
 
@@ -457,6 +458,7 @@ class NotebookController(SimulatorController):
         thread = threading.Thread(target=self.periodic_entity_apparition, args=(period, entity_type, position_range))
         thread.start()
 
+    # TODO : prevent redundancy with the definition of attach and detach routine
     def attach_routine(self, routine_fn, name=None):
         """Attach a routine to the simulator
 
@@ -464,6 +466,13 @@ class NotebookController(SimulatorController):
         :param name: routine name, defaults to None
         """
         self._routines[name or routine_fn.__name__] = routine_fn
+
+    def detach_routine(self, name):
+        """Detach a routine from the entity
+
+        :param name: routine name
+        """
+        del self._routines[name]
 
     # TODO : fix the hardcoded ressources id --> need the entities subtypes from server
     def start_ressources_apparition(self, period=5, position_range=None):
@@ -565,7 +574,7 @@ def eating(controller):
                     agent.ate = True
 
 
-# Logger class from pyvrep epuck (see if need to modify it)
+# TODO : Add this in a helper file
 class Logger(object):
     def __init__(self):
         """Logger class that logs data for the agents
