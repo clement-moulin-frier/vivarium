@@ -83,6 +83,7 @@ class Entity:
         """Execute the entity's routines with their corresponding execution intervals
         """
         to_remove = []
+        # iterate over the routines and check if they work
         for name, (fn, interval) in self._routines.items():
             if time % interval == 0:
                 try:
@@ -90,9 +91,10 @@ class Entity:
                 except Exception as e:
                     lg.error(f"Error while executing routine: {e}, removing routine {name}")
                     to_remove.append(name)
-            
-            for name in to_remove:
-                del self._routines[name]
+        
+        # remove all problematic routines at the end
+        for name in to_remove:
+            del self._routines[name]
 
     def infos(self):
         """Print the entity's infos
@@ -235,11 +237,9 @@ class Agent(Entity):
         if len(self.behaviors) == 0:
             print("No behaviors attached")
         else:
-            print(f"Available behaviors: {list(self.behaviors.keys())}")
-            if len(self.active_behaviors) == 0:
-                print("No active behaviors")
-            else:
-                print(f"active behaviors: {list(self.active_behaviors.keys())}")
+            available_behaviors = list(self.behaviors.keys())
+            active_behaviors = list(self.active_behaviors.keys())
+            print(f"Available behaviors: {available_behaviors}, Active behaviors: {active_behaviors if active_behaviors else 'No active behaviors'}")
 
     def behave(self):
         """Make the agent behave according to its active behaviors
@@ -399,6 +399,7 @@ class NotebookController(SimulatorController):
                 entity.y_position = float(position[1])
             entity.exists = True
             lg.info(f"Entity {entity_idx} spawned at {entity.x_position, entity.y_position}")
+            return entity
         except Exception as e:
             lg.error(f"Error while spawning entity {entity_idx}: {e}")
 
@@ -542,11 +543,11 @@ def eating(controller):
         # skip to next agent if the agent does not exist
         if not agent.exists:
             continue
-        for object_type in agent.diet:
-            ressources_idx = [ent.idx for ent in controller.all_entities if ent.subtype == object_type]
-            distances = agent.config.proximity_map_dist[ressources_idx]
+        for entity_type in agent.diet:
+            eatable_entities_idx = [ent.idx for ent in controller.all_entities if ent.subtype == entity_type]
+            distances = agent.config.proximity_map_dist[eatable_entities_idx]
             in_range = distances < agent.eating_range
-            for ress_idx, ent_idx in enumerate(ressources_idx):
+            for ress_idx, ent_idx in enumerate(eatable_entities_idx):
                 if in_range[ress_idx] and controller.all_entities[ent_idx].exists:
                     controller.remove_entity(ent_idx) 
                     agent.ate = True
