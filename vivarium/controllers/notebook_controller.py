@@ -7,6 +7,7 @@ import logging
 
 from vivarium.environments.braitenberg.simple import Behaviors
 from vivarium.controllers.simulator_controller import SimulatorController
+from vivarium.controllers.notebook_controller_utils import Logger, RoutineHandler
 from vivarium.simulator.simulator_states import StateType, EntityType
 
 lg = logging.getLogger(__name__)
@@ -16,15 +17,13 @@ if logging.root.handlers:
 else:
     lg.setLevel(logging.WARNING)
 
-N_DIGITS = 3
-
 
 class Entity:
     """Entity class that represents an entity in the simulation
     """
     def __init__(self, config):
         self.config = config
-        self._routines = {}
+        self.routine_handler = RoutineHandler()
         self.user_events = {}
 
     def __getattr__(self, item):
@@ -66,36 +65,25 @@ class Entity:
         :param name: routine name, defaults to None
         :param interval: routine execution interval, defaults to 1
         """
-        self._routines[name or routine_fn.__name__] = (routine_fn, interval)
+        self.routine_handler.attach_routine(routine_fn, name, interval)
 
     def detach_routine(self, name):
         """Detach a routine from the entity
 
         :param name: routine name
         """
-        del self._routines[name]
+        self.routine_handler.detach_routine(name)
 
     def detach_all_routines(self):
         """Detach all routines from the entity
         """
-        self._routines = {}
+        self.routine_handler.detach_all_routines()
 
     def routine_step(self, time):
         """Execute the entity's routines with their corresponding execution intervals
         """
-        to_remove = []
-        # iterate over the routines and check if they work
-        for name, (fn, interval) in self._routines.items():
-            if time % interval == 0:
-                try:
-                    fn(self)
-                except Exception as e:
-                    lg.error(f"Error while executing routine: {e}, removing routine {name}")
-                    to_remove.append(name)
-        
-        # remove all problematic routines at the end
-        for name in to_remove:
-            del self._routines[name]
+        # Give self object as parameter to the routine function so it executes functions on the entity
+        self.routine_handler.routine_step(self, time)
 
     def infos(self):
         """Print the entity's infos
@@ -372,7 +360,7 @@ class NotebookController(SimulatorController):
         self.box_size = self.configs[StateType.SIMULATOR][0].box_size
         self.stop_apparition_flag = False
         self._is_running = False
-        self._routines = {}
+        self.routine_handler = RoutineHandler()
         self.set_all_user_events()
         self.update_agents_entities_list()
         # TODO :associate the entities subtypes ids with their actual names
@@ -458,22 +446,6 @@ class NotebookController(SimulatorController):
         thread = threading.Thread(target=self.periodic_entity_apparition, args=(period, entity_type, position_range))
         thread.start()
 
-    # TODO : prevent redundancy with the definition of attach and detach routine
-    def attach_routine(self, routine_fn, name=None):
-        """Attach a routine to the simulator
-
-        :param routine_fn: routine_fn
-        :param name: routine name, defaults to None
-        """
-        self._routines[name or routine_fn.__name__] = routine_fn
-
-    def detach_routine(self, name):
-        """Detach a routine from the entity
-
-        :param name: routine name
-        """
-        del self._routines[name]
-
     # TODO : fix the hardcoded ressources id --> need the entities subtypes from server
     def start_ressources_apparition(self, period=5, position_range=None):
         """Start the ressources apparition process
@@ -484,8 +456,6 @@ class NotebookController(SimulatorController):
         ressources_id = 1
         self.start_entity_apparition(period, entity_type=ressources_id, position_range=position_range)
         # attach the eating ressources routine
-        # TODO : check if this works : 
-        # self._routines[eating.__name__] = eating
         self.attach_routine(eating)
                 
     def stop_entity_apparition(self):
@@ -523,7 +493,7 @@ class NotebookController(SimulatorController):
         while t < num_steps and self._is_running:
             with self.batch_set_state():
                 # execute routines
-                self.execute_simulator_routines()
+                self.controller_routine_step(t)
                 for entity in self.all_entities:
                     entity.routine_step(t)
                     entity.set_events()
@@ -546,11 +516,27 @@ class NotebookController(SimulatorController):
         """
         time.sleep(seconds)
 
-    def execute_simulator_routines(self):
+    def attach_routine(self, routine_fn, name=None):
+        """Attach a routine to the simulator
+
+        :param routine_fn: routine_fn
+        :param name: routine name, defaults to None
+        """
+        # self._routines[name or routine_fn.__name__] = routine_fn
+        self.routine_handler.attach_routine(routine_fn, name)
+
+    def detach_routine(self, name):
+        """Detach a routine from the entity
+
+        :param name: routine name
+        """
+        # del self._routines[name]
+        self.routine_handler.detach_routine(name)
+
+    def controller_routine_step(self, time):
         """Execute the simulator routines
         """
-        for fn in self._routines.values():
-            fn(self)
+        self.routine_handler.routine_step(self, time)
 
 
 def eating(controller):
@@ -573,39 +559,3 @@ def eating(controller):
                     controller.remove_entity(ent_idx) 
                     agent.ate = True
 
-
-# TODO : Add this in a helper file
-class Logger(object):
-    def __init__(self):
-        """Logger class that logs data for the agents
-        """
-        self.logs = {}
-
-    def add(self, log_field, data):
-        """Add data to the log_field of the logger
-
-        :param log_field: log_field
-        :param data: data
-        """
-        if log_field not in self.logs:
-            self.logs[log_field] = [data]
-        else:
-            self.logs[log_field].append(data)
-
-    def get_log(self, log_field):
-        """Get the log of the logger for a specific log_field
-
-        :param log_field: log_field
-        :return: data associated with the log_field
-        """
-        if log_field not in self.logs:
-            print("No data in " + log_field)
-            return []
-        else:
-            return self.logs[log_field]
-        
-    def clear(self):
-        """Clear all logs of the logger
-        """
-        del self.logs
-        self.logs = {}
