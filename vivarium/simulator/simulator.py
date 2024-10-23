@@ -13,12 +13,14 @@ import jax
 import jax.numpy as jnp
 
 from vivarium.controllers import converters
+from vivarium.utils.scene_configs import load_scene_config
 from vivarium.simulator.simulator_states import SimState, SimulatorState
+from vivarium.environments.braitenberg.selective_sensing import SelectiveSensorsEnv, init_state
 from vivarium.environments.braitenberg.selective_sensing import State as EnvState
 
 lg = logging.getLogger(__name__)
 
-# TODO : Remove use fori_loop and to_jit as class attributes
+
 class Simulator:
     def __init__(
             self, 
@@ -31,6 +33,7 @@ class Simulator:
             seed=0
         ):
         self.env = env
+        assert isinstance(self.env, SelectiveSensorsEnv), "You have to use an environment with selective sensors within the simulator"
         assert self.env.occlusion, "You have to use an environment with occlusion sensors within the simulator"
 
         # First initialize fields in the class because they will be used to define the simulator state below
@@ -58,6 +61,38 @@ class Simulator:
         lg.info("Simulator initialized")
 
 
+    def load_state(self, state, env):
+        """Load a state in the simulator
+
+        :param state: state to load
+        """
+        lg.info("Loading a new state")
+
+        self.__init__(
+            env=env,
+            env_state=state,
+            num_steps_lax=self.num_steps_lax,
+            update_freq=self.freq,
+            jit_step=self.jit_step,
+            use_fori_loop=self.use_fori_loop,
+        )
+
+
+    def load_scene(self, scene_name):
+        """Load a scene in the simulator
+
+        :param scene_name: scene to load
+        """
+        lg.info("Loading a new scene\n")
+
+        # load a scene and init the corresponding state
+        scene_config = load_scene_config(scene_name=scene_name)
+        state = init_state(**scene_config)
+        env = SelectiveSensorsEnv(state=state)
+        
+        self.load_state(state, env)
+
+
     def _step(self, state, num_updates):
         """Do num_updates jitted steps in the simulation. This is done by converting state into environment state, and convert it back to simulation state during return
 
@@ -68,7 +103,7 @@ class Simulator:
         # convert the sim_state into env state to call env.step()
         new_env_state = self.env.step(state=self.sim_to_env_state(state), num_updates=num_updates)
 
-        # TODO : Remove this weird thing and just save the env state --> Because it is with this one that we can plot state in server side
+        # record the env state because it is the one we can plot and use without client-server interaction
         if self.recording:
             self.record(new_env_state)
 
@@ -99,7 +134,6 @@ class Simulator:
             threading.Thread(target=_run).start()
         else:
             self._run(num_steps=num_steps, save=save, saving_name=saving_name)
-        return self.state
 
 
     def _run(self, num_steps, save, saving_name):
@@ -141,7 +175,6 @@ class Simulator:
         lg.info('Simulation run stops')
 
 
-    # TODO : could jit this function to make it even faster
     def update_sleep_time(self, frequency, elapsed_time):
         """Compute the time we need to sleep to respect the update frequency
 
@@ -211,7 +244,7 @@ class Simulator:
 
         self.save_records()
         self.recording = False
-        self.records = []
+        # self.records = []
 
 
     def load(self, saving_name):
@@ -225,6 +258,7 @@ class Simulator:
             lg.info('Simulation loaded from %s', saving_path)
             return data
     
+
     # TODO : set the params to the correct values when a behavior is modified
     def set_state(self, nested_field, ent_idx, column_idx, value):
         """Set the current simulation state
@@ -255,6 +289,7 @@ class Simulator:
         """Start the simulation"""
         self.run(threaded=True)
 
+
     def stop(self, blocking=True):
         """Stop the simulation
 
@@ -267,12 +302,14 @@ class Simulator:
                 lg.info('still started')
             lg.info('now stopped')
 
+
     def is_started(self):
         """Check if simulation is started
 
         :return: True if started else False
         """
         return self._is_started
+
 
     @contextmanager
     def pause(self):
@@ -344,6 +381,7 @@ class Simulator:
 
         return sim_state
     
+
     def env_to_sim_state(self, env_state):
         """Transform environment state (used in self.env) into a simulator state for the client-server interactoon
 
@@ -358,6 +396,7 @@ class Simulator:
             self.jit_step
         )
         
+
     @partial(jax.jit, static_argnums=(0,))
     def sim_to_env_state(self, sim_state):
         """Transform the simulator state used for client server connection into env state (used in self.env)
@@ -384,27 +423,10 @@ class Simulator:
 
         return env_state
     
-    # Add a method to directly get env state
+
     @property
     def env_state(self):
         return self.sim_to_env_state(self.state)
     
-    
-if __name__ == "__main__":
-    # Test for init, run and convertion functions
-    from vivarium.environments.braitenberg.selective_sensing import SelectiveSensorsEnv, init_state
 
-    env_state = init_state()
-    env = SelectiveSensorsEnv(state=env_state)
 
-    simulator = Simulator(env=env, env_state=env_state)
-
-    num_steps = 10
-    sim_state = simulator.run(num_steps=num_steps)
-
-    env_state = simulator.sim_to_env_state(sim_state)
-    assert isinstance(env_state, EnvState)
-    sim_state = simulator.env_to_sim_state(env_state)
-
-    sim_state = simulator.run(num_steps=num_steps)
-    assert isinstance(sim_state, SimState)

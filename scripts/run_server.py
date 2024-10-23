@@ -11,25 +11,8 @@ from vivarium.simulator.grpc_server.simulator_server import serve
 lg = logging.getLogger(__name__)
 
 # Define parameters of the simulator
-update_freq = 60
-num_steps_lax = 6
-
-def start_simulator(scene_config: DictConfig) -> None:
-    # init state and env
-    state = init_state(**scene_config)
-    env = SelectiveSensorsEnv(state=state)
-
-    # init simulator
-    simulator = Simulator(
-        env_state=state, 
-        env=env, 
-        update_freq=update_freq, 
-        num_steps_lax=num_steps_lax
-    )
-
-    # host the simulation on a server
-    lg.info('Simulator server started')
-    serve(simulator)
+UPDATE_FREQ = 60
+NUM_STEPS_LAX = 6    
 
 @hydra.main(version_base=None, config_path="../conf", config_name="config")
 def main(cfg: DictConfig = None) -> None:
@@ -38,9 +21,23 @@ def main(cfg: DictConfig = None) -> None:
     # retrieve args from config
     hydra_cfg = HydraConfig.get()
     lg.info(f"Scene running: {OmegaConf.to_container(hydra_cfg.runtime.choices)['scene']}")
-    args = OmegaConf.merge(cfg.default, cfg.scene)
-    # start the simulator
-    start_simulator(args)
+    scene_config = OmegaConf.merge(cfg.default, cfg.scene)
+
+    # init state and environment
+    state = init_state(**scene_config)
+    env = SelectiveSensorsEnv(state=state)
+
+    # init the simulator
+    simulator = Simulator(
+        env_state=state, 
+        env=env, 
+        update_freq=UPDATE_FREQ, 
+        num_steps_lax=NUM_STEPS_LAX
+    )
+
+    # start and host the simulator on a server
+    serve(simulator)
+    lg.info('Simulator server started')
 
 if __name__ == '__main__':
     main()
