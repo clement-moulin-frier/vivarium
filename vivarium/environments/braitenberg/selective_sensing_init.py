@@ -8,22 +8,12 @@ import matplotlib.colors as mcolors
 from jax import random
 from jax_md.rigid_body import RigidBody
 
-from omegaconf import OmegaConf
-from hydra import initialize, compose
-
 from vivarium.environments.braitenberg.simple import Behaviors, behavior_to_params
+from vivarium.utils.scene_configs import load_default_config
 from vivarium.environments.braitenberg.selective_sensing_classes import State, AgentState, ObjectState, EntityState, EntityType
 
 
-# load default arguments of functions from Hydra config files
-def load_default_config():
-    with initialize(config_path="../../../conf", version_base=None):
-        cfg = compose(config_name="config")
-        args = OmegaConf.merge(cfg.default, cfg.scene)
-    return args
-
-config = load_default_config()
-
+CONFIG = load_default_config()
 
 ### Helper functions to generate elements of sub states
 
@@ -148,19 +138,19 @@ def init_entities(
     max_agents,
     max_objects,
     ent_sub_types,
-    n_dims=config.n_dims,
-    box_size=config.box_size,
+    n_dims=CONFIG.n_dims,
+    box_size=CONFIG.box_size,
     existing_agents=None,
     existing_objects=None,
-    mass_center=config.mass_center,
-    mass_orientation=config.mass_orientation,
-    diameter=config.diameter,
-    friction=config.friction,
+    mass_center=CONFIG.mass_center,
+    mass_orientation=CONFIG.mass_orientation,
+    diameter=CONFIG.diameter,
+    friction=CONFIG.friction,
     agents_pos=None,
     objects_pos=None,
-    key_agents_pos=random.PRNGKey(config.seed),
-    key_objects_pos=random.PRNGKey(config.seed+1),
-    key_orientations=random.PRNGKey(config.seed+2)
+    key_agents_pos=random.PRNGKey(CONFIG.seed),
+    key_objects_pos=random.PRNGKey(CONFIG.seed+1),
+    key_orientations=random.PRNGKey(CONFIG.seed+2)
 ):
     """Init the sub entities state (field of state)"""
     n_entities = max_agents + max_objects # we store the entities data in jax arrays of length max_agents + max_objects 
@@ -238,12 +228,12 @@ def init_agents(
     sensed,
     behaviors,
     agents_color,
-    wheel_diameter=config.wheel_diameter,
-    speed_mul=config.speed_mul,
-    max_speed=config.max_speed,
-    theta_mul=config.theta_mul,
-    prox_dist_max=config.prox_dist_max,
-    prox_cos_min=config.prox_cos_min
+    wheel_diameter=CONFIG.wheel_diameter,
+    speed_mul=CONFIG.speed_mul,
+    max_speed=CONFIG.max_speed,
+    theta_mul=CONFIG.theta_mul,
+    prox_dist_max=CONFIG.prox_dist_max,
+    prox_cos_min=CONFIG.prox_cos_min
 ):
     """Init the sub agents state (field of state)"""
     # transform prox_dist_max into a jnp array
@@ -305,11 +295,11 @@ def init_complete_state(
     max_agents,
     max_objects,
     total_ent_sub_types,
-    box_size=config.box_size,
-    neighbor_radius=config.neighbor_radius,
-    collision_alpha=config.collision_alpha,
-    collision_eps=config.collision_eps,
-    dt=config.dt,
+    box_size=CONFIG.box_size,
+    neighbor_radius=CONFIG.neighbor_radius,
+    collision_alpha=CONFIG.collision_alpha,
+    collision_eps=CONFIG.collision_eps,
+    dt=CONFIG.dt,
 ):
     """Init the complete state"""
     return  State(
@@ -334,32 +324,32 @@ def process_entity(data, box_size):
     color = _string_to_rgb_array(color_str)
     positions = get_positions(data.get('positions'), n, box_size)
     exists = get_exists(data.get('existing'), n)
-    diameter = data.get('diameter', config.diameter) # add default diamter if not provided
+    diameter = data.get('diameter', CONFIG.diameter) # add default diamter if not provided
     diameter_lst = [diameter] * n
     return {'n': n, 'color': color}, positions, exists, diameter_lst
 
 
 def init_state(
-    entities_data=config.entities_data,
-    box_size=config.box_size,
-    dt=config.dt,
-    neighbor_radius=config.neighbor_radius,
-    collision_alpha=config.collision_alpha,
-    collision_eps=config.collision_eps,
-    n_dims=config.n_dims,
-    seed=config.seed,
-    diameter=config.diameter,
-    friction=config.friction,
-    mass_center=config.mass_center,
-    mass_orientation=config.mass_orientation,
+    entities_data=CONFIG.entities_data,
+    box_size=CONFIG.box_size,
+    dt=CONFIG.dt,
+    neighbor_radius=CONFIG.neighbor_radius,
+    collision_alpha=CONFIG.collision_alpha,
+    collision_eps=CONFIG.collision_eps,
+    n_dims=CONFIG.n_dims,
+    seed=CONFIG.seed,
+    diameter=CONFIG.diameter,
+    friction=CONFIG.friction,
+    mass_center=CONFIG.mass_center,
+    mass_orientation=CONFIG.mass_orientation,
     existing_agents=None,
     existing_objects=None,
-    wheel_diameter=config.wheel_diameter,
-    speed_mul=config.speed_mul,
-    max_speed=config.max_speed,
-    theta_mul=config.theta_mul,
-    prox_dist_max=config.prox_dist_max,
-    prox_cos_min=config.prox_cos_min,
+    wheel_diameter=CONFIG.wheel_diameter,
+    speed_mul=CONFIG.speed_mul,
+    max_speed=CONFIG.max_speed,
+    theta_mul=CONFIG.theta_mul,
+    prox_dist_max=CONFIG.prox_dist_max,
+    prox_cos_min=CONFIG.prox_cos_min,
 ) -> State:
     """ Init the jax state of the simulation from classical python / yaml scene arguments """
     key = random.PRNGKey(seed)
