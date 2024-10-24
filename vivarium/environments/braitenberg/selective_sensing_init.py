@@ -302,6 +302,7 @@ def init_complete_state(
     dt=CONFIG.dt,
 ):
     """Init the complete state"""
+    neighbor_radius = box_size if neighbor_radius == "None" else neighbor_radius
     return  State(
         time=0,
         dt=dt,
