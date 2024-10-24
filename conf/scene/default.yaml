@@ -6,7 +6,7 @@ diameter: 5.0
 friction: 0.1
 mass_center: 1.0
 mass_orientation: 0.125
-neighbor_radius: 100  # Same as box_size
+neighbor_radius: None  # Same as box_size by default
 collision_alpha: 0.5
 collision_eps: 0.1
 dt: 0.1
