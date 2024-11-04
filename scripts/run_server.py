@@ -20,7 +20,8 @@ def main(cfg: DictConfig = None) -> None:
 
     # retrieve args from config
     hydra_cfg = HydraConfig.get()
-    lg.info(f"Scene running: {OmegaConf.to_container(hydra_cfg.runtime.choices)['scene']}")
+    scene_name = OmegaConf.to_container(hydra_cfg.runtime.choices)['scene']
+    lg.info(f"Scene running: {scene_name}")
     scene_config = OmegaConf.merge(cfg.default, cfg.scene)
 
     # init state and environment
@@ -31,6 +32,7 @@ def main(cfg: DictConfig = None) -> None:
     simulator = Simulator(
         env_state=state, 
         env=env, 
+        scene_name=scene_name,
         update_freq=UPDATE_FREQ, 
         num_steps_lax=NUM_STEPS_LAX
     )

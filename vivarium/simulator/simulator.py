@@ -26,6 +26,7 @@ class Simulator:
             self, 
             env, 
             env_state, 
+            scene_name="scene",
             num_steps_lax=4, 
             update_freq=-1, 
             jit_step=True, 
@@ -36,13 +37,17 @@ class Simulator:
         assert isinstance(self.env, SelectiveSensorsEnv), "You have to use an environment with selective sensors within the simulator"
         assert self.env.occlusion, "You have to use an environment with occlusion sensors within the simulator"
 
+        self.scene_name = scene_name
+
         # First initialize fields in the class because they will be used to define the simulator state below
         self.key = jax.random.PRNGKey(seed)
         self.num_steps_lax = num_steps_lax
         self.freq = update_freq
         self.jit_step = jit_step
         self.use_fori_loop = use_fori_loop
-        self.ent_sub_types = env_state.ent_sub_types # information about entities sub types in a dictionary, can't be given client side at the moment
+        self.ent_sub_types_and_num = env_state.ent_sub_types # information about entities sub types in a dictionary
+        self.ent_sub_types = self.process_ent_sub_types(self.ent_sub_types_and_num)
+        print(f"{self.ent_sub_types = }")
 
         # transform the env state (only used in env class) into a simulator state with a simulator state (used only in client server communication)
         self.state = self.env_to_sim_state(env_state)
@@ -129,7 +134,7 @@ class Simulator:
             raise ValueError("Simulator is already started")
         # Else run it either in a thread or not
         if threaded:
-            # Set the num_loops attribute with a partial func to launch _run in a thread
+            # Set the _run attribute with a partial function to launch it in a thread
             _run = partial(self._run, num_steps=num_steps, save=save, saving_name=saving_name)
             threading.Thread(target=_run).start()
         else:
@@ -342,6 +347,17 @@ class Simulator:
         """
         return self.state
     
+
+    def process_ent_sub_types(self, ent_sub_types_and_num):
+        """Process the entity sub types and number to remove number of entities, and add idx as keys, 
+        from {label: (idx, num)} to {idx: label}
+
+        :param ent_sub_types_and_num: dictionary of entity sub types and number of entities
+        :return: processed dictionary
+        """
+        print(f"{ent_sub_types_and_num = }")
+        return {int(idx): label for label, (idx, _)  in ent_sub_types_and_num.items()}
+    
     
     @partial(jax.jit, static_argnums=(0,))
     def _env_to_sim_state(self, env_state, num_steps_lax, freq, use_fori_loop, jit_step):
@@ -408,7 +424,7 @@ class Simulator:
 
         env_state = EnvState(
             time=sim.time[0],
-            ent_sub_types=self.ent_sub_types,
+            ent_sub_types=self.ent_sub_types_and_num,
             box_size=sim.box_size[0],
             max_agents=sim.max_agents[0],
             max_objects=sim.max_objects[0],
