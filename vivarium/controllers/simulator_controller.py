@@ -1,6 +1,7 @@
-import param
 import logging
 from contextlib import contextmanager
+
+import param
 
 from vivarium.simulator.grpc_server.simulator_client import SimulatorGRPCClient
 from vivarium.controllers.config import SimulatorConfig
@@ -30,6 +31,8 @@ class SimulatorController(param.Parameterized):
         self.pull_all_data()
         self.client.name = self.name
         self._in_batch = False
+        self.scene_name = self.client.scene_name
+        self.subtypes_labels = self.client.subtypes_labels
 
     def watch_configs(self):
         watchers = {etype: [config.param.watch(self.push_state, config.param_names(), onlychanged=True) for config in configs] for etype, configs in self.configs.items()}
