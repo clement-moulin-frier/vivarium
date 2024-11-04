@@ -7,6 +7,8 @@ import logging
 
 lg = logging.getLogger(__name__)
 
+SERVER_PROCESS_NAME = "scripts/run_server.py"
+INTERFACE_PROCESS_NAME = "scripts/run_interface.py"
 
 # TODO : Later remove print statements and add logging instead
 def get_process_pid(process_name: str):
@@ -26,8 +28,8 @@ def start_server_and_interface(scene_name: str):
     # first ensure no interface or server is running
     stop_server_and_interface()
     project_root = os.path.abspath(os.path.join(os.getcwd(), "../../"))
-    server_script = os.path.join(project_root, "scripts/run_server.py")
-    interface_script = os.path.join(project_root, "scripts/run_interface.py")
+    server_script = os.path.join(project_root, SERVER_PROCESS_NAME)
+    interface_script = os.path.join(project_root, INTERFACE_PROCESS_NAME)
 
     def start_server_process():
         subprocess.run(["python3", server_script, f"scene={scene_name}"])
@@ -51,16 +53,16 @@ def start_server_and_interface(scene_name: str):
 
 def stop_server_and_interface():
     stopped = False
-    interface_process_name = "vivarium/scripts/run_interface.py"
-    interface_pid = get_process_pid(interface_process_name)
+    # interface_process_name = "vivarium/scripts/run_interface.py"
+    interface_pid = get_process_pid(INTERFACE_PROCESS_NAME)
     if interface_pid is not None:
         kill_process(interface_pid)
         stopped = True
     else: 
         lg.info("Interface process not found")
 
-    server_process_name = "vivarium/scripts/run_server.py"
-    server_pid = get_process_pid(server_process_name)
+    # server_process_name = "vivarium/scripts/run_server.py"
+    server_pid = get_process_pid(SERVER_PROCESS_NAME)
     if server_pid is not None:
         kill_process(server_pid)
         stopped = True
