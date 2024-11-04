@@ -57,7 +57,6 @@ class Entity:
             setattr(self.config, k, v)
         self.user_events = {}
 
-    # TODO : create a routine class
     def attach_routine(self, routine_fn, name=None, interval=1):
         """Attach a routine to the entity
 
@@ -95,8 +94,9 @@ class Entity:
         info_lines = []
         info_lines.append("Entity Overview:")
         info_lines.append(f"{'-' * 20}")
-        info_lines.append(f"Entity Type: {self.etype.name}")
-        info_lines.append(f"Entity Idx: {self.idx}")
+        info_lines.append(f"Type: {self.etype.name}")
+        info_lines.append(f"Subtype: {self.subtype_label}")
+        info_lines.append(f"Idx: {self.idx}")
 
         # Position
         info_lines.append(f"Position: x={dict_infos['x_position']:.2f}, y={dict_infos['y_position']:.2f}")
@@ -132,11 +132,14 @@ class Agent(Entity):
     def sensors(self, sensed_entities=None):
         """Return the sensors values of the agent
 
-        :param sensed_entities: sensed_entities of the sensors, defaults to None
+        :param sensed_entities: sensed_entities of the sensors under the form of strings, defaults to None
         :return: sensors values
         """
         left, right = self.config.left_prox, self.config.right_prox
         if sensed_entities is not None:
+            # transform the strings of sensed entities into ints (this fn can surely be optimized)
+            assert all(ent_subtype in self.valid_subtypes for ent_subtype in sensed_entities), f"Please specify valid sensed entities among {self.valid_subtypes}"
+            sensed_entities = [self.subtype_label_to_idx[label] for label in sensed_entities]
             sensed_type_left, sensed_type_right = self.prox_sensed_ent_type
             left = left if sensed_type_left in sensed_entities else 0
             right = right if sensed_type_right in sensed_entities else 0
@@ -161,10 +164,12 @@ class Agent(Entity):
         :return: sensed attributes
         """
         left_ent, right_ent = self.sensed_entities()
+        # get the sensed attribute of the entities with a getattr, specify a default value if the attribute is not found
         return (
             getattr(left_ent, sensed_attribute, default_value), 
             getattr(right_ent, sensed_attribute, default_value)
         )
+    
     def attach_behavior(self, behavior_fn, name=None, weight=1.):
         """Attach a behavior to the agent with a given weight
 
@@ -355,21 +360,44 @@ class NotebookController(SimulatorController):
         for etype in list(EntityType):
             setattr(self, f'{etype.name.lower()}s', [etype_to_class[etype](c) for c in self.configs[etype.to_state_type()]])
             self.all_entities.extend(getattr(self, f'{etype.name.lower()}s'))
-        self.from_stream = True
-        self.configs[StateType.SIMULATOR][0].freq = -1
-        self.box_size = self.configs[StateType.SIMULATOR][0].box_size
-        self.stop_apparition_flag = False
-        self._is_running = False
-        self.routine_handler = RoutineHandler()
-        self.set_all_user_events()
-        self.update_agents_entities_list()
-        # TODO :associate the entities subtypes ids with their actual names
 
-    def update_agents_entities_list(self):
+        # set flags
+        self.from_stream = True
+        self._is_running = False
+        self.stop_apparition_flag = False
+
+        # set frequency of the simulator to max speed
+        self.configs[StateType.SIMULATOR][0].freq = -1
+
+        self.box_size = self.configs[StateType.SIMULATOR][0].box_size
+
+        # handle the different subtypes labels objects
+        self.subtype_idx_to_label = self.subtypes_labels
+        self.subtype_label_to_idx = {v: k for k, v in self.subtype_idx_to_label.items()}
+        self.valid_subtypes = set(self.subtype_label_to_idx.keys())
+
+        # add a routine handler to the controller
+        self.routine_handler = RoutineHandler()
+
+        # automatically update attributes of all entities
+        self.set_all_user_events()
+        self.update_agents_attributes()
+        self.update_entities_attributes()
+    
+    def update_agents_attributes(self):
         """Give all agents the list of all entities in the simulation (usefull for advanced cases like eating)
         """
         for agent in self.agents:
             agent.simulation_entities = self.all_entities
+            agent.subtype_label_to_idx = self.subtype_label_to_idx
+            agent.valid_subtypes = self.valid_subtypes
+    
+    # TODO : implement this function at the simulator controller level (not only for notebooks)
+    def update_entities_attributes(self):
+        """Temporary fn to give their subtype labels to all entities
+        """
+        for ent in self.all_entities:
+            ent.subtype_label = self.subtype_idx_to_label[ent.subtype]
 
     def spawn_entity(self, entity_idx, position=None):
         """Spawn an entity at a given position
@@ -402,7 +430,7 @@ class NotebookController(SimulatorController):
             lg.warning(f"Entity {entity_idx} already removed")
         entity.exists = False
 
-    def remove_all_entities(self, entity_type):
+    def remove_entity_type(self, entity_type):
         """Remove all entities of a given type
 
         :param entity_type: entity_type
@@ -435,7 +463,7 @@ class NotebookController(SimulatorController):
                 lg.info(f'All entities of type {entity_type} are spawned')
             time.sleep(period)
 
-    def start_entity_apparition(self, period=5, entity_type=None, position_range=None):
+    def start_entity_apparition(self, period=5, entity_type: str = None, position_range=None):
         """Start the apparition process for entities of type entity_type every period seconds
 
         :param period: period, defaults to 5
@@ -443,7 +471,9 @@ class NotebookController(SimulatorController):
         :param position_range: position range where entities can spawn, defaults to None
         """
         self.stop_apparition_flag = False
-        thread = threading.Thread(target=self.periodic_entity_apparition, args=(period, entity_type, position_range))
+        assert entity_type in self.valid_subtypes, f"Please specify a valid entity type among {self.valid_subtypes}"
+        entity_type_idx = self.subtype_label_to_idx[entity_type]
+        thread = threading.Thread(target=self.periodic_entity_apparition, args=(period, entity_type_idx, position_range))
         thread.start()
 
     # TODO : fix the hardcoded ressources id --> need the entities subtypes from server
@@ -453,8 +483,8 @@ class NotebookController(SimulatorController):
         :param period: period, defaults to 5
         :param position_range: position_range, defaults to None
         """
-        ressources_id = 1
-        self.start_entity_apparition(period, entity_type=ressources_id, position_range=position_range)
+        ressources_type = "ressources"
+        self.start_entity_apparition(period, entity_type=ressources_type, position_range=position_range)
         # attach the eating ressources routine
         self.attach_routine(eating)
                 
@@ -522,7 +552,6 @@ class NotebookController(SimulatorController):
         :param routine_fn: routine_fn
         :param name: routine name, defaults to None
         """
-        # self._routines[name or routine_fn.__name__] = routine_fn
         self.routine_handler.attach_routine(routine_fn, name)
 
     def detach_routine(self, name):
@@ -530,13 +559,19 @@ class NotebookController(SimulatorController):
 
         :param name: routine name
         """
-        # del self._routines[name]
         self.routine_handler.detach_routine(name)
 
     def controller_routine_step(self, time):
         """Execute the simulator routines
         """
         self.routine_handler.routine_step(self, time)
+
+    def print_subtypes_list(self):
+        """Return the list of subtypes
+
+        :return: subtypes list
+        """
+        print(list(self.subtypes_labels.values()))
 
 
 def eating(controller):
@@ -549,6 +584,8 @@ def eating(controller):
         if not agent.exists:
             continue
         for entity_type in agent.diet:
+            # transform the entity type label into an idx
+            entity_type = controller.subtype_label_to_idx[entity_type]
             # get the idx of entities that are eatable by the agent (by precaution remove the agent itself)
             eatable_entities_idx = [ent.idx for ent in controller.all_entities if ent.subtype == entity_type and ent.idx != agent.idx]
             distances = agent.config.proximity_map_dist[eatable_entities_idx]
