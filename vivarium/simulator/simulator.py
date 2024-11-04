@@ -47,7 +47,6 @@ class Simulator:
         self.use_fori_loop = use_fori_loop
         self.ent_sub_types_and_num = env_state.ent_sub_types # information about entities sub types in a dictionary
         self.ent_sub_types = self.process_ent_sub_types(self.ent_sub_types_and_num)
-        print(f"{self.ent_sub_types = }")
 
         # transform the env state (only used in env class) into a simulator state with a simulator state (used only in client server communication)
         self.state = self.env_to_sim_state(env_state)
@@ -355,7 +354,6 @@ class Simulator:
         :param ent_sub_types_and_num: dictionary of entity sub types and number of entities
         :return: processed dictionary
         """
-        print(f"{ent_sub_types_and_num = }")
         return {int(idx): label for label, (idx, _)  in ent_sub_types_and_num.items()}
     
     
