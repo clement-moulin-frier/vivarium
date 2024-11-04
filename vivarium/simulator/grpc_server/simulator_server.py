@@ -31,6 +31,10 @@ def nonblocking(lock):
 
 
 class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
+    """A gRPC server for the simulator.
+
+    :param simulator_pb2_grpc: The gRPC server for the simulator.
+    """
     def __init__(self, simulator):
         self.simulator = simulator
         self.recorded_change_dict = defaultdict(dict)
@@ -53,6 +57,14 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
     def GetObjectState(self, request, context):
         object_state = self.simulator.state.object_state
         return object_state_to_proto(object_state)
+    
+    def GetSceneName(self, request, context):
+        scene_name = self.simulator.scene_name
+        return simulator_pb2.Scene(scene_name=scene_name)
+    
+    def GetSubtypesLabels(self, request, context):
+        subtype_labels_dict = self.simulator.ent_sub_types
+        return simulator_pb2.SubtypesLabels(data=subtype_labels_dict)
 
     def Start(self, request, context):
         self.simulator.run(threaded=True)
@@ -66,7 +78,6 @@ class SimulatorServerServicer(simulator_pb2_grpc.SimulatorServerServicer):
         return Empty()
 
     def SetState(self, request, context):
-
         with self._lock:
             ent_idx = request.ent_idx
             col_idx = request.col_idx

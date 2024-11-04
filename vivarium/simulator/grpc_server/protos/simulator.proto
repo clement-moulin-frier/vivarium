@@ -25,21 +25,26 @@ package simulator;
 
 // Interface exported by the server.
 service SimulatorServer {
-
+  // Do a step in the simulation
   rpc Step(google.protobuf.Empty) returns (State) {}
-
+  
+  // Get one of the states of the simulation
   rpc GetState(google.protobuf.Empty) returns (State) {}
   rpc GetNVEState(google.protobuf.Empty) returns (EntityState) {}
   rpc GetAgentState(google.protobuf.Empty) returns (AgentState) {}
   rpc GetObjectState(google.protobuf.Empty) returns (ObjectState) {}
+
+  // set the state of the simulation
   rpc SetState(StateChange) returns (google.protobuf.Empty) {}
 
+  // send the labels of subtypes and scene name
+  rpc GetSceneName(Scene) returns (Scene) {}
+  rpc GetSubtypesLabels(SubtypesLabels) returns (SubtypesLabels) {}
+
+  // Handle the connection between the server and the clients
   rpc IsStarted(google.protobuf.Empty) returns (IsStartedState) {}
-
   rpc Start(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-
   rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-
 }
 
 message AgentIdx {
@@ -131,4 +136,13 @@ message AddAgentInput {
 
 message IsStartedState {
   bool is_started = 1;
+}
+
+// TODO : Check how I should define this 
+message SubtypesLabels {
+    map<int32, string> data = 1;
+}
+
+message Scene {
+  string scene_name = 1;
 }

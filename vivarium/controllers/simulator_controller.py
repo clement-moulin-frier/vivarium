@@ -13,7 +13,8 @@ param.Dynamic.time_dependent = True
 
 
 class SimulatorController(param.Parameterized):
-
+    """Base controller class to interact with the simulator.
+    """
     configs = param.Dict({StateType.SIMULATOR: SimulatorConfig(), StateType.AGENT: [], StateType.OBJECT: []})
     refresh_change_period = param.Number(1)
     change_time = param.Integer(0)
@@ -95,10 +96,9 @@ class SimulatorController(param.Parameterized):
     def get_nve_state(self):
         self.state = self.client.get_nve_state()
         return self.state
+    
+    def get_scene_name(self):
+        self.client.get_scene_name()
 
-
-if __name__ == "__main__":
-    controller = SimulatorController()
-    controller.configs[StateType.AGENT][2].x_position = 1.
-    lg.info(controller.client.get_state())
-    lg.info('Done')
+    def get_subtypes_labels(self):
+        self.client.get_subtypes_labels()

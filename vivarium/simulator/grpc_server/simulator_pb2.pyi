@@ -165,3 +165,22 @@ class IsStartedState(_message.Message):
     IS_STARTED_FIELD_NUMBER: _ClassVar[int]
     is_started: bool
     def __init__(self, is_started: bool = ...) -> None: ...
+
+class SubtypesLabels(_message.Message):
+    __slots__ = ("data",)
+    class DataEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: int
+        value: str
+        def __init__(self, key: _Optional[int] = ..., value: _Optional[str] = ...) -> None: ...
+    DATA_FIELD_NUMBER: _ClassVar[int]
+    data: _containers.ScalarMap[int, str]
+    def __init__(self, data: _Optional[_Mapping[int, str]] = ...) -> None: ...
+
+class Scene(_message.Message):
+    __slots__ = ("scene_name",)
+    SCENE_NAME_FIELD_NUMBER: _ClassVar[int]
+    scene_name: str
+    def __init__(self, scene_name: _Optional[str] = ...) -> None: ...

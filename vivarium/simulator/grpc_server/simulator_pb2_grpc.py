@@ -46,6 +46,16 @@ class SimulatorServerStub(object):
                 request_serializer=simulator__pb2.StateChange.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 )
+        self.GetSceneName = channel.unary_unary(
+                '/simulator.SimulatorServer/GetSceneName',
+                request_serializer=simulator__pb2.Scene.SerializeToString,
+                response_deserializer=simulator__pb2.Scene.FromString,
+                )
+        self.GetSubtypesLabels = channel.unary_unary(
+                '/simulator.SimulatorServer/GetSubtypesLabels',
+                request_serializer=simulator__pb2.SubtypesLabels.SerializeToString,
+                response_deserializer=simulator__pb2.SubtypesLabels.FromString,
+                )
         self.IsStarted = channel.unary_unary(
                 '/simulator.SimulatorServer/IsStarted',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
@@ -68,13 +78,15 @@ class SimulatorServerServicer(object):
     """
 
     def Step(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Do a step in the simulation
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def GetState(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Get one of the states of the simulation
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -98,13 +110,28 @@ class SimulatorServerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def SetState(self, request, context):
+        """set the state of the simulation
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetSceneName(self, request, context):
+        """send the labels of entities
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetSubtypesLabels(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def IsStarted(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Handle the connection between the server and the clients
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -153,6 +180,16 @@ def add_SimulatorServerServicer_to_server(servicer, server):
                     servicer.SetState,
                     request_deserializer=simulator__pb2.StateChange.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'GetSceneName': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetSceneName,
+                    request_deserializer=simulator__pb2.Scene.FromString,
+                    response_serializer=simulator__pb2.Scene.SerializeToString,
+            ),
+            'GetSubtypesLabels': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetSubtypesLabels,
+                    request_deserializer=simulator__pb2.SubtypesLabels.FromString,
+                    response_serializer=simulator__pb2.SubtypesLabels.SerializeToString,
             ),
             'IsStarted': grpc.unary_unary_rpc_method_handler(
                     servicer.IsStarted,
@@ -279,6 +316,40 @@ class SimulatorServer(object):
         return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/SetState',
             simulator__pb2.StateChange.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetSceneName(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetSceneName',
+            simulator__pb2.Scene.SerializeToString,
+            simulator__pb2.Scene.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetSubtypesLabels(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/simulator.SimulatorServer/GetSubtypesLabels',
+            simulator__pb2.SubtypesLabels.SerializeToString,
+            simulator__pb2.SubtypesLabels.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
