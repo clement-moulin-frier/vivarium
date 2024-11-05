@@ -245,8 +245,9 @@ class WindowManager(Parameterized):
     update_switch = pn.widgets.Switch(name="Update plot", value=True, align="center")
     update_timestep = pn.widgets.IntSlider(name="Timestep (ms)", value=1, start=1, end=1000)
 
-    def __init__(self, **kwargs):
+    def __init__(self, notebook_mode=False, **kwargs):
         super().__init__(**kwargs)
+        self.notebook_mode = notebook_mode
         self.entity_manager_classes = {
             EntityType.AGENT: AgentManager,
             EntityType.OBJECT: ObjectManager
@@ -364,7 +365,7 @@ class WindowManager(Parameterized):
         app = pn.Row(
             # TODO : if notebook mode : remove start / stop server button
             pn.Column(
-                pn.Row(pn.pane.Markdown("### Start/Stop server", align="center"), self.start_toggle),
+                pn.Row(pn.pane.Markdown("### Start/Stop server", align="center"), self.start_toggle) if not self.notebook_mode else None,
                 pn.Row(pn.pane.Markdown("### Start/Stop update", align="center"), self.update_switch, self.update_timestep),
                 pn.panel(self.plot)
             ),
