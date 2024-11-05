@@ -507,7 +507,9 @@ class NotebookController(SimulatorController):
         :raises RuntimeError: if the simulator is already started
         """
         if self._is_running:
-            raise RuntimeError("Simulator is already started")
+            # raise RuntimeError("Simulator is already started")
+            print("Simulator is already started")
+            return
         self._is_running = True
         if threaded:
             threading.Thread(target=self._run).start()
