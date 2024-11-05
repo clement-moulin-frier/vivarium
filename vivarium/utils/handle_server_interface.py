@@ -32,7 +32,7 @@ def kill_process(pid):
     os.kill(int(pid), signal.SIGTERM)
 
 # Define parameters of the simulator
-def start_server_and_interface(scene_name: str, notebook_mode: bool = True):
+def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait_time: int = 6):
     """Start the server and interface for the given scene
 
     :param scene_name: scene name
@@ -56,7 +56,7 @@ def start_server_and_interface(scene_name: str, notebook_mode: bool = True):
     print("STARTING SERVER")
     server_process = multiprocessing.Process(target=start_server_process)
     server_process.start()
-    time.sleep(5)
+    time.sleep(wait_time)
 
     interface_command = [
         "panel", 
@@ -69,7 +69,6 @@ def start_server_and_interface(scene_name: str, notebook_mode: bool = True):
     def start_interface_process():
         subprocess.run(interface_command)
 
-    time.sleep(2)
     # start the interface 
     print("\nSTARTING INTERFACE")
     interface_process = multiprocessing.Process(target=start_interface_process)
