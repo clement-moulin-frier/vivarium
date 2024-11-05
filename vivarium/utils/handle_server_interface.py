@@ -31,18 +31,31 @@ def start_server_and_interface(scene_name: str):
     server_script = os.path.join(project_root, SERVER_PROCESS_NAME)
     interface_script = os.path.join(project_root, INTERFACE_PROCESS_NAME)
 
+    server_command = [
+        "python3", 
+        server_script, 
+        f"scene={scene_name}" 
+    ]
+
     def start_server_process():
-        subprocess.run(["python3", server_script, f"scene={scene_name}"])
+        subprocess.run(server_command)
 
     print("STARTING SERVER")
     server_process = multiprocessing.Process(target=start_server_process)
     server_process.start()
 
     time.sleep(5)
-    print("")
+
+    interface_command = [
+        "panel", 
+        "serve", 
+        interface_script, 
+        "--args", 
+        "--notebook_mode=True"
+    ]
 
     def start_interface_process():
-        subprocess.run(["panel", "serve", interface_script])
+        subprocess.run(interface_command)
 
     time.sleep(2)
 
