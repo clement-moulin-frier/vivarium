@@ -71,7 +71,7 @@ def start_server_and_interface(scene_name: str, notebook_mode: bool = True):
 
     time.sleep(2)
     # start the interface 
-    print("STARTING INTERFACE")
+    print("\nSTARTING INTERFACE")
     interface_process = multiprocessing.Process(target=start_interface_process)
     interface_process.start()
 
