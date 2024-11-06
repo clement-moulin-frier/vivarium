@@ -179,6 +179,8 @@ class Agent(Entity):
         :param interval: interval of behavior execution, defaults to 1
         :param weight: weight, defaults to 1.
         """
+        assert isinstance(interval, int) and interval > 0, "Interval must be a positive integer"
+        assert isinstance(weight, (int, float)) and weight > 0, "Weight must be a positive number"
         self.behaviors[name or behavior_fn.__name__] = (behavior_fn, interval, weight)
 
     def detach_behavior(self, name, stop_motors=False):
@@ -238,29 +240,34 @@ class Agent(Entity):
             active_behaviors = list(self.active_behaviors.keys())
             print(f"Available behaviors: {available_behaviors}, Active behaviors: {active_behaviors if active_behaviors else 'No active behaviors'}")
 
-    # TODO : refactor this function to make it more readable and efficient
     def behave(self, time):
         """Make the agent behave according to its active behaviors
+
+        :param time: current time
         """
-        # return early if no active behaviors
-        if len(self.active_behaviors) == 0 :
+        if not self.active_behaviors:
             return
         
-        # add a try to prevent the simulator from crashing when a bad behavior function is attached
+        # prevents simulator to crash if an error occurs during motor values computations
         try:
-            total_weights = 0.
-            total_motor = np.zeros(2)
-            for (fn, interval, w) in self.active_behaviors.values():
-                # check if need to execute agent behavior at this time step
-                if time % interval == 0:
-                    total_motor += w * np.array(fn(self))
-                    total_weights += w
-            motors = total_motor / total_weights if total_weights != 0. else [self.left_motor, self.right_motor]
+            motor_contributions = [
+                (w * np.array(fn(self)), w)
+                for (fn, interval, w) in self.active_behaviors.values()
+                if time % interval == 0
+            ]
+            # check if there are motor contributions from an active behavior (it can be empty because of the interval)
+            if motor_contributions:
+                total_motor_values = sum(motor_value for (motor_value, _) in motor_contributions)
+                total_weights = sum(weight for (_, weight) in motor_contributions)
+                motor_values = total_motor_values / total_weights
+            # else keep the current motor values
+            else:
+                motor_values = [self.left_motor, self.right_motor]
         except Exception as e:
             lg.error(f"Error while computing motor values in behavior of agent {self.idx}: {e}")
-            motors = np.zeros(2)
+            motor_values = np.zeros(2)  
 
-        self.left_motor, self.right_motor = motors
+        self.left_motor, self.right_motor = motor_values
 
     def stop_motors(self):
         """Stop the motors of the agent
@@ -349,6 +356,7 @@ class Object(Entity):
         self.etype = EntityType.OBJECT
 
 
+# mappy the entity type to their corresponding class
 etype_to_class = {
     EntityType.AGENT: Agent, 
     EntityType.OBJECT: Object
@@ -416,7 +424,6 @@ class NotebookController(SimulatorController):
                 lg.warning(f"Entity {entity_idx} already exists")
                 return
             if position is not None:
-                # TODO : rounding doesn't prevent from error 
                 entity.x_position = float(position[0])
                 entity.y_position = float(position[1])
             entity.exists = True
