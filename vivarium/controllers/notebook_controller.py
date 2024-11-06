@@ -105,6 +105,7 @@ class Entity:
         return print("\n".join(info_lines))
     
 
+# TODO : Add BehaviorHandler class as a subclass of RoutineHandler
 class Agent(Entity):
     """Agent class that represents an agent in the simulation
 
@@ -170,14 +171,15 @@ class Agent(Entity):
             getattr(right_ent, sensed_attribute, default_value)
         )
     
-    def attach_behavior(self, behavior_fn, name=None, weight=1.):
+    def attach_behavior(self, behavior_fn, name=None, interval=1, weight=1.):
         """Attach a behavior to the agent with a given weight
 
         :param behavior_fn: behavior_fn
         :param name: name, defaults to None
+        :param interval: interval of behavior execution, defaults to 1
         :param weight: weight, defaults to 1.
         """
-        self.behaviors[name or behavior_fn.__name__] = (behavior_fn, weight)
+        self.behaviors[name or behavior_fn.__name__] = (behavior_fn, interval, weight)
 
     def detach_behavior(self, name, stop_motors=False):
         """Detach a behavior from the agent and stop the motors if needed
@@ -225,6 +227,7 @@ class Agent(Entity):
         n = name.__name__ if hasattr(name, "__name__") else name
         del self.active_behaviors[n]
 
+    # TODO : add interval execution for behaviors
     def check_behaviors(self):
         """Print the behaviors and active behaviors of the agent
         """
@@ -235,24 +238,28 @@ class Agent(Entity):
             active_behaviors = list(self.active_behaviors.keys())
             print(f"Available behaviors: {available_behaviors}, Active behaviors: {active_behaviors if active_behaviors else 'No active behaviors'}")
 
-    def behave(self):
+    # TODO : refactor this function to make it more readable and efficient
+    def behave(self, time):
         """Make the agent behave according to its active behaviors
         """
-        if len(self.active_behaviors) == 0:
+        # return early if no active behaviors
+        if len(self.active_behaviors) == 0 :
             return
-        else:
-            # add a try to prevent the simulator from crashing when a bad behavior function is attached
-            try:
-                total_weights = 0.
-                total_motor = np.zeros(2)
-                for fn, w in self.active_behaviors.values():
-                    # problem here 
+        
+        # add a try to prevent the simulator from crashing when a bad behavior function is attached
+        try:
+            total_weights = 0.
+            total_motor = np.zeros(2)
+            for (fn, interval, w) in self.active_behaviors.values():
+                # check if need to execute agent behavior at this time step
+                if time % interval == 0:
                     total_motor += w * np.array(fn(self))
                     total_weights += w
-                motors = total_motor / total_weights
-            except Exception as e:
-                lg.error(f"Error while computing motor values: {e}")
-                motors = np.zeros(2)
+            motors = total_motor / total_weights if total_weights != 0. else [self.left_motor, self.right_motor]
+        except Exception as e:
+            lg.error(f"Error while computing motor values in behavior of agent {self.idx}: {e}")
+            motors = np.zeros(2)
+
         self.left_motor, self.right_motor = motors
 
     def stop_motors(self):
@@ -369,8 +376,6 @@ class NotebookController(SimulatorController):
         # set frequency of the simulator to max speed
         self.configs[StateType.SIMULATOR][0].freq = -1
 
-        self.box_size = self.configs[StateType.SIMULATOR][0].box_size
-
         # handle the different subtypes labels objects
         self.subtype_idx_to_label = self.subtypes_labels
         self.subtype_label_to_idx = {v: k for k, v in self.subtype_idx_to_label.items()}
@@ -476,7 +481,6 @@ class NotebookController(SimulatorController):
         thread = threading.Thread(target=self.periodic_entity_apparition, args=(period, entity_type_idx, position_range))
         thread.start()
 
-    # TODO : fix the hardcoded ressources id --> need the entities subtypes from server
     def start_ressources_apparition(self, period=5, position_range=None):
         """Start the ressources apparition process
 
@@ -530,7 +534,7 @@ class NotebookController(SimulatorController):
                     entity.routine_step(t)
                     entity.set_events()
                     if entity.etype == EntityType.AGENT:
-                        entity.behave()
+                        entity.behave(t)
             self.state = self.client.step()
             self.pull_configs()
             t += 1
@@ -574,6 +578,40 @@ class NotebookController(SimulatorController):
         :return: subtypes list
         """
         print(list(self.subtypes_labels.values()))
+
+    def get_fps(self, record_time=2):
+        """Compute the fps of the simulation for a given record time without blocking
+
+        :param record_time: record_time, defaults to 2
+        """
+        start_time = time.time()
+        start_step = self.current_step
+
+        def calculate_fps():
+            time.sleep(record_time)
+            end_step = self.current_step
+            fps = (end_step - start_step) / record_time
+            print(f"FPS: {fps:.2f} (number of steps per second)") 
+
+        # use a thread to calculate the FPS without blocking the run
+        threading.Thread(target=calculate_fps).start()
+
+    @property
+    def current_step(self):
+        """Return the current time of the simulation
+
+        :return: time
+        """
+        return self.configs[StateType.SIMULATOR][0].time
+    
+    @property
+    def box_size(self):
+        """Return the box size of the simulation
+
+        :return: box size
+        """
+        return self.configs[StateType.SIMULATOR][0].box_size
+
 
 
 def eating(controller):
