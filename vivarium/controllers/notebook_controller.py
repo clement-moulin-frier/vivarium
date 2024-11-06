@@ -97,6 +97,7 @@ class Entity:
         info_lines.append(f"Type: {self.etype.name}")
         info_lines.append(f"Subtype: {self.subtype_label}")
         info_lines.append(f"Idx: {self.idx}")
+        info_lines.append(f"Exists: {self.exists}")
 
         # Position
         info_lines.append(f"Position: x={dict_infos['x_position']:.2f}, y={dict_infos['y_position']:.2f}")
@@ -379,7 +380,7 @@ class NotebookController(SimulatorController):
         # set flags
         self.from_stream = True
         self._is_running = False
-        self.stop_apparition_flag = False
+        self._stop_apparition_flag = False
 
         # set frequency of the simulator to max speed
         self.configs[StateType.SIMULATOR][0].freq = -1
@@ -463,7 +464,7 @@ class NotebookController(SimulatorController):
         if position_range is None:
             box_size = self.state.simulator_state.box_size[0]
             position_range = ((0, box_size), (0, box_size)) 
-        while not self.stop_apparition_flag:
+        while not self._stop_apparition_flag:
             non_existing_ent_list = [ent.idx for ent in self.all_entities if not ent.exists and ent.subtype == entity_type]
             lg.debug(f"{non_existing_ent_list = }")
             if non_existing_ent_list:
@@ -482,10 +483,11 @@ class NotebookController(SimulatorController):
         :param entity_type: entity_type, defaults to None
         :param position_range: position range where entities can spawn, defaults to None
         """
-        self.stop_apparition_flag = False
+        self._stop_apparition_flag = False
         assert entity_type in self.valid_subtypes, f"Please specify a valid entity type among {self.valid_subtypes}"
         entity_type_idx = self.subtype_label_to_idx[entity_type]
         thread = threading.Thread(target=self.periodic_entity_apparition, args=(period, entity_type_idx, position_range))
+        thread.daemon = True
         thread.start()
 
     def start_ressources_apparition(self, period=5, position_range=None):
@@ -502,7 +504,7 @@ class NotebookController(SimulatorController):
     def stop_entity_apparition(self):
         """Stop any entities apparition process
         """
-        self.stop_apparition_flag = True
+        self._stop_apparition_flag = True
 
     def set_all_user_events(self):
         """Set all user events from clients (interface or notebooks) for all entities
@@ -523,7 +525,9 @@ class NotebookController(SimulatorController):
             return
         self._is_running = True
         if threaded:
-            threading.Thread(target=self._run).start()
+            run_thread = threading.Thread(target=self._run)
+            run_thread.daemon = True
+            run_thread.start()
         else:
             self._run(num_steps)
 
@@ -551,6 +555,7 @@ class NotebookController(SimulatorController):
         """Stop the simulation
         """
         self._is_running = False
+        self._stop_apparition_flag = True
 
     def wait(self, seconds):
         """Wait for a given number of seconds
@@ -591,7 +596,6 @@ class NotebookController(SimulatorController):
 
         :param record_time: record_time, defaults to 2
         """
-        start_time = time.time()
         start_step = self.current_step
 
         def calculate_fps():
