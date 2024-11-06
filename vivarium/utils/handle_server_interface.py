@@ -40,7 +40,9 @@ def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait
     """
     # first ensure no interface or server is running
     stop_server_and_interface()
-    project_root = os.path.abspath(os.path.join(os.getcwd(), "../../"))
+    # find the path to the server and interface scripts
+    print(f"{os.path.dirname(__file__)}")
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
     server_script = os.path.join(project_root, SERVER_PROCESS_NAME)
     interface_script = os.path.join(project_root, INTERFACE_PROCESS_NAME)
 
