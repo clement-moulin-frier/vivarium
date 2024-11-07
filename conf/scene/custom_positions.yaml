@@ -4,7 +4,7 @@ entities_data:
   EntitySubTypes:
     - PREYS
     - PREDS
-    - RESSOURCES
+    - RESOURCES
     - POISON
 
   # Define the different entities
@@ -20,7 +20,7 @@ entities_data:
           beh: LOVE
           sensed: 
             - PREYS
-            - RESSOURCES
+            - RESOURCES
         fear:
           beh: FEAR
           sensed: 
@@ -41,7 +41,7 @@ entities_data:
           sensed: 
             - POISON
 
-    RESSOURCES:
+    RESOURCES:
       type: OBJECT
       num: 5
       color: green

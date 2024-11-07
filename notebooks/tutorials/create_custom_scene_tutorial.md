@@ -144,7 +144,7 @@ entities_data:
   EntitySubTypes:
     - PREDATORS
     - PREYS
-    - RESSOURCES
+    - RESOURCES
     - POISON
 
   Entities:
@@ -162,7 +162,7 @@ entities_data:
           sensed: # Update this to sense all entities
             - PREDATORS
             - PREYS
-            - RESSOURCES
+            - RESOURCES
             - POISON
 
     # Add preys entity
@@ -179,11 +179,11 @@ entities_data:
           sensed: 
             - PREDATORS
             - PREYS
-            - RESSOURCES
+            - RESOURCES
             - POISON
     
     # Add ressource entity
-    RESSOURCES:
+    RESOURCES:
       type: OBJECT
       num: 8
       color: green
@@ -195,7 +195,7 @@ entities_data:
       color: purple 
 ``` 
 
-We modified the entities data to have 2 types of agents and 2 types of objects. We chose a simple setting with predators and preys agents, and ressources and poison objects. We give them different colors, sizes, proximeters ranges, and proximeters angles to distinguish them easiely. 
+We modified the entities data to have 2 types of agents and 2 types of objects. We chose a simple setting with predators and preys agents, and resources and poison objects. We give them different colors, sizes, proximeters ranges, and proximeters angles to distinguish them easiely. 
 
 Here is the render of the scene:
 
@@ -203,7 +203,7 @@ Here is the render of the scene:
 
 ## Adding custom behaviors
 
-We already have an interesting environment to study with the last scene, but we can improve it a lot by adding custom behaviors depending on the type of the agents. For example, we can add a behavior that makes the predators chase the preys, and another one that makes the preys flee from the predators. At the same time, all agents would be repulsed by the poison objects, and the preys would be attracted to ressources.
+We already have an interesting environment to study with the last scene, but we can improve it a lot by adding custom behaviors depending on the type of the agents. For example, we can add a behavior that makes the predators chase the preys, and another one that makes the preys flee from the predators. At the same time, all agents would be repulsed by the poison objects, and the preys would be attracted to resources.
 
 One of the constraints is that you have to give the same number of behaviors to all agents, but can have them sensing any type of entity. 
 
@@ -216,7 +216,7 @@ entities_data:
   EntitySubTypes:
     - PREDATORS
     - PREYS
-    - RESSOURCES
+    - RESOURCES
     - POISON
 
   Entities:
@@ -248,11 +248,11 @@ entities_data:
       prox_dist_max: 100
       prox_cos_min: -0.20 
       selective_behaviors:
-        # Add an aggression behavior towards ressources
+        # Add an aggression behavior towards resources
         aggr_to_ressource:
           beh: AGGRESSION
           sensed: 
-            - RESSOURCES
+            - RESOURCES
         # Add a fear behavior towards predators and poison
         fear_from_preds_poison:
           beh: FEAR
@@ -260,7 +260,7 @@ entities_data:
             - PREDATORS
             - POISON
     
-    RESSOURCES:
+    RESOURCES:
       type: OBJECT
       num: 8
       color: green

@@ -8,7 +8,7 @@ entities_data:
   EntitySubTypes:
   ## Care : make sure to order entities in a good order (first the agents and then the objects) ...
     - robots
-    - ressources
+    - resources
     - s_obstacles
     - b_obstacles
 
@@ -23,11 +23,11 @@ entities_data:
           beh: MANUAL
           sensed: 
             - robots
-            - ressources
+            - resources
             - s_obstacles
             - b_obstacles
       
-    ressources:
+    resources:
       type: OBJECT
       num: 15
       existing: 7

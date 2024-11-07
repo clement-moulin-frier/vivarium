@@ -9,7 +9,7 @@ entities_data:
     - MEDIUM_PREDS
     - SMALL_PREYS
     - BIG_PREDS
-    - RESSOURCES
+    - RESOURCES
     - POISON
     - OBSTCALES
 
@@ -28,7 +28,7 @@ entities_data:
           beh: LOVE
           sensed: 
             - MEDIUM_PREYS
-            - RESSOURCES
+            - RESOURCES
         fear:
           beh: FEAR
           sensed: 
@@ -93,7 +93,7 @@ entities_data:
             - MEDIUM_PREDS
             - BIG_PREDS
             - SMALL_PREYS
-            - RESSOURCES
+            - RESOURCES
             - POISON
             - OBSTCALES
         shy:
@@ -103,11 +103,11 @@ entities_data:
             - MEDIUM_PREDS
             - BIG_PREDS
             - SMALL_PREYS
-            - RESSOURCES
+            - RESOURCES
             - POISON
             - OBSTCALES
 
-    RESSOURCES:
+    RESOURCES:
       type: OBJECT
       num: 15
       diameter: 7.0

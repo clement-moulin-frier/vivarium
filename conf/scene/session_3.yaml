@@ -7,7 +7,7 @@ prox_dist_max: 60
 entities_data:
   EntitySubTypes:
     - robots
-    - ressources
+    - resources
     - obstacles
 
   Entities:
@@ -22,10 +22,10 @@ entities_data:
           beh: MANUAL
           sensed: 
             - robots
-            - ressources
+            - resources
             - obstacles
       
-    ressources:
+    resources:
       type: OBJECT
       num: 12
       existing: 3

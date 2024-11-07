@@ -490,15 +490,15 @@ class NotebookController(SimulatorController):
         thread.daemon = True
         thread.start()
 
-    def start_ressources_apparition(self, period=5, position_range=None):
-        """Start the ressources apparition process
+    def start_resources_apparition(self, period=5, position_range=None):
+        """Start the resources apparition process
 
         :param period: period, defaults to 5
         :param position_range: position_range, defaults to None
         """
-        ressources_type = "ressources"
-        self.start_entity_apparition(period, entity_type=ressources_type, position_range=position_range)
-        # attach the eating ressources routine
+        resources_type = "resources"
+        self.start_entity_apparition(period, entity_type=resources_type, position_range=position_range)
+        # attach the eating resources routine
         self.attach_routine(eating)
                 
     def stop_entity_apparition(self):
