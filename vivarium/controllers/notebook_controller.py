@@ -372,6 +372,8 @@ class NotebookController(SimulatorController):
     def __init__(self, **params):
         super().__init__(**params)
         self.all_entities = []
+        self.time = 0
+
         # add agents and objects to the global entities list
         for etype in list(EntityType):
             setattr(self, f'{etype.name.lower()}s', [etype_to_class[etype](c) for c in self.configs[etype.to_state_type()]])
@@ -536,19 +538,22 @@ class NotebookController(SimulatorController):
 
         :param num_steps: num_steps, defaults to math.inf
         """
-        t = 0
-        while t < num_steps and self._is_running:
+        while self.time < num_steps and self._is_running:
             with self.batch_set_state():
-                # execute routines
-                self.controller_routine_step(t)
+                # execute routines of the controller
+                self.controller_routine_step(self.time)
+                # execute routines of the entities
                 for entity in self.all_entities:
-                    entity.routine_step(t)
+                    entity.routine_step(self.time)
                     entity.set_events()
+                    # execute behaviors of agents
                     if entity.etype == EntityType.AGENT:
-                        entity.behave(t)
+                        entity.behave(self.time)
+            # update the attributes of all entities and do a step on server side
             self.state = self.client.step()
             self.pull_configs()
-            t += 1
+            self.time += 1
+        # finally stop the simulation
         self.stop()
 
     def stop(self):
@@ -591,24 +596,26 @@ class NotebookController(SimulatorController):
         """
         print(list(self.subtypes_labels.values()))
 
-    def get_fps(self, record_time=2):
+    def get_fps(self, record_time=2, server=False):
         """Compute the fps of the simulation for a given record time without blocking
 
         :param record_time: record_time, defaults to 2
+        :param server_time: wether to record steps per seconds in the server or in the controller, defaults to False
         """
-        start_step = self.current_step
+        print(f"measuring the number of steps per second in the {'server' if server else 'controller'} for {record_time} seconds")
+        start_time = self.time if not server else self.server_time
 
         def calculate_fps():
             time.sleep(record_time)
-            end_step = self.current_step
-            fps = (end_step - start_step) / record_time
-            print(f"FPS: {fps:.2f} (number of steps per second)") 
+            end_time = self.time if not server else self.server_time
+            fps = (end_time - start_time) / record_time
+            print(f"FPS: {fps:.2f} (number of steps per second in the {'server' if server else 'controller'})") 
 
-        # use a thread to calculate the FPS without blocking the run
+        # use a thread to calculate the fps without blocking the run
         threading.Thread(target=calculate_fps).start()
 
     @property
-    def current_step(self):
+    def server_time(self):
         """Return the current time of the simulation
 
         :return: time
@@ -622,7 +629,6 @@ class NotebookController(SimulatorController):
         :return: box size
         """
         return self.configs[StateType.SIMULATOR][0].box_size
-
 
 
 def eating(controller):
