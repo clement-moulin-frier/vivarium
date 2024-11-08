@@ -1,13 +1,14 @@
 import time
 import math
 import threading
+import functools
 
 import numpy as np
 import logging
 
 from vivarium.environments.braitenberg.simple import Behaviors
 from vivarium.controllers.simulator_controller import SimulatorController
-from vivarium.controllers.notebook_controller_utils import Logger, RoutineHandler
+from vivarium.controllers.utils import Logger, RoutineHandler
 from vivarium.simulator.simulator_states import StateType, EntityType
 
 lg = logging.getLogger(__name__)
@@ -84,6 +85,7 @@ class Entity:
         # Give self object as parameter to the routine function so it executes functions on the entity
         self.routine_handler.routine_step(self, time)
 
+    # TODO : rename print infos
     def infos(self):
         """Print the entity's infos
 
@@ -141,7 +143,7 @@ class Agent(Entity):
         if sensed_entities is not None:
             # transform the strings of sensed entities into ints (this fn can surely be optimized)
             assert all(ent_subtype in self.valid_subtypes for ent_subtype in sensed_entities), f"Please specify valid sensed entities among {self.valid_subtypes}"
-            sensed_entities = [self.subtype_label_to_idx[label] for label in sensed_entities]
+            sensed_entities = [self._subtype_label_to_idx[label] for label in sensed_entities]
             sensed_type_left, sensed_type_right = self.prox_sensed_ent_type
             left = left if sensed_type_left in sensed_entities else 0
             right = right if sensed_type_right in sensed_entities else 0
@@ -231,6 +233,7 @@ class Agent(Entity):
         del self.active_behaviors[n]
 
     # TODO : add interval execution for behaviors
+    # TODO : rename print behaviors to check behaviors
     def check_behaviors(self):
         """Print the behaviors and active behaviors of the agent
         """
@@ -382,15 +385,14 @@ class NotebookController(SimulatorController):
         # set flags
         self.from_stream = True
         self._is_running = False
-        self._stop_apparition_flag = False
 
         # set frequency of the simulator to max speed
         self.configs[StateType.SIMULATOR][0].freq = -1
 
         # handle the different subtypes labels objects
-        self.subtype_idx_to_label = self.subtypes_labels
-        self.subtype_label_to_idx = {v: k for k, v in self.subtype_idx_to_label.items()}
-        self.valid_subtypes = set(self.subtype_label_to_idx.keys())
+        self._subtype_idx_to_label = self.subtypes_labels
+        self._subtype_label_to_idx = {v: k for k, v in self._subtype_idx_to_label.items()}
+        self.valid_subtypes = set(self._subtype_label_to_idx.keys())
 
         # add a routine handler to the controller
         self.routine_handler = RoutineHandler()
@@ -405,7 +407,7 @@ class NotebookController(SimulatorController):
         """
         for agent in self.agents:
             agent.simulation_entities = self.all_entities
-            agent.subtype_label_to_idx = self.subtype_label_to_idx
+            agent._subtype_label_to_idx = self._subtype_label_to_idx
             agent.valid_subtypes = self.valid_subtypes
     
     # TODO : implement this function at the simulator controller level (not only for notebooks)
@@ -413,7 +415,7 @@ class NotebookController(SimulatorController):
         """Temporary fn to give their subtype labels to all entities
         """
         for ent in self.all_entities:
-            ent.subtype_label = self.subtype_idx_to_label[ent.subtype]
+            ent.subtype_label = self._subtype_idx_to_label[ent.subtype]
 
     def spawn_entity(self, entity_idx, position=None):
         """Spawn an entity at a given position
@@ -450,64 +452,40 @@ class NotebookController(SimulatorController):
 
         :param entity_type: entity_type
         """
+        entity_type_idx = self.get_idx_from_label_subtype(entity_type)
         for ent in self.all_entities:
-            if ent.etype == entity_type:
+            if ent.subtype == entity_type_idx:
                 self.remove_entity(ent.idx)
 
-    def periodic_entity_apparition(self, period, entity_type=None, position_range=None):
-        """Spawn entities of type entity_type every period seconds within a given position range
-
-        :param period: period
-        :param entity_type: entity_type, defaults to None
-        :param position_range: position_range, defaults to None
-        """
-        assert entity_type is not None, "Please specify the entity type"
-        # transform the position range if not specified
-        if position_range is None:
-            box_size = self.state.simulator_state.box_size[0]
-            position_range = ((0, box_size), (0, box_size)) 
-        while not self._stop_apparition_flag:
-            non_existing_ent_list = [ent.idx for ent in self.all_entities if not ent.exists and ent.subtype == entity_type]
-            lg.debug(f"{non_existing_ent_list = }")
-            if non_existing_ent_list:
-                ent_idx = np.random.choice(non_existing_ent_list)
-                x = np.random.uniform(position_range[0][0], position_range[0][1], 1)
-                y = np.random.uniform(position_range[1][0], position_range[1][1], 1)
-                self.spawn_entity(ent_idx, position=(x, y))
-            else:
-                lg.info(f'All entities of type {entity_type} are spawned')
-            time.sleep(period)
-
-    def start_entity_apparition(self, period=5, entity_type: str = None, position_range=None):
+    def start_entity_apparition(self, interval=50, entity_type: str = None, position_range=None):
         """Start the apparition process for entities of type entity_type every period seconds
 
         :param period: period, defaults to 5
         :param entity_type: entity_type, defaults to None
         :param position_range: position range where entities can spawn, defaults to None
         """
-        self._stop_apparition_flag = False
-        assert entity_type in self.valid_subtypes, f"Please specify a valid entity type among {self.valid_subtypes}"
-        entity_type_idx = self.subtype_label_to_idx[entity_type]
-        thread = threading.Thread(target=self.periodic_entity_apparition, args=(period, entity_type_idx, position_range))
-        thread.daemon = True
-        thread.start()
+        entity_type_idx = self.get_idx_from_label_subtype(entity_type)
 
-    def start_resources_apparition(self, period=5, position_range=None):
+        routine_fn = functools.partial(spawn_entity_routine_fn, entity_type=entity_type_idx, position_range=position_range)
+        # add the name of the spawning routine function otherwise error in the routine handler
+        self.attach_routine(routine_fn, name=spawn_entity_routine_fn.__name__, interval=interval)
+
+    def start_resources_apparition(self, interval=50, position_range=None):
         """Start the resources apparition process
 
         :param period: period, defaults to 5
         :param position_range: position_range, defaults to None
         """
         resources_type = "resources"
-        self.start_entity_apparition(period, entity_type=resources_type, position_range=position_range)
-        # attach the eating resources routine
-        self.attach_routine(eating)
-                
-    def stop_entity_apparition(self):
-        """Stop any entities apparition process
-        """
-        self._stop_apparition_flag = True
+        self.start_entity_apparition(interval, entity_type=resources_type, position_range=position_range)
+        # start the eating routine for agents
+        self.attach_routine(eating_routine_fn)
 
+    def stop_ressources_apparition(self):
+        """Stop the resources apparition process
+        """
+        self.detach_routine(spawn_entity_routine_fn.__name__)
+                
     def set_all_user_events(self):
         """Set all user events from clients (interface or notebooks) for all entities
         """
@@ -542,6 +520,7 @@ class NotebookController(SimulatorController):
             with self.batch_set_state():
                 # execute routines of the controller
                 self.controller_routine_step(self.time)
+
                 # execute routines of the entities
                 for entity in self.all_entities:
                     entity.routine_step(self.time)
@@ -549,10 +528,12 @@ class NotebookController(SimulatorController):
                     # execute behaviors of agents
                     if entity.etype == EntityType.AGENT:
                         entity.behave(self.time)
+
             # update the attributes of all entities and do a step on server side
             self.state = self.client.step()
             self.pull_configs()
             self.time += 1
+
         # finally stop the simulation
         self.stop()
 
@@ -560,7 +541,7 @@ class NotebookController(SimulatorController):
         """Stop the simulation
         """
         self._is_running = False
-        self._stop_apparition_flag = True
+        self.routine_handler.detach_all_routines()
 
     def wait(self, seconds):
         """Wait for a given number of seconds
@@ -569,13 +550,13 @@ class NotebookController(SimulatorController):
         """
         time.sleep(seconds)
 
-    def attach_routine(self, routine_fn, name=None):
+    def attach_routine(self, routine_fn, name=None, interval=1):
         """Attach a routine to the simulator
 
         :param routine_fn: routine_fn
         :param name: routine name, defaults to None
         """
-        self.routine_handler.attach_routine(routine_fn, name)
+        self.routine_handler.attach_routine(routine_fn, name, interval)
 
     def detach_routine(self, name):
         """Detach a routine from the entity
@@ -583,6 +564,11 @@ class NotebookController(SimulatorController):
         :param name: routine name
         """
         self.routine_handler.detach_routine(name)
+
+    def detach_all_routines(self):
+        """Detach all routines from the entity
+        """
+        self.routine_handler.detach_all_routines()
 
     def controller_routine_step(self, time):
         """Execute the simulator routines
@@ -596,6 +582,17 @@ class NotebookController(SimulatorController):
         """
         print(list(self.subtypes_labels.values()))
 
+    def get_idx_from_label_subtype(self, label):
+        """Return the index of a subtype from its label
+
+        :param label: label
+        :return: index of the subtype
+        """
+        assert label in self.valid_subtypes, f"Please specify a valid entity type among {self.valid_subtypes}"
+        entity_type_idx = self._subtype_label_to_idx[label]
+        return entity_type_idx
+
+    # TODO : rename print fps and do a get fps fn
     def get_fps(self, record_time=2, server=False):
         """Compute the fps of the simulation for a given record time without blocking
 
@@ -611,7 +608,7 @@ class NotebookController(SimulatorController):
             fps = (end_time - start_time) / record_time
             print(f"FPS: {fps:.2f} (number of steps per second in the {'server' if server else 'controller'})") 
 
-        # use a thread to calculate the fps without blocking the run
+        # use a thread to calculate the fps without blocking the run loop
         threading.Thread(target=calculate_fps).start()
 
     @property
@@ -631,7 +628,31 @@ class NotebookController(SimulatorController):
         return self.configs[StateType.SIMULATOR][0].box_size
 
 
-def eating(controller):
+def spawn_entity_routine_fn(controller, entity_type=None, position_range=None):
+    """Spawn entities of type entity_type every period seconds within a given position range
+
+    :param period: period
+    :param entity_type: entity_type, defaults to None
+    :param position_range: position_range, defaults to None
+    """
+    assert entity_type is not None, "Please specify the entity type"
+    assert isinstance(entity_type, int), "Entity type must be an integer index"
+
+    # transform the position range if not specified
+    if position_range is None:
+        position_range = ((0, controller.box_size), (0, controller.box_size)) 
+
+    non_existing_ent_list = [ent.idx for ent in controller.all_entities if not ent.exists and ent.subtype == entity_type]
+    if non_existing_ent_list:
+        ent_idx = np.random.choice(non_existing_ent_list)
+        x = np.random.uniform(position_range[0][0], position_range[0][1], 1)
+        y = np.random.uniform(position_range[1][0], position_range[1][1], 1)
+        controller.spawn_entity(ent_idx, position=(x, y))
+    else:
+        lg.info(f'All entities of type {entity_type} are spawned')
+
+
+def eating_routine_fn(controller):
     """make agents of the simulation eating the entities in their diet
 
     :param controller: NotebookController
@@ -642,7 +663,7 @@ def eating(controller):
             continue
         for entity_type in agent.diet:
             # transform the entity type label into an idx
-            entity_type = controller.subtype_label_to_idx[entity_type]
+            entity_type = controller._subtype_label_to_idx[entity_type]
             # get the idx of entities that are eatable by the agent (by precaution remove the agent itself)
             eatable_entities_idx = [ent.idx for ent in controller.all_entities if ent.subtype == entity_type and ent.idx != agent.idx]
             distances = agent.config.proximity_map_dist[eatable_entities_idx]
