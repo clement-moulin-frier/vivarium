@@ -54,6 +54,7 @@ class RoutineHandler(object):
         :param name: routine name, defaults to None
         :param interval: routine execution interval, defaults to 1
         """
+        assert isinstance(interval, int) and interval > 0, "Interval must be a positive integer"
         self._routines[name or routine_fn.__name__] = (routine_fn, interval)
 
     def detach_routine(self, name):

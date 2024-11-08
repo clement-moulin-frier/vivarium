@@ -85,8 +85,7 @@ class Entity:
         # Give self object as parameter to the routine function so it executes functions on the entity
         self.routine_handler.routine_step(self, time)
 
-    # TODO : rename print infos
-    def infos(self):
+    def print_infos(self):
         """Print the entity's infos
 
         :return: entity's infos
@@ -233,8 +232,7 @@ class Agent(Entity):
         del self.active_behaviors[n]
 
     # TODO : add interval execution for behaviors
-    # TODO : rename print behaviors to check behaviors
-    def check_behaviors(self):
+    def print_behaviors(self):
         """Print the behaviors and active behaviors of the agent
         """
         if len(self.behaviors) == 0:
@@ -311,31 +309,31 @@ class Agent(Entity):
         """
         return self.logger.clear()
 
-    def infos(self, full_infos=False):
+    def print_infos(self, full_infos=False):
         """Print the agent's infos
 
         :param full_infos: full_infos, defaults to False
         :return: agent's infos
         """
-        super().infos()
+        super().print_infos()
         info_lines = []
         sensors = self.sensors()
         info_lines.append(f"Sensors: Left={sensors[0]:.2f}, Right={sensors[1]:.2f}")
         info_lines.append(f"Motors: Left={self.left_motor:.2f}, Right={self.right_motor:.2f}")
         
+        # TODO : see if we print behaviors and eating infos by default
         # List behaviors
-        if self.behaviors:
-            info_lines.append("Behaviors:")
-            for name, (behavior_fn, weight) in self.behaviors.items():
-                info_lines.append(f"  - {name}: Function={behavior_fn.__name__}, Weight={weight}")
-        else:
-            info_lines.append("Behaviors: None")
-        # TODO : might add active behaviors here as well
+        # if self.behaviors:
+        #     info_lines.append("Behaviors:")
+        #     for name, (behavior_fn, weight) in self.behaviors.items():
+        #         info_lines.append(f"  - {name}: Function={behavior_fn.__name__}, Weight={weight}")
+        # else:
+        #     info_lines.append("Behaviors: None")
 
         # See if we print that by default
-        info_lines.append('') # add a space between other infos and eating infos atm
-        info_lines.append(f"Diet: {self.diet}")
-        info_lines.append(f"Eating range: {self.eating_range}")
+        # info_lines.append('') # add a space between other infos and eating infos atm
+        # info_lines.append(f"Diet: {self.diet}")
+        # info_lines.append(f"Eating range: {self.eating_range}")
         
         dict_infos = self.config.to_dict()
         if full_infos:
@@ -417,6 +415,8 @@ class NotebookController(SimulatorController):
         for ent in self.all_entities:
             ent.subtype_label = self._subtype_idx_to_label[ent.subtype]
 
+    # TODO : Clean mechanism to clean entity apparition (at seems like the entity is moving from a position to another)
+    # TODO : maybe add a little time.sleep()
     def spawn_entity(self, entity_idx, position=None):
         """Spawn an entity at a given position
 
@@ -484,7 +484,10 @@ class NotebookController(SimulatorController):
     def stop_ressources_apparition(self):
         """Stop the resources apparition process
         """
-        self.detach_routine(spawn_entity_routine_fn.__name__)
+        if spawn_entity_routine_fn.__name__ in self.routine_handler._routines:
+            self.detach_routine(spawn_entity_routine_fn.__name__)
+        else:
+            lg.warning("Resources apparition is already stopped")
                 
     def set_all_user_events(self):
         """Set all user events from clients (interface or notebooks) for all entities
@@ -592,21 +595,21 @@ class NotebookController(SimulatorController):
         entity_type_idx = self._subtype_label_to_idx[label]
         return entity_type_idx
 
-    # TODO : rename print fps and do a get fps fn
-    def get_fps(self, record_time=2, server=False):
+    def print_fps(self, record_time=2, server=False):
         """Compute the fps of the simulation for a given record time without blocking
 
         :param record_time: record_time, defaults to 2
         :param server_time: wether to record steps per seconds in the server or in the controller, defaults to False
         """
-        print(f"measuring the number of steps per second in the {'server' if server else 'controller'} for {record_time} seconds")
+        print(f"measuring the FPS (number of steps per second) in the {'server' if server else 'controller'} during {record_time} seconds")
         start_time = self.time if not server else self.server_time
+
 
         def calculate_fps():
             time.sleep(record_time)
             end_time = self.time if not server else self.server_time
             fps = (end_time - start_time) / record_time
-            print(f"FPS: {fps:.2f} (number of steps per second in the {'server' if server else 'controller'})") 
+            print(f"FPS: {fps:.2f}") 
 
         # use a thread to calculate the fps without blocking the run loop
         threading.Thread(target=calculate_fps).start()
