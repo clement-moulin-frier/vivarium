@@ -503,16 +503,15 @@ class NotebookController(SimulatorController):
         :raises RuntimeError: if the simulator is already started
         """
         if self._is_running:
-            # raise RuntimeError("Simulator is already started")
             print("Simulator is already started")
             return
         self._is_running = True
         if threaded:
-            run_thread = threading.Thread(target=self._run)
+            run_thread = threading.Thread(target=self._run, args=(num_steps,))
             run_thread.daemon = True
             run_thread.start()
         else:
-            self._run(num_steps)
+            self._run(num_steps=num_steps)
 
     def _run(self, num_steps=math.inf):
         """run the simulation for a given number of steps
