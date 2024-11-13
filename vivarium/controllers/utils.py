@@ -87,3 +87,8 @@ class RoutineHandler(object):
         # remove all problematic routines at the end to prevent spamming error messages and crashing the program
         for name in to_remove:
             del self._routines[name]
+    
+    def print_routines(self):
+        """Print the routines attached to the entity
+        """
+        print(f"Attached routines: {list(self._routines.keys())}")
