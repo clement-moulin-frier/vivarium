@@ -106,6 +106,12 @@ class Entity:
         
         return print("\n".join(info_lines))
     
+    # TODO : Add this in tests
+    def print_routines(self):
+        """Print the entity's routines
+        """
+        self.routine_handler.print_routines()
+    
 
 # TODO : Add BehaviorHandler class as a subclass of RoutineHandler
 class Agent(Entity):
