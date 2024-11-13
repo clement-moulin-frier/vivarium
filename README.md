@@ -1,6 +1,6 @@
 # 🌱 Vivarium
 
-**Vivarium** is framework for multi-agents simulations in Jax. It enables creating simple agents with two motors and two sensors, inspired by [Braitenberg Vehicles ](https://en.wikipedia.org/wiki/Braitenberg_vehicle), in a 2D rigid-body physics world. With Vivarium, you can run predefined or custom simulations, and interact with them in real time using a Web Interface or Jupyter notebooks. See our tutorials to get started with the project. 
+**Vivarium** is framework for multi-agents simulations in Jax. It enables creating simple agents with two motors and two sensors, inspired by [Braitenberg Vehicles ](https://en.wikipedia.org/wiki/Braitenberg_vehicle), in a 2D rigid-body physics world. The physics engine is written in [Jax-MD](https://github.com/jax-md/jax-md). With Vivarium, you can run predefined or custom simulations, and interact with them in real time using a Web Interface or Jupyter notebooks. See our tutorials to get started with the project. 
 
 ![Vivarium demo](images/simulation.gif)
 
@@ -65,8 +65,7 @@ Once this command will have completed, it will output a URL looking like `http:/
 
 ### Interact with it from a jupyter notebook 📓
 
-You can also choose to control the simulator programmatically in Jupyter Notebook. We first recommend you to do the first tutorials listed below. Then you can select a notebook in the [sessions](notebooks/sessions/) directory and start playing with it !
-
+You can also choose to control the simulator programmatically in Jupyter Notebook. We first recommend you to do the first tutorials listed below. Then you can select a notebook in the [sessions](notebooks/sessions/) directory and start playing with it ! If you choose to do so, you don't need to start the server and the interface manually. Instead, you can start and stop them with a custom command you can find in the notebooks.
 
 ## 📚 Tutorials
 

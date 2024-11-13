@@ -487,7 +487,7 @@ class NotebookController(SimulatorController):
         # start the eating routine for agents
         self.attach_routine(eating_routine_fn)
 
-    def stop_ressources_apparition(self):
+    def stop_resources_apparition(self):
         """Stop the resources apparition process
         """
         if spawn_entity_routine_fn.__name__ in self.routine_handler._routines:
@@ -670,6 +670,7 @@ def eating_routine_fn(controller):
         if not agent.exists:
             continue
         for entity_type in agent.diet:
+            assert entity_type in controller.valid_subtypes, f"Please specify a valid entity type among {controller.valid_subtypes}, for agent {agent.idx} diet : {agent.diet} "
             # transform the entity type label into an idx
             entity_type = controller._subtype_label_to_idx[entity_type]
             # get the idx of entities that are eatable by the agent (by precaution remove the agent itself)
