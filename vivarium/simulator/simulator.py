@@ -15,8 +15,8 @@ import jax.numpy as jnp
 from vivarium.controllers import converters
 from vivarium.utils.scene_configs import load_scene_config
 from vivarium.simulator.simulator_states import SimState, SimulatorState
-from vivarium.environments.braitenberg.selective_sensing import SelectiveSensorsEnv, init_state
-from vivarium.environments.braitenberg.selective_sensing import State as EnvState
+from vivarium.environments.braitenberg.selective_sensing.selective_sensing_env import SelectiveSensorsEnv, init_state
+from vivarium.environments.braitenberg.selective_sensing.selective_sensing_env import State as EnvState
 
 lg = logging.getLogger(__name__)
 
