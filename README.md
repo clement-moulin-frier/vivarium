@@ -65,11 +65,11 @@ Once this command will have completed, it will output a URL looking like `http:/
 
 ### Interact with it from a jupyter notebook 📓
 
-You can also choose to control the simulator programmatically in Jupyter Notebook. We first recommend you to do the first tutorials listed below. Then you can select a notebook in the [sessions](notebooks/sessions/) directory and start playing with it ! If you choose to do so, you don't need to start the server and the interface manually. Instead, you can start and stop them with a custom command you can find in the notebooks.
+You can also choose to control the simulator programmatically in Jupyter Notebook. We first recommend you to do the first tutorials listed below. Then you can select a notebook in the `notebooks/sessions/ `[directory](notebooks/sessions/) and start playing with it ! If you choose to do so, you don't need to start the server and the interface manually. Instead, you can start and stop them with a custom command you can find in the notebooks.
 
 ## 📚 Tutorials
 
-To help you get started and explore the project, we provide a set of Jupyter notebook tutorials located in the [notebooks folder](notebooks/README.md). These tutorials cover various aspects of the project, from using the graphical interface to interacting with simulations and understanding the backend.
+To help you get started and explore the project, we provide a set of Jupyter notebook tutorials located in the `notebooks/` [directory](notebooks/README.md). These tutorials cover various aspects of the project, from using the graphical interface to interacting with simulations and understanding the backend.
 
 - **Web Interface Tutorial**: Begin with the [web interface tutorial](notebooks/tutorials/web_interface_tutorial.md) to gain a basic understanding of the project and learn how to use the graphical interface.
 - **Quickstart Tutorial**: To learn how to interact with a simulation from a Jupyter notebook, follow the [quickstart tutorial](notebooks/tutorials/quickstart_tutorial.ipynb). This tutorial will guide you through creating, running, and manipulating simulations within a notebook environment.
@@ -89,11 +89,12 @@ python -m grpc_tools.protoc -I./vivarium/simulator/grpc_server/protos --python_o
 
 ### Running Automated Tests 🧪 
 
-If you want to test your changes locally, you can run the following command in the root of the directory :
+If you want to add tests for your local changes, you can write them in the `tests/` directory. Make sure that the name or your files and test functions start with "test". You can then run the following command in the root of the directory to launch them :
 
 ```bash
 pytest
 ```
 
-You can add your own tests in the tests/ subdirector. Make sure that the name or your files and test functions start with "test".
+## Acknowledgments
 
+The main contributors of this repository are Corentin Léger and Clément Moullin-Frier from the Flowers team at Inria, with participation of Martial Marzloff. CMF initiated the code base architecture in 2023 and CL was the main developper in 2024. CL was funded by the [French National Research Agency](https://anr.fr/), project ECOCURL, Grant ANR-20-CE23-0006. 
