@@ -13,11 +13,11 @@ from jax_md import space, partition
 from vivarium.environments.utils import distance 
 from vivarium.environments.base_env import BaseEnv
 from vivarium.environments.physics_engine import dynamics_fn
-from vivarium.environments.braitenberg.simple import proximity_map, sensor_fn
-from vivarium.environments.braitenberg.simple import Behaviors, linear_behavior
-from vivarium.environments.braitenberg.simple import braintenberg_force_fn
-from vivarium.environments.braitenberg.selective_sensing_classes import State, Neighbors, EntityType
-from vivarium.environments.braitenberg.selective_sensing_init import init_state
+from vivarium.environments.braitenberg.simple.simple_env import proximity_map, sensor_fn
+from vivarium.environments.braitenberg.simple.simple_env import Behaviors, linear_behavior
+from vivarium.environments.braitenberg.simple.simple_env import braintenberg_force_fn
+from vivarium.environments.braitenberg.selective_sensing.classes import State, Neighbors, EntityType
+from vivarium.environments.braitenberg.selective_sensing.init import init_state
 
 
 SPACE_NDIMS = 2
