@@ -1,4 +1,4 @@
-from vivarium.environments.braitenberg.selective_sensing import init_state, SelectiveSensorsEnv
+from vivarium.environments.braitenberg.selective_sensing.selective_sensing_env import init_state, SelectiveSensorsEnv
 from vivarium.simulator.simulator import Simulator
 
 NUM_STEPS = 50
