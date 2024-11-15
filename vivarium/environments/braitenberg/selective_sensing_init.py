@@ -131,7 +131,6 @@ def set_to_none_if_all_none(lst):
     return lst
 
 
-
 ### Helper functions to generate elements sub states of the state
 
 def init_entities(

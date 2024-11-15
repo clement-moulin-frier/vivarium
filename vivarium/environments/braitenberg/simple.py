@@ -1,3 +1,6 @@
+# TODO : reorganize this directory to put simple / selective sensing in subdirectories
+# TODO : move the classes and init functions in separate files in the simple env
+
 import logging as lg
 
 from enum import Enum
