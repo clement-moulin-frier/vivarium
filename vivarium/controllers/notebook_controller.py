@@ -6,7 +6,7 @@ import functools
 import numpy as np
 import logging
 
-from vivarium.environments.braitenberg.simple import Behaviors
+from vivarium.environments.braitenberg.simple.simple_env import Behaviors
 from vivarium.controllers.simulator_controller import SimulatorController
 from vivarium.controllers.utils import Logger, RoutineHandler
 from vivarium.simulator.simulator_states import StateType, EntityType

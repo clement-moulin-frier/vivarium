@@ -4,7 +4,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 from hydra.core.hydra_config import HydraConfig
 
-from vivarium.environments.braitenberg.selective_sensing import init_state, SelectiveSensorsEnv
+from vivarium.environments.braitenberg.selective_sensing.selective_sensing_env import init_state, SelectiveSensorsEnv
 from vivarium.simulator.simulator import Simulator
 
 lg = logging.getLogger(__name__)
