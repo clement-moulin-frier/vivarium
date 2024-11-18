@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from jax_md.dataclasses import dataclass as md_dataclass
 from jax_md import simulate
 
-from vivarium.environments.base_env import BaseState, BaseEnv
+from vivarium.environments.base_env import BaseState
 
 
 class EntityType(Enum):
@@ -56,40 +56,3 @@ class State(BaseState):
     entities: EntityState
     agents: AgentState
     objects: ObjectState    
-
-class Behaviors(Enum):
-    FEAR = 0
-    AGGRESSION = 1
-    LOVE = 2
-    SHY = 3
-    NOOP = 4
-    MANUAL = 5
-
-behavior_params = {
-    Behaviors.FEAR.value: jnp.array(
-        [[1., 0., 0.], 
-         [0., 1., 0.]]),
-    Behaviors.AGGRESSION.value: jnp.array(
-        [[0., 1., 0.], 
-         [1., 0., 0.]]),
-    Behaviors.LOVE.value: jnp.array(
-        [[-1., 0., 1.], 
-         [0., -1., 1.]]),
-    Behaviors.SHY.value: jnp.array(
-        [[0., -1., 1.], 
-         [-1., 0., 1.]]),
-    Behaviors.NOOP.value: jnp.array(
-        [[0., 0., 0.], 
-         [0., 0., 0.]]),
-    Behaviors.MANUAL.value: jnp.array(
-        [[0., 0., 0.], 
-         [0., 0., 0.]])
-}
-
-def behavior_to_params(behavior):
-    """Return the params associated to a behavior.
-
-    :param behavior: behavior id (int)
-    :return: params
-    """
-    return behavior_params[behavior]

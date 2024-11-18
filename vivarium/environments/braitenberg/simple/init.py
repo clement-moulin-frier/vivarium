@@ -4,16 +4,16 @@ import numpy as np
 from jax import random
 from jax_md.rigid_body import RigidBody
 
+from vivarium.environments.braitenberg.behaviors import Behaviors, behavior_to_params
 from vivarium.environments.braitenberg.simple.classes import (
     EntityType,
     State,
     AgentState,
     ObjectState,
     EntityState,
-    Behaviors,
-    behavior_to_params
 )
 
+# Constants
 SEED = 0
 MAX_AGENTS = 10
 MAX_OBJECTS = 2
@@ -36,6 +36,7 @@ PROX_COS_MIN = 0.0
 AGENTS_COLOR = jnp.array([0.0, 0.0, 1.0])
 OBJECTS_COLOR = jnp.array([1.0, 0.0, 0.0])
 BEHAVIOR = Behaviors.AGGRESSION.value
+
 
 def init_state(
     box_size=BOX_SIZE,

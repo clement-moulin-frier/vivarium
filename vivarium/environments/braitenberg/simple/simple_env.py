@@ -1,10 +1,8 @@
 import logging as lg
 
-from enum import Enum
 from functools import partial
 from typing import Tuple
 
-import numpy as np
 import jax.numpy as jnp
 
 from jax import vmap, jit
@@ -13,10 +11,11 @@ from jax import random, ops
 from jax_md import space, rigid_body, partition, quantity
 
 from vivarium.environments.base_env import BaseEnv
-from vivarium.environments.braitenberg.simple.init import init_state
 from vivarium.environments.utils import normal, distance, relative_position 
 from vivarium.environments.physics_engine import total_collision_energy, friction_force, dynamics_fn
-from vivarium.environments.braitenberg.simple.classes import EntityType, State, Behaviors, behavior_to_params
+from vivarium.environments.braitenberg.simple.init import init_state
+from vivarium.environments.braitenberg.behaviors import Behaviors
+from vivarium.environments.braitenberg.simple.classes import EntityType, State
 
 
 ### Define the constants and the classes of the environment to store its state ###

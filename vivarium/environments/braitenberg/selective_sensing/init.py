@@ -8,7 +8,7 @@ import matplotlib.colors as mcolors
 from jax import random
 from jax_md.rigid_body import RigidBody
 
-from vivarium.environments.braitenberg.simple.simple_env import Behaviors, behavior_to_params
+from vivarium.environments.braitenberg.behaviors import Behaviors, behavior_to_params
 from vivarium.utils.scene_configs import load_default_config
 from vivarium.environments.braitenberg.selective_sensing.classes import State, AgentState, ObjectState, EntityState, EntityType
 
