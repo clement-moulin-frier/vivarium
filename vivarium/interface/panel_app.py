@@ -291,20 +291,12 @@ class WindowManager(Parameterized):
         self.pcb_plot.period = event.new
 
 
-    # TODO : Change in this function !!! 
     def update_plot_cb(self):
         """Periodic callback for the plot update
         """
         for em in self.entity_managers.values():
             em.update_selected_simulator()
         state = self.controller.update_state()
-        # TODO : encapsulate this in a function
-        # if state.simulator_state.has_changed:
-        #     self = WindowManager()
-        #     self.controller.update_entity_list()
-        #     self.plot = self.create_plot()
-        #     self.app = self.create_app()
-        #     self.controller.simulator_config.has_changed = False
         self.controller.pull_configs()
         if self.controller.panel_simulator_config.config_update:
             self.controller.pull_selected_configs()
