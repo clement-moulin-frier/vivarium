@@ -79,11 +79,11 @@ class Entity:
         """
         self.routine_handler.detach_all_routines()
 
-    def routine_step(self, time):
+    def routine_step(self, time, catch_errors):
         """Execute the entity's routines with their corresponding execution intervals
         """
         # Give self object as parameter to the routine function so it executes functions on the entity
-        self.routine_handler.routine_step(self, time)
+        self.routine_handler.routine_step(self, time, catch_errors)
 
     def print_infos(self):
         """Print the entity's infos
@@ -485,7 +485,7 @@ class NotebookController(SimulatorController):
         for e in self.all_entities:
             e.set_events()
 
-    def run(self, threaded=True, num_steps=math.inf):
+    def run(self, threaded=True, num_steps=math.inf, catch_errors=False):
         """Run the simulation
 
         :param threaded: wether to run the simulation in a thread or not, defaults to True
@@ -497,13 +497,13 @@ class NotebookController(SimulatorController):
             return
         self._is_running = True
         if threaded:
-            run_thread = threading.Thread(target=self._run, args=(num_steps,))
+            run_thread = threading.Thread(target=self._run, args=(num_steps, catch_errors))
             run_thread.daemon = True
             run_thread.start()
         else:
             self._run(num_steps=num_steps)
 
-    def _run(self, num_steps=math.inf):
+    def _run(self, num_steps=math.inf, catch_errors=False):
         """run the simulation for a given number of steps
 
         :param num_steps: num_steps, defaults to math.inf
@@ -511,14 +511,14 @@ class NotebookController(SimulatorController):
         while self.time < num_steps and self._is_running:
             with self.batch_set_state():
                 # execute routines of the controller
-                self.controller_routine_step(self.time)
+                self.controller_routine_step(self.time, catch_errors=catch_errors)
 
                 # execute routines of the existing entities
                 for entity in self.all_entities:
+                    entity.set_events()
                     if not entity.exists:
                         continue
-                    entity.routine_step(self.time)
-                    entity.set_events()
+                    entity.routine_step(self.time, catch_errors=catch_errors)
                     # execute behaviors of agents
                     if entity.etype == EntityType.AGENT:
                         entity.behave(self.time)
@@ -564,10 +564,10 @@ class NotebookController(SimulatorController):
         """
         self.routine_handler.detach_all_routines()
 
-    def controller_routine_step(self, time):
+    def controller_routine_step(self, time, catch_errors):
         """Execute the simulator routines
         """
-        self.routine_handler.routine_step(self, time)
+        self.routine_handler.routine_step(self, time, catch_errors)
 
     def print_subtypes_list(self):
         """Return the list of subtypes
