@@ -106,7 +106,6 @@ class Entity:
         
         return print("\n".join(info_lines))
     
-    # TODO : Add this in tests
     def print_routines(self):
         """Print the entity's routines
         """
@@ -237,7 +236,6 @@ class Agent(Entity):
         n = name.__name__ if hasattr(name, "__name__") else name
         del self.active_behaviors[n]
 
-    # TODO : add interval execution for behaviors
     def print_behaviors(self):
         """Print the behaviors and active behaviors of the agent
         """
@@ -326,20 +324,6 @@ class Agent(Entity):
         sensors = self.sensors()
         info_lines.append(f"Sensors: Left={sensors[0]:.2f}, Right={sensors[1]:.2f}")
         info_lines.append(f"Motors: Left={self.left_motor:.2f}, Right={self.right_motor:.2f}")
-        
-        # TODO : see if we print behaviors and eating infos by default
-        # List behaviors
-        # if self.behaviors:
-        #     info_lines.append("Behaviors:")
-        #     for name, (behavior_fn, weight) in self.behaviors.items():
-        #         info_lines.append(f"  - {name}: Function={behavior_fn.__name__}, Weight={weight}")
-        # else:
-        #     info_lines.append("Behaviors: None")
-
-        # See if we print that by default
-        # info_lines.append('') # add a space between other infos and eating infos atm
-        # info_lines.append(f"Diet: {self.diet}")
-        # info_lines.append(f"Eating range: {self.eating_range}")
         
         dict_infos = self.config.to_dict()
         if full_infos:
@@ -529,8 +513,10 @@ class NotebookController(SimulatorController):
                 # execute routines of the controller
                 self.controller_routine_step(self.time)
 
-                # execute routines of the entities
+                # execute routines of the existing entities
                 for entity in self.all_entities:
+                    if not entity.exists:
+                        continue
                     entity.routine_step(self.time)
                     entity.set_events()
                     # execute behaviors of agents
@@ -634,6 +620,23 @@ class NotebookController(SimulatorController):
         :return: box size
         """
         return self.configs[StateType.SIMULATOR][0].box_size
+
+    # TODO: Test this in notebooks
+    @property
+    def existing_agents(self):
+        """Return the list of existing agents
+
+        :return: existing agents
+        """
+        return [agent for agent in self.agents if agent.exists]
+
+    @property
+    def non_existing_agents(self):
+        """Return the list of non existing agents
+
+        :return: non existing agents
+        """
+        return [agent for agent in self.agents if not agent.exists]
 
 
 def spawn_entity_routine_fn(controller, entity_type=None, position_range=None):
