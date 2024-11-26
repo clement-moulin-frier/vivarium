@@ -6,10 +6,10 @@ import functools
 import numpy as np
 import logging
 
-from vivarium.environments.braitenberg.simple.simple_env import Behaviors
+from vivarium.environments.braitenberg.behaviors import Behaviors
 from vivarium.controllers.simulator_controller import SimulatorController
-from vivarium.controllers.utils import Logger, RoutineHandler
 from vivarium.simulator.simulator_states import StateType, EntityType
+from vivarium.controllers.utils import Logger, RoutineHandler, BehaviorHandler
 
 lg = logging.getLogger(__name__)
     
@@ -121,16 +121,13 @@ class Agent(Entity):
     def __init__(self, config):
         super().__init__(config)
         self.etype = EntityType.AGENT
-
-        self.behaviors = {}
-        self.active_behaviors = {}
+        self.behavior_handler = BehaviorHandler()
+        self.logger = Logger()
         self.eating_range = 10
         self.diet = []
-        # TODO : see if we keep both
         self.ate = False
         self.time_since_last_meal = np.inf
         self.simulation_entities = None
-        self.logger = Logger()
         self.set_manual()
 
     def set_manual(self):
@@ -187,95 +184,56 @@ class Agent(Entity):
         :param interval: interval of behavior execution, defaults to 1
         :param weight: weight, defaults to 1.
         """
-        assert isinstance(interval, int) and interval > 0, "Interval must be a positive integer"
-        assert isinstance(weight, (int, float)) and weight > 0, "Weight must be a positive number"
-        self.behaviors[name or behavior_fn.__name__] = (behavior_fn, interval, weight)
+        self.behavior_handler.attach_behavior(behavior_fn, name, interval, weight)
 
-    # TODO : add a lock to the detach behavior and to the behave function to prevent the simulator from crashing --> MEDIUM PRIORITY
+    
     def detach_behavior(self, name, stop_motors=False):
         """Detach a behavior from the agent and stop the motors if needed
-
+        
         :param name: name
-        :param stop_motors: stop motors signal, defaults to False
+        :param stop_motors: wether to stop the motors or not, defaults to False
         """
-        n = name.__name__ if hasattr(name, "__name__") else name
-        if n in self.behaviors:
-            del self.behaviors[n]
-        if n in self.active_behaviors:
-            del self.active_behaviors[n]
+        self.behavior_handler.detach_behavior(name)
         if stop_motors:
             self.stop_motors()
 
     def detach_all_behaviors(self, stop_motors=False):
         """Detach all behaviors from the agent and stop the motors if needed
-
-        :param stop_motors: stop motors signal, defaults to False
+        
+        :param stop_motors: wether to stop the motors or not, defaults to False
         """
-        self.behaviors = {}
-        self.active_behaviors = {}
+        self.behavior_handler.detach_all_behaviors()
         if stop_motors:
             self.stop_motors()
 
     def start_behavior(self, name):
         """Start a behavior of the agent
-
-        :param name: behavior name
+        
+        :param name: name
         """
-        n = name.__name__ if hasattr(name, "__name__") else name
-        self.active_behaviors[n] = self.behaviors[n]
+        self.behavior_handler.start_behavior(name)
 
     def start_all_behaviors(self):
-        """Start all behaviors of the agent
-        """
-        for n in self.behaviors:
-            self.active_behaviors[n] = self.behaviors[n]
+        """Start all behaviors of the agent"""
+        self.behavior_handler.start_all_behaviors()
 
     def stop_behavior(self, name):
         """Stop a behavior of the agent
-
-        :param name: behavior name
+        
+        :param name: name
         """
-        n = name.__name__ if hasattr(name, "__name__") else name
-        del self.active_behaviors[n]
+        self.behavior_handler.stop_behavior(name)
 
     def print_behaviors(self):
-        """Print the behaviors and active behaviors of the agent
-        """
-        if len(self.behaviors) == 0:
-            print("No behaviors attached")
-        else:
-            available_behaviors = list(self.behaviors.keys())
-            active_behaviors = list(self.active_behaviors.keys())
-            print(f"Available behaviors: {available_behaviors}, Active behaviors: {active_behaviors if active_behaviors else 'No active behaviors'}")
+        """Print the behaviors and active behaviors of the agent"""
+        self.behavior_handler.print_behaviors()
 
     def behave(self, time):
         """Make the agent behave according to its active behaviors
-
-        :param time: current time
-        """
-        if not self.active_behaviors:
-            return
         
-        # prevents simulator to crash if an error occurs during motor values computations
-        try:
-            motor_contributions = [
-                (w * np.array(fn(self)), w)
-                for (fn, interval, w) in self.active_behaviors.values()
-                if time % interval == 0
-            ]
-            # check if there are motor contributions from an active behavior (it can be empty because of the interval)
-            if motor_contributions:
-                total_motor_values = sum(motor_value for (motor_value, _) in motor_contributions)
-                total_weights = sum(weight for (_, weight) in motor_contributions)
-                motor_values = total_motor_values / total_weights
-            # else keep the current motor values
-            else:
-                motor_values = [self.left_motor, self.right_motor]
-        except Exception as e:
-            lg.error(f"Error while computing motor values in behavior of agent {self.idx}: {e}")
-            motor_values = np.zeros(2)  
-
-        self.left_motor, self.right_motor = motor_values
+        :param time: time
+        """
+        self.behavior_handler.behave(self, time)
 
     def stop_motors(self):
         """Stop the motors of the agent
@@ -292,6 +250,7 @@ class Agent(Entity):
         self.ate = False
         return val
 
+    # TODO : maybe delete this function
     def has_eaten_since(self, time):
         """ Check if the agent has eaten since a given time
 
@@ -565,12 +524,16 @@ class NotebookController(SimulatorController):
     def stop(self):
         """Stop the simulation and detach all routines
         """
+        if not self._is_running:
+            print("Simulator is already stopped")
         self._is_running = False
         self.routine_handler.detach_all_routines()
 
     def pause(self):
         """Pause the simulation
         """
+        if not self._is_running:
+            print("Simulator is already stopped")
         self._is_running = False
 
     def wait(self, seconds):

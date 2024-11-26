@@ -1,6 +1,8 @@
 import logging
 import threading
 
+import numpy as np
+
 lg = logging.getLogger(__name__)
 
 
@@ -41,11 +43,8 @@ class Logger(object):
 
 
 class RoutineHandler(object):
-    """RoutineHandler class that handles routines for the NotebookController and its Entities
-    """
+    """RoutineHandler class that handles routines for the NotebookController and its Entities"""
     def __init__(self):
-        """Initialize the RoutineHandler
-        """
         self._routines = {}
         self._lock = threading.Lock()
 
@@ -105,3 +104,109 @@ class RoutineHandler(object):
         """
         with self._lock:
             print(f"Attached routines: {list(self._routines.keys())}")
+
+
+class BehaviorHandler(object):
+    """BehaviorHandler class that handles behaviors for agents"""
+    def __init__(self):
+        """Initialize the BehaviorHandler"""
+        self._behaviors = {}
+        self._active_behaviors = {}
+        self._lock = threading.Lock()
+
+    def attach_behavior(self, behavior_fn, name=None, interval=1, weight=1.):
+        """Attach a behavior to the agent with a given weight
+
+        :param behavior_fn: behavior function
+        :param name: behavior name, defaults to None
+        :param interval: behavior execution interval, defaults to 1
+        :param weight: behavior weight, defaults to 1.
+        """
+        assert isinstance(interval, int) and interval > 0, "Interval must be a positive integer"
+        assert isinstance(weight, (int, float)) and weight > 0, "Weight must be a positive number"
+        with self._lock:
+            self._behaviors[name or behavior_fn.__name__] = (behavior_fn, interval, weight)
+
+    def detach_behavior(self, name):
+        """Detach a behavior from the agent
+
+        :param name: behavior name
+        """
+        with self._lock:
+            n = name.__name__ if hasattr(name, "__name__") else name
+            if n in self._behaviors:
+                del self._behaviors[n]
+            if n in self._active_behaviors:
+                del self._active_behaviors[n]
+
+    def detach_all_behaviors(self):
+        """Detach all behaviors from the agent"""
+        with self._lock:
+            self._behaviors = {}
+            self._active_behaviors = {}
+
+    def start_behavior(self, name):
+        """Start a behavior of the agent
+
+        :param name: behavior name
+        """
+        with self._lock:
+            n = name.__name__ if hasattr(name, "__name__") else name
+            self._active_behaviors[n] = self._behaviors[n]
+
+    def start_all_behaviors(self):
+        """Start all behaviors of the agent"""
+        with self._lock:
+            for n in self._behaviors:
+                self._active_behaviors[n] = self._behaviors[n]
+
+    def stop_behavior(self, name):
+        """Stop a behavior of the agent
+
+        :param name: behavior name
+        """
+        with self._lock:
+            n = name.__name__ if hasattr(name, "__name__") else name
+            if n in self._active_behaviors:
+                del self._active_behaviors[n]
+
+    def behave(self, agent, time):
+        """Make the agent behave according to its active behaviors
+
+        :param time: current time
+        """
+        if not self._active_behaviors:
+            return
+        
+        # prevents simulator to crash if an error occurs during motor values computations
+        try:
+            motor_contributions = [
+                (w * np.array(fn(agent)), w)
+                for (fn, interval, w) in self._active_behaviors.values()
+                if time % interval == 0
+            ]
+            # check if there are motor contributions from an active behavior (it can be empty because of the interval)
+            if motor_contributions:
+                total_motor_values = sum(motor_value for (motor_value, _) in motor_contributions)
+                total_weights = sum(weight for (_, weight) in motor_contributions)
+                motor_values = total_motor_values / total_weights
+            # else keep the current motor values
+            else:
+                motor_values = [agent.left_motor, agent.right_motor]
+        except Exception as e:
+            lg.error(f"Error while computing motor values in behavior of agent {agent.idx}: {e}")
+            motor_values = np.zeros(2)  
+
+        agent.left_motor, agent.right_motor = motor_values
+
+    def print_behaviors(self):
+        """Print the behaviors and active behaviors of the agent"""
+        with self._lock:
+            if len(self._behaviors) == 0:
+                print("No behaviors attached")
+            else:
+                available_behaviors = list(self._behaviors.keys())
+                active_behaviors = list(self._active_behaviors.keys())
+                print(f"Available behaviors: {available_behaviors}, Active behaviors: {active_behaviors if active_behaviors else 'No active behaviors'}")
+
+ 
