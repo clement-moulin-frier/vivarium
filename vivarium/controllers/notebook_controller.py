@@ -126,7 +126,7 @@ class Agent(Entity):
         self.active_behaviors = {}
         self.eating_range = 10
         self.diet = []
-        self.ate = False
+        self.time_since_last_meal = np.inf
         self.simulation_entities = None
         self.logger = Logger()
         self.set_manual()
@@ -281,14 +281,12 @@ class Agent(Entity):
         self.left_motor = 0
         self.right_motor = 0
 
-    def has_eaten(self):
-        """Check if the agent has eaten
+    def has_eaten_since(self, time):
+        """ Check if the agent has eaten since a given time
 
-        :return: True if the agent has eaten, False otherwise
+        :return: True if the agent has eaten since the given time, False otherwise
         """
-        val = self.ate
-        self.ate = False
-        return val
+        return self.time_since_last_meal < time
     
     def add_log(self, log_field, data):
         """Add a log to the agent's logger (e.g robot.add_log("left_prox", left_prox_value))
@@ -327,7 +325,9 @@ class Agent(Entity):
         
         dict_infos = self.config.to_dict()
         if full_infos:
-
+            info_lines.append('') # add a space between other infos and eating infos atm
+            info_lines.append(f"Diet: {self.diet}")
+            info_lines.append(f"Eating range: {self.eating_range}")
             info_lines.append("\nConfiguration Details:")
             for k, v in dict_infos.items():
                 if k not in ['x_position', 'y_position', 'behavior', 'left_motor', 'right_motor', 'params', 'sensed']:
@@ -456,9 +456,9 @@ class NotebookController(SimulatorController):
         """
         entity_type_idx = self.get_idx_from_label_subtype(entity_type)
 
-        routine_fn = functools.partial(spawn_entity_routine_fn, entity_type=entity_type_idx, position_range=position_range)
+        routine_fn = functools.partial(spawn_entity_routine, entity_type=entity_type_idx, position_range=position_range)
         # add the name of the spawning routine function otherwise error in the routine handler
-        self.attach_routine(routine_fn, name=spawn_entity_routine_fn.__name__, interval=interval)
+        self.attach_routine(routine_fn, name=spawn_entity_routine.__name__, interval=interval)
 
     def start_resources_apparition(self, interval=50, position_range=None):
         """Start the resources apparition process
@@ -469,13 +469,13 @@ class NotebookController(SimulatorController):
         resources_type = "resources"
         self.start_entity_apparition(interval, entity_type=resources_type, position_range=position_range)
         # start the eating routine for agents
-        self.attach_routine(eating_routine_fn)
+        self.attach_routine(eating_routine)
 
     def stop_resources_apparition(self):
         """Stop the resources apparition process
         """
-        if spawn_entity_routine_fn.__name__ in self.routine_handler._routines:
-            self.detach_routine(spawn_entity_routine_fn.__name__)
+        if spawn_entity_routine.__name__ in self.routine_handler._routines:
+            self.detach_routine(spawn_entity_routine.__name__)
         else:
             lg.warning("Resources apparition is already stopped")
                 
@@ -663,7 +663,7 @@ def spawn_entity_routine_fn(controller, entity_type=None, position_range=None):
         lg.info(f'All entities of type {entity_type} are spawned')
 
 
-def eating_routine_fn(controller):
+# TODO : Update old routine function for eating
     """make agents of the simulation eating the entities in their diet
 
     :param controller: NotebookController
@@ -683,6 +683,42 @@ def eating_routine_fn(controller):
             # arr_idx is the index of the in_range array
             for arr_idx, ent_idx in enumerate(eatable_entities_idx):
                 if in_range[arr_idx] and controller.all_entities[ent_idx].exists:
-                    controller.remove_entity(ent_idx) 
-                    agent.ate = True
+                    controller.remove_entity(ent_idx)
+                    # TODO : check here 
+                    agent.time_since_last_meal = 0    
+
+
+def eating_routine(controller):
+    """Routine to make agents eat entities in their diet. 
+    They can only eat entities sensed by their proximeters, and that are in their eating range.
+
+    :param controller: _description_
+    """
+    for agent in controller.existing_agents:
+        left_prox, right_prox = agent.sensors()
+        left_type, right_type = agent.prox_sensed_ent_type
+
+        can_eat_left = (
+            controller.subtypes_labels[left_type] in agent.diet and
+            (1. - left_prox) * agent.proxs_dist_max <= agent.eating_range
+        )
+
+        can_eat_right = (
+            controller.subtypes_labels[right_type] in agent.diet and
+            (1. - right_prox) * agent.proxs_dist_max <= agent.eating_range
+        )
+
+        # if the agent can eat
+        if can_eat_left or can_eat_right:
+            # determine which side to eat
+            if can_eat_left and can_eat_right:
+                eating_choice = np.random.choice([0, 1])
+            else:
+                eating_choice = 0 if can_eat_left else 1
+            
+            controller.remove_entity(agent.prox_sensed_ent_idx[eating_choice])
+        # TODO : update the mechanism to update the has eaten since time
+            agent.ate = True
+        else:
+            agent.ate = False
 
