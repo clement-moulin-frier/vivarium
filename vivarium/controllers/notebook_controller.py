@@ -192,6 +192,7 @@ class Agent(Entity):
         assert isinstance(weight, (int, float)) and weight > 0, "Weight must be a positive number"
         self.behaviors[name or behavior_fn.__name__] = (behavior_fn, interval, weight)
 
+    # TODO : add a lock to the detach behavior and to the behave function to prevent the simulator from crashing --> MEDIUM PRIORITY
     def detach_behavior(self, name, stop_motors=False):
         """Detach a behavior from the agent and stop the motors if needed
 
@@ -409,15 +410,13 @@ class NotebookController(SimulatorController):
             agent._subtype_label_to_idx = self._subtype_label_to_idx
             agent.valid_subtypes = self.valid_subtypes
     
-    # TODO : implement this function at the simulator controller level (not only for notebooks)
     def update_entities_attributes(self):
         """Temporary fn to give their subtype labels to all entities
         """
         for ent in self.all_entities:
             ent.subtype_label = self._subtype_idx_to_label[ent.subtype]
 
-    # TODO : Clean mechanism to clean entity apparition (at seems like the entity is moving from a position to another)
-    # TODO : maybe add a little time.sleep()
+    # TODO : Clean mechanism to clean entity apparition (at seems like the entity is moving from a position to another), maybe add a time.sleep() --> LOW PRIORITY
     def spawn_entity(self, entity_idx, position=None):
         """Spawn an entity at a given position
 
@@ -511,7 +510,7 @@ class NotebookController(SimulatorController):
         for e in self.all_entities:
             e.set_events()
 
-    def run(self, threaded=True, num_steps=math.inf, catch_errors=False):
+    def run(self, threaded=True, num_steps=math.inf, catch_errors=True):
         """Run the simulation
 
         :param threaded: wether to run the simulation in a thread or not, defaults to True
@@ -529,12 +528,15 @@ class NotebookController(SimulatorController):
         else:
             self._run(num_steps=num_steps)
 
-    def _run(self, num_steps=math.inf, catch_errors=False):
+    def _run(self, num_steps=math.inf, catch_errors=True):
         """run the simulation for a given number of steps
 
         :param num_steps: num_steps, defaults to math.inf
+        :param catch_errors: wether to catch errors or not, defaults to False
         """
-        while self.time < num_steps and self._is_running:
+        # Add a local time for the run function independant from the controller time
+        run_time = 0
+        while run_time < num_steps and self._is_running:
             with self.batch_set_state():
                 # execute routines of the controller
                 self.controller_routine_step(self.time, catch_errors=catch_errors)
@@ -548,11 +550,15 @@ class NotebookController(SimulatorController):
                     # execute behaviors of agents
                     if entity.etype == EntityType.AGENT:
                         entity.behave(self.time)
+                        # TODO: see if we do this in a dedicated function or not
+                        # increment time since last meal for all alive agents
+                        entity.time_since_last_meal += 1
 
             # update the attributes of all entities and do a step on server side
             self.state = self.client.step()
             self.pull_configs()
             self.time += 1
+            run_time += 1
 
         # finally stop the simulation
         self.stop()
@@ -621,7 +627,6 @@ class NotebookController(SimulatorController):
         print(f"measuring the FPS (number of steps per second) in the {'server' if server else 'controller'} during {record_time} seconds")
         start_time = self.time if not server else self.server_time
 
-
         def calculate_fps():
             time.sleep(record_time)
             end_time = self.time if not server else self.server_time
@@ -647,7 +652,6 @@ class NotebookController(SimulatorController):
         """
         return self.configs[StateType.SIMULATOR][0].box_size
 
-    # TODO: Test this in notebooks
     @property
     def existing_agents(self):
         """Return the list of existing agents
@@ -690,7 +694,6 @@ def spawn_entity_routine(controller, entity_type=None, position_range=None):
     else:
         lg.info(f'All entities of type {entity_type} are spawned')
 
-
 def eating_routine_classic(controller):
     """Make agents eat entities if they are in their diet and eating range
 
@@ -713,9 +716,7 @@ def eating_routine_classic(controller):
                 if in_range[arr_idx] and controller.all_entities[ent_idx].exists:
                     controller.remove_entity(ent_idx)
                     agent.ate = True
-                    # TODO : Implement this mechanism too
-                    agent.time_since_last_meal = 0    
-
+                    agent.time_since_last_meal = 0
 
 def eating_routine_proximeters(controller):
     """Make agents eat entities if they are in their diet, eating range and sensed by their proximeters
@@ -730,7 +731,6 @@ def eating_routine_proximeters(controller):
             controller.subtypes_labels[left_type] in agent.diet and
             (1. - left_prox) * agent.proxs_dist_max <= agent.eating_range
         )
-
         can_eat_right = (
             controller.subtypes_labels[right_type] in agent.diet and
             (1. - right_prox) * agent.proxs_dist_max <= agent.eating_range
@@ -745,8 +745,8 @@ def eating_routine_proximeters(controller):
                 eating_choice = 0 if can_eat_left else 1
             
             controller.remove_entity(agent.prox_sensed_ent_idx[eating_choice])
-        # TODO : update the mechanism to update the has eaten since time
             agent.ate = True
+            agent.time_since_last_meal = 0
         else:
             agent.ate = False
 
