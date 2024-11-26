@@ -156,15 +156,14 @@ class Agent(Entity):
         return [left, right]
 
     def sensed_entities(self):
-        """Return the left and right sensed entities of the agent
+        """Return the left and right sensed entities of the agent if they are sensed, else None
 
         :return: sensed entities
         """
         left_idx, right_idx = self.prox_sensed_ent_idx
-        return [
-            self.simulation_entities[left_idx], 
-            self.simulation_entities[right_idx]
-        ]
+        left_ent = self.simulation_entities[left_idx] if self.config.left_prox != 0 else None
+        right_ent = self.simulation_entities[right_idx] if self.config.right_prox != 0 else None
+        return [left_ent, right_ent]
     
     def sense_attributes(self, sensed_attribute, default_value=None):
         """Return the sensed attribute of the left and right sensed entities
@@ -561,13 +560,18 @@ class NotebookController(SimulatorController):
             run_time += 1
 
         # finally stop the simulation
-        self.stop()
+        self.pause()
 
     def stop(self):
-        """Stop the simulation
+        """Stop the simulation and detach all routines
         """
         self._is_running = False
         self.routine_handler.detach_all_routines()
+
+    def pause(self):
+        """Pause the simulation
+        """
+        self._is_running = False
 
     def wait(self, seconds):
         """Wait for a given number of seconds
