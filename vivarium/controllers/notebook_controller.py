@@ -126,6 +126,8 @@ class Agent(Entity):
         self.active_behaviors = {}
         self.eating_range = 10
         self.diet = []
+        # TODO : see if we keep both
+        self.ate = False
         self.time_since_last_meal = np.inf
         self.simulation_entities = None
         self.logger = Logger()
@@ -280,6 +282,15 @@ class Agent(Entity):
         """
         self.left_motor = 0
         self.right_motor = 0
+
+    def has_eaten(self):
+        """Check if the agent has eaten
+
+        :return: True if the agent has eaten, False otherwise
+        """
+        val = self.ate
+        self.ate = False
+        return val
 
     def has_eaten_since(self, time):
         """ Check if the agent has eaten since a given time
@@ -450,7 +461,7 @@ class NotebookController(SimulatorController):
     def start_entity_apparition(self, interval=50, entity_type: str = None, position_range=None):
         """Start the apparition process for entities of type entity_type every period seconds
 
-        :param period: period, defaults to 5
+        :param interval: execution interval, defaults to 50
         :param entity_type: entity_type, defaults to None
         :param position_range: position range where entities can spawn, defaults to None
         """
@@ -463,13 +474,20 @@ class NotebookController(SimulatorController):
     def start_resources_apparition(self, interval=50, position_range=None):
         """Start the resources apparition process
 
-        :param period: period, defaults to 5
+        :param interval: execution interval, defaults to 5
         :param position_range: position_range, defaults to None
         """
         resources_type = "resources"
         self.start_entity_apparition(interval, entity_type=resources_type, position_range=position_range)
-        # start the eating routine for agents
-        self.attach_routine(eating_routine)
+        
+    def start_eating_mechanism(self, interval=10, proximeters_mode=False):
+        """Start the eating mechanism for all agents
+
+        :param interval: execution interval, defaults to 10
+        :param proximeters_mode: wether to only eat entities sensed by proximeters or not, defaults to False
+        """
+        eating_routine = eating_routine_proximeters if proximeters_mode else eating_routine_classic
+        self.attach_routine(eating_routine, interval=interval)
 
     def stop_resources_apparition(self):
         """Stop the resources apparition process
@@ -478,6 +496,14 @@ class NotebookController(SimulatorController):
             self.detach_routine(spawn_entity_routine.__name__)
         else:
             lg.warning("Resources apparition is already stopped")
+
+    def stop_eating_mechanism(self):
+        if eating_routine_classic.__name__ in self.routine_handler._routines:
+            self.detach_routine(eating_routine_classic.__name__)
+        elif eating_routine_proximeters.__name__ in self.routine_handler._routines:
+            self.detach_routine(eating_routine_proximeters.__name__)
+        else:
+            lg.warning("Eating mechanism is already stopped")
                 
     def set_all_user_events(self):
         """Set all user events from clients (interface or notebooks) for all entities
@@ -639,7 +665,9 @@ class NotebookController(SimulatorController):
         return [agent for agent in self.agents if not agent.exists]
 
 
-def spawn_entity_routine_fn(controller, entity_type=None, position_range=None):
+# Predefined routines that can be attached to the controller
+
+def spawn_entity_routine(controller, entity_type=None, position_range=None):
     """Spawn entities of type entity_type every period seconds within a given position range
 
     :param period: period
@@ -663,8 +691,8 @@ def spawn_entity_routine_fn(controller, entity_type=None, position_range=None):
         lg.info(f'All entities of type {entity_type} are spawned')
 
 
-# TODO : Update old routine function for eating
-    """make agents of the simulation eating the entities in their diet
+def eating_routine_classic(controller):
+    """Make agents eat entities if they are in their diet and eating range
 
     :param controller: NotebookController
     """
@@ -684,15 +712,15 @@ def spawn_entity_routine_fn(controller, entity_type=None, position_range=None):
             for arr_idx, ent_idx in enumerate(eatable_entities_idx):
                 if in_range[arr_idx] and controller.all_entities[ent_idx].exists:
                     controller.remove_entity(ent_idx)
-                    # TODO : check here 
+                    agent.ate = True
+                    # TODO : Implement this mechanism too
                     agent.time_since_last_meal = 0    
 
 
-def eating_routine(controller):
-    """Routine to make agents eat entities in their diet. 
-    They can only eat entities sensed by their proximeters, and that are in their eating range.
+def eating_routine_proximeters(controller):
+    """Make agents eat entities if they are in their diet, eating range and sensed by their proximeters
 
-    :param controller: _description_
+    :param controller: NotebookController
     """
     for agent in controller.existing_agents:
         left_prox, right_prox = agent.sensors()
