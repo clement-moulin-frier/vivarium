@@ -64,7 +64,6 @@ class Simulator:
         self.step()
         lg.info("Simulator initialized")
 
-
     def load_state(self, state, env):
         """Load a state in the simulator
 
@@ -81,7 +80,6 @@ class Simulator:
             use_fori_loop=self.use_fori_loop,
         )
 
-
     def load_scene(self, scene_name):
         """Load a scene in the simulator
 
@@ -95,7 +93,6 @@ class Simulator:
         env = SelectiveSensorsEnv(state=state)
         
         self.load_state(state, env)
-
 
     def _step(self, state, num_updates):
         """Do num_updates jitted steps in the simulation. This is done by converting state into environment state, and convert it back to simulation state during return
@@ -114,12 +111,10 @@ class Simulator:
         # return the next sim state (convert new env state)
         return self.env_to_sim_state(new_env_state)
     
-
     def step(self):
         """Do a step in the simulation by calling _step"""
         self.state = self._step(self.state, self.num_steps_lax)
         return self.state
-
 
     def run(self, threaded=False, num_steps=math.inf, save=False, saving_name=None):
         """Run the simulator for the desired number of timesteps, either in a separate thread or not. Return the final state
@@ -138,7 +133,6 @@ class Simulator:
             threading.Thread(target=_run).start()
         else:
             self._run(num_steps=num_steps, save=save, saving_name=saving_name)
-
 
     def _run(self, num_steps, save, saving_name):
         """Function that runs the simulator for the desired number of steps. Used to be called either normally or in a thread.
@@ -178,7 +172,6 @@ class Simulator:
         self._is_started = False
         lg.info('Simulation run stops')
 
-
     def update_sleep_time(self, frequency, elapsed_time):
         """Compute the time we need to sleep to respect the update frequency
 
@@ -195,7 +188,6 @@ class Simulator:
             sleep_time = 0
         return sleep_time
         
-
     def start_recording(self, saving_name):
         """Start the recording of the simulation
         :param saving_name: optional name of the saving file
@@ -217,7 +209,6 @@ class Simulator:
         os.makedirs(self.saving_dir, exist_ok=True)
         lg.info('Saving directory %s created', self.saving_dir)
 
-
     def record(self, data):
         """Record the desired data during a step
         :param data: saved data (e.g simulator.state)
@@ -226,7 +217,6 @@ class Simulator:
             lg.warning('Recording not started yet.')
             return
         self.records.append(data)
-
 
     def save_records(self):
         """Save the recorded steps in a pickle file"""
@@ -239,7 +229,6 @@ class Simulator:
             pickle.dump(self.records, f)
             lg.info('Simulation frames saved in %s', saving_path)
 
-
     def stop_recording(self):
         """Stop the recording, save the recorded steps and reset recording information"""
         if not self.recording:
@@ -248,8 +237,6 @@ class Simulator:
 
         self.save_records()
         self.recording = False
-        # self.records = []
-
 
     def load(self, saving_name):
         """Load data corresponding to saving_name 
@@ -262,7 +249,6 @@ class Simulator:
             lg.info('Simulation loaded from %s', saving_path)
             return data
     
-
     # TODO : set the params to the correct values when a behavior is modified
     def set_state(self, nested_field, ent_idx, column_idx, value):
         """Set the current simulation state
@@ -288,11 +274,9 @@ class Simulator:
         if nested_field[1] in ('box_size', 'neighbor_radius', 'dt'):
             lg.warning("Impossible to change 'box size', 'dt', 'neighbor radius' during the simulation")
 
-
     def start(self):
         """Start the simulation"""
         self.run(threaded=True)
-
 
     def stop(self, blocking=True):
         """Stop the simulation
@@ -306,14 +290,12 @@ class Simulator:
                 lg.info('still started')
             lg.info('now stopped')
 
-
     def is_started(self):
         """Check if simulation is started
 
         :return: True if started else False
         """
         return self._is_started
-
 
     @contextmanager
     def pause(self):
@@ -327,7 +309,6 @@ class Simulator:
         finally:
             self.run(threaded=True)
 
-
     # TODO : Update documentation
     def update_attr(self, attr, type_):
         """_summary_
@@ -338,7 +319,6 @@ class Simulator:
         lg.debug(f"\nUpdate attribute: {attr = }; {type_ = }")
         setattr(self, attr, type_(getattr(self.state.simulator_state, attr)[0]))
 
-
     def get_state(self):
         """Get current simulation state
 
@@ -346,7 +326,6 @@ class Simulator:
         """
         return self.state
     
-
     def process_ent_sub_types(self, ent_sub_types_and_num):
         """Process the entity sub types and number to remove number of entities, and add idx as keys, 
         from {label: (idx, num)} to {idx: label}
@@ -355,7 +334,6 @@ class Simulator:
         :return: processed dictionary
         """
         return {int(idx): label for label, (idx, _)  in ent_sub_types_and_num.items()}
-    
     
     @partial(jax.jit, static_argnums=(0,))
     def _env_to_sim_state(self, env_state, num_steps_lax, freq, use_fori_loop, jit_step):
@@ -395,7 +373,6 @@ class Simulator:
 
         return sim_state
     
-
     def env_to_sim_state(self, env_state):
         """Transform environment state (used in self.env) into a simulator state for the client-server interactoon
 
@@ -409,7 +386,6 @@ class Simulator:
             self.use_fori_loop,
             self.jit_step
         )
-        
 
     @partial(jax.jit, static_argnums=(0,))
     def sim_to_env_state(self, sim_state):
@@ -436,7 +412,6 @@ class Simulator:
         )
 
         return env_state
-    
 
     @property
     def env_state(self):

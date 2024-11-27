@@ -15,27 +15,28 @@ lg = logging.getLogger(__name__)
 
 
 class PanelConfig(Config):
+    """Base class for panel configurations"""
     pass
 
-
 class PanelEntityConfig(PanelConfig):
+    """Base class for panel configurations of entities"""
     visible = param.Boolean(True)
 
-
 class PanelAgentConfig(PanelEntityConfig):
+    """Base class for panel configurations of agents"""
     visible_wheels = param.Boolean(True)
     visible_proxs = param.Boolean(True)
 
-
 class PanelObjectConfig(PanelEntityConfig):
+    """Base class for panel configurations of objects"""
     pass
 
-
 class PanelSimulatorConfig(Config):
+    """Base class for panel configurations of the simulator"""
     hide_non_existing = param.Boolean(True)
     config_update = param.Boolean(False)
 
-
+# Mapping between config classes and their corresponding state types
 panel_config_to_stype = {
     PanelSimulatorConfig: StateType.SIMULATOR, 
     PanelAgentConfig: StateType.AGENT,
@@ -46,6 +47,7 @@ stype_to_panel_config = {stype: config_class for config_class, stype in panel_co
 
 
 class Selected(param.Parameterized):
+    """Class to store the selected entities in the interface"""
     selection = param.ListSelector([0], objects=[0])
 
     def selection_nve_idx(self, ent_idx):
@@ -56,7 +58,7 @@ class Selected(param.Parameterized):
 
 
 class PanelController(SimulatorController):
-
+    """Controller for the panel interface"""
     def __init__(self, **params):
         self._selected_configs_watchers = None
         self._selected_panel_configs_watchers = None
@@ -83,17 +85,22 @@ class PanelController(SimulatorController):
         self.panel_simulator_config.hide_non_existing = True
 
     def watch_selected_configs(self):
-        watchers = {etype: config.param.watch(self.push_selected_to_config_list, config.param_names(), onlychanged=True)
-                    for etype, config in self.selected_configs.items()}
+        """Watch the selected configurations"""
+        watchers = {
+            etype: config.param.watch(self.push_selected_to_config_list, config.param_names(), onlychanged=True)
+            for etype, config in self.selected_configs.items()
+        }
         return watchers
 
     def watch_selected_panel_configs(self):
+        """Watch the selected panel configurations"""
         watchers = {etype: config.param.watch(self.push_selected_to_config_list, config.param_names(), onlychanged=True)
                     for etype, config in self.selected_panel_configs.items()}
         return watchers
 
     @contextmanager
     def dont_push_selected_configs(self):
+        """Context manager to avoid pushing the selected configurations"""
         if self._selected_configs_watchers is not None:
             for etype, config in self.selected_configs.items():
                 config.param.unwatch(self._selected_configs_watchers[etype])
@@ -104,6 +111,7 @@ class PanelController(SimulatorController):
 
     @contextmanager
     def dont_push_selected_panel_configs(self):
+        """Context manager to avoid pushing the selected panel configurations"""
         if self._selected_panel_configs_watchers is not None:
             for etype, config in self.selected_panel_configs.items():
                 config.param.unwatch(self._selected_panel_configs_watchers[etype])
@@ -113,11 +121,13 @@ class PanelController(SimulatorController):
             self._selected_panel_configs_watchers = self.watch_selected_panel_configs()
 
     def update_entity_list(self, *events):
+        """Update the entity list"""
         state = self.state
         for etype, selected in self.selected_entities.items():
             selected.param.selection.objects = state.entity_idx(etype).tolist()
 
     def pull_selected_configs(self, *events):
+        """Pull the selected configurations"""
         state = self.state
         config_dict = {etype.to_state_type(): [config] for etype, config in self.selected_configs.items()}
         with self.dont_push_selected_configs():
@@ -128,15 +138,18 @@ class PanelController(SimulatorController):
         return state
 
     def pull_selected_panel_configs(self, *events):
+        """Pull the selected panel configurations"""
         with self.dont_push_selected_panel_configs():
             for etype, panel_config in self.selected_panel_configs.items():
                 panel_config.param.update(**self.panel_configs[etype.to_state_type()][self.selected_entities[etype].selection[0]].to_dict())
 
     def pull_all_data(self):
+        """Pull all the data from the simulator"""
         self.pull_selected_configs()
         self.pull_configs({StateType.SIMULATOR: self.configs[StateType.SIMULATOR]})
 
     def push_selected_to_config_list(self, *events):
+        """Push the selected configurations to the configuration list"""
         lg.info("Push_selected_to_config_list %d", len(events))
         for e in events:
             if isinstance(e.obj, PanelConfig):

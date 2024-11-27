@@ -51,14 +51,18 @@ def total_collision_energy(positions, diameter, neighbor, displacement, exists_m
 
     # Set collision energy to zero if the sender or receiver is non existing
     mask = exists_mask[senders] * exists_mask[receivers]
-    energies = collision_energy(displacement,
-                                 r_senders,
-                                 r_receivers,
-                                 l_senders,
-                                 l_receivers,
-                                 epsilon,
-                                 alpha,
-                                 mask)
+    
+    energies = collision_energy(
+        displacement,
+        r_senders,
+        r_receivers,
+        l_senders,
+        l_receivers,
+        epsilon,
+        alpha,
+        mask
+    )
+
     return jnp.sum(energies)
 
 # Functions to compute the verlet force on the whole system
@@ -76,6 +80,14 @@ def friction_force(state, exists_mask):
     return - jnp.tile(state.entities.friction, (SPACE_NDIMS, 1)).T * cur_vel
 
 def collision_force(state, neighbor, exists_mask, displacement):
+    """Compute the collision force on the system
+
+    :param state: current state of the system
+    :param neighbor: neighbor array of the entities
+    :param exists_mask: mask to specify which particles exist
+    :param displacement: displacement function of jax_md
+    :return: collision force function of the system
+    """
     coll_force_fn = quantity.force(
         total_collision_energy(
             positions=state.entities.position.center,
@@ -89,7 +101,6 @@ def collision_force(state, neighbor, exists_mask, displacement):
     )
 
     return coll_force_fn
-
 
 def verlet_force_fn(displacement):
     """Compute the verlet force on the whole system
@@ -116,7 +127,6 @@ def verlet_force_fn(displacement):
         return rigid_body.RigidBody(center=center, orientation=0)
 
     return force_fn
-
 
 def dynamics_fn(displacement, shift, force_fn=None):    
     """Compute the dynamics of the system

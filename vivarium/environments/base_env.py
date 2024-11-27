@@ -1,19 +1,23 @@
-# TODO : Update this file to make it match with current architecture
 import logging as lg
 
 from functools import partial
 from typing import Tuple
 
 import jax.numpy as jnp
-
 from jax import  jit
-from flax import struct
+from jax_md.dataclasses import dataclass as md_dataclass
 
 
-@struct.dataclass
+@md_dataclass
 class BaseState:
     time: jnp.int32
     box_size: jnp.int32
+
+@md_dataclass
+class Neighbors:
+    neighbors: jnp.array
+    agents_neighs_idx: jnp.array
+    agents_idx_dense: jnp.array
    
 
 class BaseEnv:
@@ -24,23 +28,13 @@ class BaseEnv:
         raise(NotImplementedError)
 
     @partial(jit, static_argnums=(0,))
-    def _step(self, state: BaseState, neighbors: jnp.array) -> Tuple[BaseState, jnp.array]:
+    def _step_env(self, state: BaseState, neighbors_storage: Neighbors) -> Tuple[BaseState, Neighbors]:
         raise(NotImplementedError)
     
-    def step(self, state: BaseState) -> BaseState:
-        current_state = state
-        state, neighbors = self._step(current_state, self.neighbors)
+    def step(self, state: BaseState, num_updates) -> BaseState:
+        raise(NotImplementedError)
 
-        if self.neighbors.did_buffer_overflow:
-            # reallocate neighbors and run the simulation from current_state
-            lg.warning('BUFFER OVERFLOW: rebuilding neighbors')
-            neighbors = self.allocate_neighbors(state)
-            assert not neighbors.did_buffer_overflow
-
-        self.neighbors = neighbors
-        return state
-
-    def allocate_neighbors(self, state, position=None):
+    def allocate_neighbors(self, state: BaseState, position=None):
         position = state.entities.position.center if position is None else position
         neighbors = self.neighbor_fn.allocate(position)
         return neighbors

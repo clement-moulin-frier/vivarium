@@ -8,8 +8,7 @@ lg = logging.getLogger(__name__)
 
 class Logger(object):
     def __init__(self):
-        """Logger class that logs data for the agents
-        """
+        """Logger class that logs data for the agents"""
         self.logs = {}
 
     def add(self, log_field, data):

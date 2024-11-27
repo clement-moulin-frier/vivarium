@@ -368,9 +368,9 @@ class SelectiveSensorsEnv(BaseEnv):
         )
 
         # Update the entities and the state
-        state = state.replace(agents=agents)
+        state = state.set(agents=agents)
         entities = self.apply_physics(state, neighbors)
-        state = state.replace(time=state.time+1, entities=entities)
+        state = state.set(time=state.time+1, entities=entities)
 
         # Update the neighbors storage
         neighbors = neighbors.update(state.entities.position.center)

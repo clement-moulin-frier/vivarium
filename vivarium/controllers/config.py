@@ -5,15 +5,19 @@ from jax_md.rigid_body import monomer
 
 from vivarium.simulator.simulator_states import StateType
 
-
 mass = monomer.mass()
 mass_center = float(mass.center[0])
 mass_orientation = float(mass.orientation[0])
 
 
 class Config(Parameterized):
-
+    """Base class for configuration objects"""
     def to_dict(self, params=None):
+        """Return a dictionary with the configuration parameters
+
+        :param params: params, defaults to None
+        :return: dictionary with the configuration parameters
+        """
         d = self.param.values()
         del d['name']
         if params is not None:
@@ -22,13 +26,22 @@ class Config(Parameterized):
             return d
 
     def param_names(self):
+        """Return the names of the configuration parameters
+
+        :return: list of parameter names
+        """
         return list(self.to_dict().keys())
 
     def json(self):
+        """Return a JSON representation of the configuration
+
+        :return: JSON representation of the configuration
+        """
         return self.param.serialize_parameters(subset=self.param_names())
 
 
 class AgentConfig(Config):
+    """Configuration class for agents"""
     idx = param.Integer()
     # ent_sensedtype = param.Integer()
     x_position = param.Number(0.)
@@ -36,12 +49,11 @@ class AgentConfig(Config):
     orientation = param.Number(0.)
     mass_center = param.Number(mass_center)
     mass_orientation = param.Number(mass_orientation)
-    # TODO : Change behavior back to a list of objects
+    # TODO : Change the behaviors to a list of objects in the future
     behavior = param.Array(np.array([0.]))
     left_motor = param.Number(0., bounds=(0., 1.))
     right_motor = param.Number(0., bounds=(0., 1.))
-    # TODO : Will be problems here if proximeters if non occlusion mode (as many proximeter values as neighbors) 
-    # TODO : Except if we only consider the non occlusion case where the sensors information is just the sensor of closest entity
+    # TODO : Will be problems here if proximeters if non occlusion mode (as many proximeter values as neighbors), except if we only consider the non occlusion case where the sensors information is just the sensor of closest entity
     left_prox = param.Number(0., bounds=(0., 1.))
     right_prox = param.Number(0., bounds=(0., 1.))
     prox_sensed_ent_type = param.Array(np.array([0]))
@@ -67,6 +79,7 @@ class AgentConfig(Config):
 
 
 class ObjectConfig(Config):
+    """Configuration class for objects"""
     idx = param.Integer()
     # ent_sensedtype = param.Integer()
     x_position = param.Number(0.)
@@ -85,6 +98,7 @@ class ObjectConfig(Config):
 
 
 class SimulatorConfig(Config):
+    """Configuration class for the simulator"""
     idx = param.Integer(0, constant=True)
     time = param.Integer(0)
     box_size = param.Number(100., bounds=(0, None))
