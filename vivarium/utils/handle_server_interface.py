@@ -1,5 +1,6 @@
 import os
 import time
+import psutil
 import multiprocessing
 import subprocess
 import signal
@@ -9,13 +10,16 @@ lg = logging.getLogger(__name__)
 
 SERVER_PROCESS_NAME = "scripts/run_server.py"
 INTERFACE_PROCESS_NAME = "scripts/run_interface.py"
+SERVER_PROCESS_NAME_WIN = "scripts\\run_server.py"
+INTERFACE_PROCESS_NAME_WIN = "scripts\\run_interface.py"
 
-def get_process_pid(process_name: str):
+def get_process_pids_unix(process_name: str):
     """Get the process ID of a running process by name
 
     :param process_name: process name
     :return: process ID
     """
+    pids = []
     process = subprocess.Popen(['ps', 'aux'], stdout=subprocess.PIPE)
     out, err = process.communicate()
     for line in out.splitlines():
@@ -23,7 +27,39 @@ def get_process_pid(process_name: str):
             pid_str = line.split()[1]
             pid = pid_str.decode()
             lg.warning(f" Found the process {process_name} running with this PID: {pid}")
-            return pid
+            pids.append(pid)
+    return pids
+
+def get_process_pids_windows(process_name):
+    python_processes = []
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            if "python" in proc.info['name'].lower():
+                cmdline = ' '.join(proc.info['cmdline']).lower()
+                if process_name.lower() in cmdline:
+                    pid = proc.info['pid']
+                    lg.warning(f" Found the process {process_name} running with this PID: {pid}")
+                    python_processes.append(pid)
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+    return python_processes
+
+def get_server_interface_pids():
+    """Get the process IDs of the server and interface
+
+    :return: server and interface process IDs
+    """
+    if os.name == "nt":
+        interface_pids = get_process_pids_windows(INTERFACE_PROCESS_NAME_WIN)
+        server_pids = get_process_pids_windows(SERVER_PROCESS_NAME_WIN)
+    elif os.name == "posix":
+        interface_pids = get_process_pids_unix(INTERFACE_PROCESS_NAME)
+        server_pids = get_process_pids_unix(SERVER_PROCESS_NAME)
+    else:
+        lg.error("OS not recognized")
+        return
+    
+    return interface_pids, server_pids
 
 def kill_process(pid):
     """Kill a process by its ID
@@ -32,6 +68,41 @@ def kill_process(pid):
     """
     os.kill(int(pid), signal.SIGTERM)
     lg.warning(f"Killed process with PID: {pid}")
+
+def terminate_process(pids):
+    """Terminate the process if the PID is not None"""
+    if pids:
+        for pid in pids:
+            kill_process(pid)
+
+def stop_server_and_interface(auto_kill=False):
+    """Stop the server and interface
+    """
+    processes_running = False
+
+    interface_pids, server_pids = get_server_interface_pids()
+    
+    if interface_pids or server_pids:
+        processes_running = True
+        if auto_kill:
+            terminate_process(interface_pids)
+            terminate_process(server_pids)
+            processes_running = False
+        else:
+            message = "\nThe following processes are running:\n"
+            if interface_pids:
+                message += f" - Interface (PIDs: {interface_pids})\n"
+            if server_pids is not None:
+                message += f" - Server (PIDs: {server_pids})\n"
+            message += "Do you want to stop them? (y/n): "
+            user_input = input(message)
+
+            if user_input.lower() == "y":
+                terminate_process(interface_pids)
+                terminate_process(server_pids)
+                processes_running = False
+
+    return processes_running
 
 # Define parameters of the simulator
 def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait_time: int = 6):
@@ -83,56 +154,9 @@ def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait
     interface_process = multiprocessing.Process(target=start_interface_process)
     interface_process.start()
 
-def terminate_process(pid):
-    """Terminate the process if the PID is not None"""
-    if pid is not None:
-        kill_process(pid)
-
-def stop_server_and_interface(auto_kill=False):
-    """Stop the server and interface
-    """
-    processes_running = False
-    interface_pid = get_process_pid(INTERFACE_PROCESS_NAME)
-    server_pid = get_process_pid(SERVER_PROCESS_NAME)
-    
-    if interface_pid is not None or server_pid is not None:
-        processes_running = True
-        if auto_kill:
-            terminate_process(interface_pid)
-            terminate_process(server_pid)
-            processes_running = False
-        else:
-            message = "\nThe following processes are running:\n"
-            if interface_pid is not None:
-                message += f" - Interface (PID: {interface_pid})\n"
-            if server_pid is not None:
-                message += f" - Server (PID: {server_pid})\n"
-            message += "Do you want to stop them? (y/n): "
-            user_input = input(message)
-
-            if user_input.lower() == "y":
-                terminate_process(interface_pid)
-                terminate_process(server_pid)
-                processes_running = False
-
-    return processes_running
-
-# TODO : older version of the function, see if we remove it
-def stop_server_and_interface_unsafe():
-    """Stop the server and interface processes if they are running"""
-    interface_pid = get_process_pid(INTERFACE_PROCESS_NAME)
-    if interface_pid is not None:
-        kill_process(interface_pid)
-        stopped = True
-    else: 
-        lg.info("Interface process not found")
-
-    server_pid = get_process_pid(SERVER_PROCESS_NAME)
-    if server_pid is not None:
-        kill_process(server_pid)
-        stopped = True
-    else:
-        lg.info("Server process not found")
-
-    if stopped:
-        print("\nServer and Interface Stopped")
+if __name__ == "__main__":
+    print(os.name)
+    interface_pids, server_pids = get_server_interface_pids()
+    print(f"Interface PIDs: {interface_pids}")
+    print(f"Server PIDs: {server_pids}")
+    stop_server_and_interface(auto_kill=False)
