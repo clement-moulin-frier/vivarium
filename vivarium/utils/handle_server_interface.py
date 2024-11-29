@@ -117,8 +117,9 @@ def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait
     :param notebook_mode: notebook_mode to adapt the interface, defaults to True
     """
     if os.name == "nt":
-        lg.error("The 'start_server_and_interface' function is not supported on Windows")
-        lg.error("Please use the 'start_all.bat scene_name' command in the project root directory to start the server and interface instead.")
+        lg.warning("The 'start_server_and_interface' function is not supported on Windows OS")
+        lg.warning("Instead, start the server and interface by running the following command from the project root directory:")
+        lg.warning(f"\nstart_all.bat {scene_name}")
         return 
     
     # first ensure no interface or server is running
