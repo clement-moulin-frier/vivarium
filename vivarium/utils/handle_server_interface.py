@@ -116,6 +116,11 @@ def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait
     :param scene_name: scene name
     :param notebook_mode: notebook_mode to adapt the interface, defaults to True
     """
+    if os.name == "nt":
+        lg.error("The 'start_server_and_interface' function is not supported on Windows")
+        lg.error("Please use the 'start_all.bat scene_name' command in the project root directory to start the server and interface instead.")
+        return 
+    
     # first ensure no interface or server is running
     processes_running = stop_server_and_interface(auto_kill=False)
     if processes_running:
@@ -135,11 +140,8 @@ def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait
         f"scene={scene_name}" 
     ]
 
-    def start_server_process():
-        subprocess.run(server_command)
-
     print("\nSTARTING SERVER")
-    server_process = multiprocessing.Process(target=start_server_process)
+    server_process = multiprocessing.Process(target=start_process, args=(server_command,))
     server_process.start()
     time.sleep(wait_time)
 
@@ -151,17 +153,19 @@ def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait
         f"--notebook_mode={str(notebook_mode)}",
     ]
 
-    def start_interface_process():
-        subprocess.run(interface_command)
-
     # start the interface 
     print("\nSTARTING INTERFACE")
-    interface_process = multiprocessing.Process(target=start_interface_process)
+    interface_process = multiprocessing.Process(target=start_interface_process, args=(interface_command,))
     interface_process.start()
 
+
+def start_process(process_command):
+    subprocess.run(process_command, capture_output=True, text=True)
+
+
+
 if __name__ == "__main__":
-    print(os.name)
-    interface_pids, server_pids = get_server_interface_pids()
-    print(f"Interface PIDs: {interface_pids}")
-    print(f"Server PIDs: {server_pids}")
+    platform = os.name
+    print(f"Platform: {platform}")
     stop_server_and_interface(auto_kill=True)
+    start_server_and_interface("session_1", notebook_mode=True, wait_time=6)
