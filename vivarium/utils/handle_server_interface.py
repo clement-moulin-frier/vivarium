@@ -109,8 +109,15 @@ def stop_server_and_interface(auto_kill=False):
 
     return processes_running
 
+def start_process(process_command):
+    """Start a process with the given command
+
+    :param process_command: command to start the process
+    """
+    subprocess.run(process_command)
+
 # Define parameters of the simulator
-def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait_time: int = 6):
+def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait_time: int = 7, auto_kill=False):
     """Start the server and interface for the given scene
 
     :param scene_name: scene name
@@ -123,7 +130,8 @@ def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait
         return 
     
     # first ensure no interface or server is running
-    processes_running = stop_server_and_interface(auto_kill=False)
+    processes_running = stop_server_and_interface(auto_kill=auto_kill)
+
     if processes_running:
         lg.warning("\nServer and Interface processes are still running, please stop them before starting new ones")
         lg.warning("ERROR: New processes will not be started")
@@ -156,17 +164,15 @@ def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait
 
     # start the interface 
     print("\nSTARTING INTERFACE")
-    interface_process = multiprocessing.Process(target=start_interface_process, args=(interface_command,))
+    interface_process = multiprocessing.Process(target=start_process, args=(interface_command,))
     interface_process.start()
-
-
-def start_process(process_command):
-    subprocess.run(process_command, capture_output=True, text=True)
-
 
 
 if __name__ == "__main__":
     platform = os.name
     print(f"Platform: {platform}")
+    interface_pids, server_pids = get_server_interface_pids()
+    print(f"Interface PIDs: {interface_pids}")
+    print(f"Server PIDs: {server_pids}")
     stop_server_and_interface(auto_kill=True)
     start_server_and_interface("session_1", notebook_mode=True, wait_time=6)
