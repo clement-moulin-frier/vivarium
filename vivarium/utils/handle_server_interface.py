@@ -14,10 +14,10 @@ SERVER_PROCESS_NAME_WIN = "scripts\\run_server.py"
 INTERFACE_PROCESS_NAME_WIN = "scripts\\run_interface.py"
 
 def get_process_pids_unix(process_name: str):
-    """Get the process ID of a running process by name
+    """Get the processes IDs of a running process by name
 
     :param process_name: process name
-    :return: process ID
+    :return: lisf of processes IDs
     """
     pids = []
     process = subprocess.Popen(['ps', 'aux'], stdout=subprocess.PIPE)
@@ -31,7 +31,12 @@ def get_process_pids_unix(process_name: str):
     return pids
 
 def get_process_pids_windows(process_name):
-    python_processes = []
+    """Get the processes IDs of a running process by name
+
+    :param process_name: process name
+    :return: list of processes IDs
+    """
+    pids = []
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
             if "python" in proc.info['name'].lower():
@@ -39,10 +44,10 @@ def get_process_pids_windows(process_name):
                 if process_name.lower() in cmdline:
                     pid = proc.info['pid']
                     lg.warning(f" Found the process {process_name} running with this PID: {pid}")
-                    python_processes.append(pid)
+                    pids.append(pid)
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
-    return python_processes
+    return pids
 
 def get_server_interface_pids():
     """Get the process IDs of the server and interface
@@ -159,4 +164,4 @@ if __name__ == "__main__":
     interface_pids, server_pids = get_server_interface_pids()
     print(f"Interface PIDs: {interface_pids}")
     print(f"Server PIDs: {server_pids}")
-    stop_server_and_interface(auto_kill=False)
+    stop_server_and_interface(auto_kill=True)
