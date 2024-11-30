@@ -11,7 +11,7 @@ See a preliminary demo of the project on [this video](https://youtu.be/dnO-wo6Ns
 1- Clone the repository:
 
 ```bash
-git clone git@github.com:clement-moulin-frier/vivarium.git
+git clone git@github.com:flowersteam/vivarium.git
 cd vivarium/
 ```
 2- (Optional) Create and activate a virtual environment:
