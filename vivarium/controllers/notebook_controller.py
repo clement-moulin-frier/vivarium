@@ -584,7 +584,7 @@ class NotebookController(SimulatorController):
         :param record_time: record_time, defaults to 2
         :param server_time: wether to record steps per seconds in the server or in the controller, defaults to False
         """
-        print(f"measuring the FPS (number of steps per second) in the {'server' if server else 'controller'} during {record_time} seconds")
+        print(f"measuring the FPS (number of steps per second) in the {'server' if server else 'controller'} during {record_time} seconds ...")
         start_time = self.time if not server else self.server_time
 
         def calculate_fps():
