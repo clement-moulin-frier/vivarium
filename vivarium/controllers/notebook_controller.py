@@ -520,17 +520,9 @@ class NotebookController(SimulatorController):
             run_time += 1
 
         # finally stop the simulation
-        self.pause()
+        self.stop()
 
     def stop(self):
-        """Stop the simulation and detach all routines
-        """
-        if not self._is_running:
-            print("Simulator is already stopped")
-        self._is_running = False
-        self.routine_handler.detach_all_routines()
-
-    def pause(self):
         """Pause the simulation
         """
         if not self._is_running:
