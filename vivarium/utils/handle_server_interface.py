@@ -80,7 +80,7 @@ def terminate_process(pids):
         for pid in pids:
             kill_process(pid)
 
-def stop_server_and_interface(auto_kill=False):
+def stop_server_and_interface(safe_mode=True):
     """Stop the server and interface
     """
     processes_running = False
@@ -90,7 +90,7 @@ def stop_server_and_interface(auto_kill=False):
     if interface_pids or server_pids:
         print("\nStopping server and interface processes\n")
         processes_running = True
-        if auto_kill:
+        if not safe_mode:
             terminate_process(interface_pids)
             terminate_process(server_pids)
             processes_running = False
@@ -121,7 +121,7 @@ def start_process(process_command):
     subprocess.run(process_command)
 
 # Define parameters of the simulator
-def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait_time: int = 7, auto_kill=False):
+def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait_time: int = 7, safe_mode=True):
     """Start the server and interface for the given scene
 
     :param scene_name: scene name
@@ -134,7 +134,7 @@ def start_server_and_interface(scene_name: str, notebook_mode: bool = True, wait
         return 
     
     # first ensure no interface or server is running
-    processes_running = stop_server_and_interface(auto_kill=auto_kill)
+    processes_running = stop_server_and_interface(safe_mode=safe_mode)
 
     if processes_running:
         lg.warning("\nServer and Interface processes are still running, please stop them before starting new ones")
@@ -178,5 +178,5 @@ if __name__ == "__main__":
     interface_pids, server_pids = get_server_interface_pids()
     print(f"Interface PIDs: {interface_pids}")
     print(f"Server PIDs: {server_pids}")
-    stop_server_and_interface(auto_kill=True)
+    stop_server_and_interface(safe_mode=False)
     start_server_and_interface("session_1", notebook_mode=True, wait_time=6)
