@@ -42,7 +42,7 @@ We use [Hydra](https://hydra.cc/docs/intro/) to manage simulations data. By defa
 
 #### Using custom scene files 🌄
 
-You can customize the initial simulation parameters by creating your own scene files in YAML format and placing them in the `conf/scene` directory. Scene files can specify parameters such as the number of objects, their size, or the colors, positions, and behaviors of agents for example.
+You can customize the initial simulation parameters by creating your own scene files in YAML format and placing them in the `conf/scene` directory. Scene files can specify parameters such as the number of objects, their size, or the colors, positions, and behaviors of agents for example. See Tutorial [Create a custom Scene](notebooks/tutorials/create_custom_scene_tutorial.md) for more information.
 
 To use a custom scene file in your simulation, pass the `scene` option followed by the name of the scene file (without the `.yaml` extension) to the `run_server.py` script. For example, to run the `prey_predator_large` scene, use the following command:
 
@@ -65,11 +65,11 @@ Once this command will have completed, it will output a URL looking like `http:/
 
 ### Interact with it from a jupyter notebook 📓
 
-You can also choose to control the simulator programmatically in Jupyter Notebook. We first recommend you to do the first tutorials listed below. Then you can select a notebook in the `notebooks/sessions/ `[directory](notebooks/sessions/) and start playing with it ! If you choose to do so, you don't need to start the server and the interface manually. Instead, you can start and stop them with a custom command you can find in the notebooks.
+You can also choose to control the simulator programmatically in Jupyter Notebook. We first recommend you to do the first tutorials listed below. Then you can select a notebook in the `notebooks/sessions` [directory](notebooks/sessions/README.md) and start playing with it ! If you choose to do so, you don't need to start the server and the interface manually. Instead, you can start and stop them with a custom command you can find in the notebooks.
 
 ## 📚 Tutorials
 
-To help you get started and explore the project, we provide a set of Jupyter notebook tutorials located in the `notebooks/` [directory](notebooks/README.md). These tutorials cover various aspects of the project, from using the graphical interface to interacting with simulations and understanding the backend.
+To help you get started and explore the project, we provide a set of Jupyter notebook tutorials located in the `notebooks/tutorials` [directory](notebooks/tutorials/README.md). These tutorials cover various aspects of the project, from using the graphical interface to interacting with simulations and understanding the backend.
 
 - **Web Interface Tutorial**: Begin with the [web interface tutorial](notebooks/tutorials/web_interface_tutorial.md) to gain a basic understanding of the project and learn how to use the graphical interface.
 - **Quickstart Tutorial**: To learn how to interact with a simulation from a Jupyter notebook, follow the [quickstart tutorial](notebooks/tutorials/quickstart_tutorial.ipynb). This tutorial will guide you through creating, running, and manipulating simulations within a notebook environment.
