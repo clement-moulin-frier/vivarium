@@ -361,6 +361,10 @@ class NotebookController(SimulatorController):
         self.set_all_user_events()
         self.update_agents_attributes()
         self.update_entities_attributes()
+
+    def is_running(self):
+        """Check if the simulator is running"""
+        return self._is_running
     
     def update_agents_attributes(self):
         """Give all agents the list of all entities in the simulation (usefull for advanced cases like eating)
