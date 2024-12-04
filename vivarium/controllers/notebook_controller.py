@@ -112,7 +112,6 @@ class Entity:
         self.routine_handler.print_routines()
     
 
-# TODO : Add BehaviorHandler class as a subclass of RoutineHandler
 class Agent(Entity):
     """Agent class that represents an agent in the simulation
 
@@ -176,7 +175,7 @@ class Agent(Entity):
             getattr(right_ent, sensed_attribute, default_value)
         )
     
-    def attach_behavior(self, behavior_fn, name=None, interval=1, weight=1.):
+    def attach_behavior(self, behavior_fn, name=None, interval=1, weight=1., start=True):
         """Attach a behavior to the agent with a given weight
 
         :param behavior_fn: behavior_fn
@@ -184,7 +183,7 @@ class Agent(Entity):
         :param interval: interval of behavior execution, defaults to 1
         :param weight: weight, defaults to 1.
         """
-        self.behavior_handler.attach_behavior(behavior_fn, name, interval, weight)
+        self.behavior_handler.attach_behavior(behavior_fn, name, interval, weight, start)
 
     
     def detach_behavior(self, name, stop_motors=False):

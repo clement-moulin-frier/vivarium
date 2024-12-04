@@ -144,7 +144,7 @@ class BehaviorHandler(object):
         self._active_behaviors = {}
         self._lock = threading.Lock()
 
-    def attach_behavior(self, behavior_fn, name=None, interval=1, weight=1., start=True):
+    def attach_behavior(self, behavior_fn, name=None, interval=5, weight=1., start=True):
         """Attach a behavior to the agent with a given weight
 
         :param behavior_fn: behavior function
