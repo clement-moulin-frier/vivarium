@@ -17,8 +17,8 @@ cd vivarium/
 2- (Optional) Create and activate a virtual environment:
 
 ```bash
-python -m venv myvenv
-source myvenv/bin/activate
+python -m venv env_vivarium
+source env_vivarium/bin/activate
 ```
 
 3- Install the dependencies:
