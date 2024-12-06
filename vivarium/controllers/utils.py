@@ -141,7 +141,7 @@ class BehaviorHandler(object):
     def __init__(self):
         """Initialize the BehaviorHandler"""
         self._behaviors = {}
-        self._active_behaviors = {}
+        self._started_behaviors = {}
         self._lock = threading.Lock()
 
     def attach_behavior(self, behavior_fn, name=None, interval=5, weight=1., start=True):
@@ -169,8 +169,8 @@ class BehaviorHandler(object):
             n = name.__name__ if hasattr(name, "__name__") else name
             if n in self._behaviors:
                 del self._behaviors[n]
-            if n in self._active_behaviors:
-                del self._active_behaviors[n]
+            if n in self._started_behaviors:
+                del self._started_behaviors[n]
 
     def detach_all_behaviors(self):
         """Detach all behaviors from the agent"""
@@ -184,13 +184,13 @@ class BehaviorHandler(object):
         """
         with self._lock:
             n = name.__name__ if hasattr(name, "__name__") else name
-            self._active_behaviors[n] = self._behaviors[n]
+            self._started_behaviors[n] = self._behaviors[n]
 
     def start_all_behaviors(self):
         """Start all behaviors of the agent"""
         with self._lock:
             for n in self._behaviors:
-                self._active_behaviors[n] = self._behaviors[n]
+                self._started_behaviors[n] = self._behaviors[n]
 
     def stop_behavior(self, name):
         """Stop a behavior of the agent
@@ -199,22 +199,22 @@ class BehaviorHandler(object):
         """
         with self._lock:
             n = name.__name__ if hasattr(name, "__name__") else name
-            if n in self._active_behaviors:
-                del self._active_behaviors[n]
+            if n in self._started_behaviors:
+                del self._started_behaviors[n]
 
     def behave(self, agent, time):
         """Make the agent behave according to its active behaviors
 
         :param time: current time
         """
-        if not self._active_behaviors:
+        if not self._started_behaviors:
             return
         
         # prevents simulator to crash if an error occurs during motor values computations
         try:
             motor_contributions = [
                 (w * np.array(fn(agent)), w)
-                for (fn, interval, w) in self._active_behaviors.values()
+                for (fn, interval, w) in self._started_behaviors.values()
                 if time % interval == 0
             ]
             # check if there are motor contributions from an active behavior (it can be empty because of the interval)
@@ -235,10 +235,11 @@ class BehaviorHandler(object):
         """Print the behaviors and active behaviors of the agent"""
         with self._lock:
             if len(self._behaviors) == 0:
-                print("No behaviors attached")
+                print("No behavior attached")
             else:
-                available_behaviors = list(self._behaviors.keys())
-                active_behaviors = list(self._active_behaviors.keys())
-                print(f"Available behaviors: {available_behaviors}, Active behaviors: {active_behaviors if active_behaviors else 'No active behaviors'}")
+                attached_behaviors = list(self._behaviors.keys())
+                started_behaviors = list(self._started_behaviors.keys())
+                started_print = 'No behavior started' if not started_behaviors else f'Started behaviors: {started_behaviors}'
+                print(f'Attached behaviors: {attached_behaviors}, {started_print}')
 
  

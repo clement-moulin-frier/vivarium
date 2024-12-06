@@ -216,12 +216,14 @@ class Agent(Entity):
         """Start all behaviors of the agent"""
         self.behavior_handler.start_all_behaviors()
 
-    def stop_behavior(self, name):
+    def stop_behavior(self, name, stop_motors=False):
         """Stop a behavior of the agent
         
         :param name: name
         """
         self.behavior_handler.stop_behavior(name)
+        if stop_motors:
+            self.stop_motors()
 
     def print_behaviors(self):
         """Print the behaviors and active behaviors of the agent"""
