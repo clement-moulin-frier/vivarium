@@ -123,7 +123,7 @@ class RoutineHandler(object):
             for name in to_remove:
                 self.detach_routine(name)
     
-    def print_behaviors(self):
+    def print_routines(self):
         """Print the behaviors and active behaviors of the agent"""
         with self._lock:
             if len(self._routines) == 0:
