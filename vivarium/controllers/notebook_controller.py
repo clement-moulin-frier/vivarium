@@ -99,9 +99,9 @@ class Entity:
         info_lines.append(f"Subtype: {self.subtype_label}")
         info_lines.append(f"Idx: {self.idx}")
         info_lines.append(f"Exists: {self.exists}")
-
-        # Position
         info_lines.append(f"Position: x={dict_infos['x_position']:.2f}, y={dict_infos['y_position']:.2f}")
+        info_lines.append(f"Diameter: {self.diameter:.2f}")
+        info_lines.append(f"Color: {self.color}")
         info_lines.append("")
         
         return print("\n".join(info_lines))
@@ -112,7 +112,6 @@ class Entity:
         self.routine_handler.print_routines()
     
 
-# TODO : Add BehaviorHandler class as a subclass of RoutineHandler
 class Agent(Entity):
     """Agent class that represents an agent in the simulation
 
@@ -176,7 +175,7 @@ class Agent(Entity):
             getattr(right_ent, sensed_attribute, default_value)
         )
     
-    def attach_behavior(self, behavior_fn, name=None, interval=1, weight=1.):
+    def attach_behavior(self, behavior_fn, name=None, interval=1, weight=1., start=True):
         """Attach a behavior to the agent with a given weight
 
         :param behavior_fn: behavior_fn
@@ -184,7 +183,7 @@ class Agent(Entity):
         :param interval: interval of behavior execution, defaults to 1
         :param weight: weight, defaults to 1.
         """
-        self.behavior_handler.attach_behavior(behavior_fn, name, interval, weight)
+        self.behavior_handler.attach_behavior(behavior_fn, name, interval, weight, start)
 
     
     def detach_behavior(self, name, stop_motors=False):
@@ -217,12 +216,14 @@ class Agent(Entity):
         """Start all behaviors of the agent"""
         self.behavior_handler.start_all_behaviors()
 
-    def stop_behavior(self, name):
+    def stop_behavior(self, name, stop_motors=False):
         """Stop a behavior of the agent
         
         :param name: name
         """
         self.behavior_handler.stop_behavior(name)
+        if stop_motors:
+            self.stop_motors()
 
     def print_behaviors(self):
         """Print the behaviors and active behaviors of the agent"""
@@ -302,7 +303,7 @@ class Agent(Entity):
             info_lines.append(f"Eating range: {self.eating_range}")
             info_lines.append("\nConfiguration Details:")
             for k, v in dict_infos.items():
-                if k not in ['x_position', 'y_position', 'behavior', 'left_motor', 'right_motor', 'params', 'sensed']:
+                if k not in ['x_position', 'y_position', 'diameter', 'color', 'behavior', 'left_motor', 'right_motor', 'params', 'sensed']:
                     info_lines.append(f"  - {k}: {v}")
 
         info_lines.append("")
@@ -361,6 +362,10 @@ class NotebookController(SimulatorController):
         self.set_all_user_events()
         self.update_agents_attributes()
         self.update_entities_attributes()
+
+    def is_running(self):
+        """Check if the simulator is running"""
+        return self._is_running
     
     def update_agents_attributes(self):
         """Give all agents the list of all entities in the simulation (usefull for advanced cases like eating)
