@@ -601,6 +601,11 @@ class NotebookController(SimulatorController):
         # use a thread to calculate the fps without blocking the run loop
         threading.Thread(target=calculate_fps).start()
 
+      def print_routines(self):
+        """Print the controller's routines
+        """
+        self.routine_handler.print_routines()
+
     @property
     def server_time(self):
         """Return the current time of the simulation
@@ -664,13 +669,11 @@ def eating_routine_range(controller):
 
     :param controller: NotebookController
     """
-    for agent in controller.agents:
-        # skip to next agent if the agent does not exist
-        if not agent.exists:
-            continue
+    for agent in controller.existing_agents:
         for entity_type in agent.diet:
             assert entity_type in controller.valid_subtypes, f"Please specify a valid entity type among {controller.valid_subtypes}, for agent {agent.idx} diet : {agent.diet} "
             # transform the entity type label into an idx
+            # TODO : use this fn get_idx_from_label_subtype instead of the list here (test it works well)
             entity_type = controller._subtype_label_to_idx[entity_type]
             # get the idx of entities that are eatable by the agent (by precaution remove the agent itself)
             eatable_entities_idx = [ent.idx for ent in controller.all_entities if ent.subtype == entity_type and ent.idx != agent.idx]
