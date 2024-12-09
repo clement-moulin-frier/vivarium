@@ -685,14 +685,17 @@ def eating_routine_proximeters(controller):
     """
     for agent in controller.existing_agents:
         left_prox, right_prox = agent.sensors()
-        left_type, right_type = agent.prox_sensed_ent_type
+        left_type_idx, right_type_idx = agent.prox_sensed_ent_type
+        # TODO : could improve this step by also directly storing the diet as a list of idx ijnstead of computing it each time
+        diet_idx = [controller.get_idx_from_label_subtype(entity) for entity in agent.diet]
+
 
         can_eat_left = (
-            controller.subtypes_labels[left_type] in agent.diet and
+            left_type_idx in diet_idx and
             (1. - left_prox) * agent.proxs_dist_max <= agent.eating_range
         )
         can_eat_right = (
-            controller.subtypes_labels[right_type] in agent.diet and
+            right_type_idx in diet_idx and
             (1. - right_prox) * agent.proxs_dist_max <= agent.eating_range
         )
 
@@ -709,4 +712,3 @@ def eating_routine_proximeters(controller):
             agent.time_since_feeding = 0
         else:
             agent.ate = False
-
