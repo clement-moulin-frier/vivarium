@@ -6,12 +6,12 @@ prox_dist_max: 60
 # Entity data definitions
 entities_data:
   EntitySubTypes:
-    - robots
+    - agents
     - resources
     - obstacles
 
   Entities:
-    robots:
+    agents:
       type: AGENT
       num: 2
       existing: 1
@@ -21,7 +21,7 @@ entities_data:
         aggr:
           beh: MANUAL
           sensed: 
-            - robots
+            - agents
             - resources
             - obstacles
       

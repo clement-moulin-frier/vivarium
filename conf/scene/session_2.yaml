@@ -5,11 +5,11 @@ prox_dist_max: 60
 # Entity data definitions
 entities_data:
   EntitySubTypes:
-    - AGENTS
-    - OBJECTS
+    - agents
+    - objects
 
   Entities:
-    AGENTS:
+    agents:
       type: AGENT
       num: 1
       color: blue
@@ -18,10 +18,10 @@ entities_data:
         aggr:
           beh: MANUAL
           sensed: 
-            - AGENTS
-            - OBJECTS
+            - agents
+            - objects
       
-    OBJECTS:
+    objects:
       type: OBJECT
       num: 13
       color: orange
