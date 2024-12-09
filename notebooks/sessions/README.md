@@ -1,5 +1,16 @@
 This directory contains educational sessions that enable you controlling a simulation from a Notebook controller.
 
+- For MacOS and Windows: If Python and/or Jupyter Notebook is not installed on your computer, install [install Anaconda](https://www.anaconda.com/).
+- If not already done, first install the required software by following the instructions in the main [README](../../).
+- Once the simulator is open, launch `jupyter notebook` by opening another terminal (on Windows: open Anaconda Prompt instead) and executing:
+```bash
+cd <PATH_TO_LOCAL_VIVARIUM_REPO>
+source env_vivarium/bin/activate
+jupyter notebook
+```
+- This will open a web page in the browser with a list of files. Open the practical session you want to do (`session_1.ipynb` if it is the first class).
+
+The rest of the session is described in this newly opened document, please continue from there. 
 Here is a quick overview of the available sessions:
 
 - [Session 1](session_1.ipynb): Introduction to basic of the Notebook controller API
