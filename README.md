@@ -2,12 +2,10 @@
 
 **Vivarium** is framework for for building and running multi-agents simulations using Jax. It allows you to design simple agents equipped with two motors and two sensors, inspired by [Braitenberg Vehicles ](https://en.wikipedia.org/wiki/Braitenberg_vehicle), operating in a 2D rigid-body physics environment powered by [Jax-MD](https://github.com/jax-md/jax-md).
 
-Vivarium is a powerful framework for building and running multi-agent simulations using JAX. Inspired by Braitenberg Vehicles, it allows you to design simple agents equipped with two motors and two sensors, operating in a 2D rigid-body physics environment powered by JAX-MD.
-
-**Key Features**:
-- Predefined and customizable simulations.
-- Real-time interaction via a web interface or Jupyter Notebooks.
-- Eductional sessions to learn the basics of multi-agent simulation.
+### **Key Features**:
+- **Predefined and Custom Simulations**: Quickly start with built-in scenes or create your own with customizable parameters.
+- **Real-Time Interaction**: Observe and control simulations dynamically using a web interface or programmatically through Jupyter Notebooks.
+- **Educational Resources**: Learn multi-agent simulation concepts with a series of interactive educational sessions.
 
 ![Vivarium demo](images/simulation.gif)
 
@@ -76,9 +74,9 @@ Once this command will have completed, it will output a URL looking like `http:/
 
 ### 3. Control simulations from Jupyter Notebooks 📓
 
-You can control the simulator programmatically using Jupyter Notebooks. This allows you to manage agent behaviors, internal states, and environmental dynamics (e.g., spawning resources or interaction mechanisms). With this approach, there's no need to manually start the server or interfac. Everything can be initiated directly from the provided commands within the notebooks.
+You can control the simulator programmatically using Jupyter Notebooks. This allows you to manage agent behaviors, internal states, and environmental dynamics (e.g., spawning resources or interaction mechanisms). With this approach, there's no need to manually start the server or interfac. Everything can be initiated directly from the provided commands within the notebooks. 
 
-To get started, we recommend completing the introductory tutorials below: Web Interface Tutorial, and Quickstart Tutorial.
+To get started, we recommend completing the [web interface tutorial](notebooks/tutorials/web_interface_tutorial.md) first. You can then start controlling the simulation from a Jupyter Notebook by following the [quickstart tutorial](notebooks/tutorials/quickstart_tutorial.ipynb).
 
 ## 📚 Tutorials
 
@@ -92,9 +90,9 @@ To help you get started and explore the project, we provide a set of Jupyter not
 ## 🎓 Educationnal sessions 
 
 We offer a series of educational Jupyter Notebooks designed to teach the fundamentals of multi-agent simulation. These six sessions range from assigning basic agent behaviors to building complex eco-evolutionary environments and logging data for advanced projects.You can find these sessions in the `notebooks/sessions` [directory](notebooks/sessions/README.md). They cover topics such as:
-- Assigning reactive behaviors to agents.  
-- Controlling the environmental dynamics.  
-- Logging and analyzing simulation data.
+- **Assigning reactive behaviors to agents**
+- **Controlling the environmental dynamics**
+- **Logging and analyzing simulation data**
 
 ## 🛠 Development
 
