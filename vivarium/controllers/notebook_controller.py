@@ -2,6 +2,9 @@ import time
 import math
 import threading
 import functools
+import warnings
+
+warnings.filterwarnings("ignore", category=FutureWarning, module="jax")
 
 import numpy as np
 import logging
