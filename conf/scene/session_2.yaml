@@ -14,6 +14,7 @@ entities_data:
       num: 1
       color: blue
       diameter: 10
+      prox_dist_max: 80.0
       selective_behaviors:
         aggr:
           beh: MANUAL
