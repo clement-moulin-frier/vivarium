@@ -1,6 +1,13 @@
 # 🌱 Vivarium
 
-**Vivarium** is framework for multi-agents simulations in Jax. It enables creating simple agents with two motors and two sensors, inspired by [Braitenberg Vehicles ](https://en.wikipedia.org/wiki/Braitenberg_vehicle), in a 2D rigid-body physics world. The physics engine is written in [Jax-MD](https://github.com/jax-md/jax-md). With Vivarium, you can run predefined or custom simulations, and interact with them in real time using a Web Interface or Jupyter notebooks. See our tutorials to get started with the project. 
+**Vivarium** is framework for for building and running multi-agents simulations using Jax. It allows you to design simple agents equipped with two motors and two sensors, inspired by [Braitenberg Vehicles ](https://en.wikipedia.org/wiki/Braitenberg_vehicle), operating in a 2D rigid-body physics environment powered by [Jax-MD](https://github.com/jax-md/jax-md).
+
+Vivarium is a powerful framework for building and running multi-agent simulations using JAX. Inspired by Braitenberg Vehicles, it allows you to design simple agents equipped with two motors and two sensors, operating in a 2D rigid-body physics environment powered by JAX-MD.
+
+**Key Features**:
+- Predefined and customizable simulations.
+- Real-time interaction via a web interface or Jupyter Notebooks.
+- Eductional sessions to learn the basics of multi-agent simulation.
 
 ![Vivarium demo](images/simulation.gif)
 
@@ -30,7 +37,13 @@ pip install -e .
 
 ## 🚀 Usage
 
-### Run the simulation in a server 🖥️
+Vivarium can be used in three main ways:  
+1. **Run a simulation server.**  
+2. **Interact with the simulation via a web interface.**  
+3. **Control the simulation programmatically in Jupyter Notebooks.**
+
+
+### 1. Run the simulation in a server 🖥️
 
 To run the simulation in a server, use the following command:
 
@@ -38,11 +51,11 @@ To run the simulation in a server, use the following command:
 python3 scripts/run_server.py
 ```
 
-We use [Hydra](https://hydra.cc/docs/intro/) to manage simulations data. By default, the simulation will use the parameters specified in the `default.yaml` scene file located in the `conf/scene` directory.
+By default, the simulation will use the configuration specified in the `default.yaml` scene file, located in the `conf/scene` directory. This system enables you to create custom scene files to define the initial parameters of your simulations with [Hydra](https://hydra.cc/docs/intro/).
 
 #### Using custom scene files 🌄
 
-You can customize the initial simulation parameters by creating your own scene files in YAML format and placing them in the `conf/scene` directory. Scene files can specify parameters such as the number of objects, their size, or the colors, positions, and behaviors of agents for example. See Tutorial [Create a custom Scene](notebooks/tutorials/create_custom_scene_tutorial.md) for more information.
+You can customize the initial simulation parameters by creating your own scene files in YAML format and placing them in this `conf/scene` directory. Scene files can specify parameters such as the number of objects, their size, or the colors, positions, and behaviors of agents for example. See Tutorial [Create a custom Scene](notebooks/tutorials/create_custom_scene_tutorial.md) for more information.
 
 To use a custom scene file in your simulation, pass the `scene` option followed by the name of the scene file (without the `.yaml` extension) to the `run_server.py` script. For example, to run the `prey_predator_large` scene, use the following command:
 
@@ -50,22 +63,22 @@ To use a custom scene file in your simulation, pass the `scene` option followed 
 python3 scripts/run_server.py scene=prey_predator_large
 ```
 
-Any parameters not specified in the custom scene file will be inherited from the `default.yaml` scene.
+### 2. Interact via the web interface 🌐
 
-### Interact with it from a web interface 🌐
-
-When the server is started, you can launch a web interface from another terminal to observe the simulation and interact with it:
+Once the server is running, start the web interface:
 
 ```bash
 panel serve scripts/run_interface.py --autoreload
 ```
 
-Once this command will have completed, it will output a URL looking like `http://localhost:5006/run_interface`. Just click on it, and it will open the web interface in your browser. From there you can start the simulation and play with it.
+Once this command will have completed, it will output a URL looking like `http://localhost:5006/run_interface`. Just click on it, and it will open the web interface in your browser. From here, you can observe and interact with the simulation. We recommend starting with the [Web Interface Tutorial](notebooks/tutorials/web_interface_tutorial.md) to get a better understanding of the interface and its functionalities.
 
 
-### Interact with it from a jupyter notebook 📓
+### 3. Control simulations from Jupyter Notebooks 📓
 
-You can also choose to control the simulator programmatically in Jupyter Notebook. We first recommend you to do the first tutorials listed below. Then you can select a notebook in the `notebooks/sessions` [directory](notebooks/sessions/README.md) and start playing with it ! If you choose to do so, you don't need to start the server and the interface manually. Instead, you can start and stop them with a custom command you can find in the notebooks.
+You can control the simulator programmatically using Jupyter Notebooks. This allows you to manage agent behaviors, internal states, and environmental dynamics (e.g., spawning resources or interaction mechanisms). With this approach, there's no need to manually start the server or interfac. Everything can be initiated directly from the provided commands within the notebooks.
+
+To get started, we recommend completing the introductory tutorials below: Web Interface Tutorial, and Quickstart Tutorial.
 
 ## 📚 Tutorials
 
@@ -76,12 +89,18 @@ To help you get started and explore the project, we provide a set of Jupyter not
 - **Create a custom Scene**: If you want to create your own simulations with custom parameters, check out the [create a custom scene tutorial](notebooks/tutorials/create_custom_scene_tutorial.md). This tutorial will show you how to create and use custom scene files to define the initial parameters of your simulations. 
 - **Simulator tutorial**: For a deeper understanding of the simulator backend and its capabilities, check out the [simulator tutorial](notebooks/tutorials/simulator_tutorial.ipynb). This tutorial provides insights into the underlying mechanics of the simulator and demonstrates how to leverage its features for advanced use cases
 
+## 🎓 Educationnal sessions 
+
+We offer a series of educational Jupyter Notebooks designed to teach the fundamentals of multi-agent simulation. These six sessions range from assigning basic agent behaviors to building complex eco-evolutionary environments and logging data for advanced projects.You can find these sessions in the `notebooks/sessions` [directory](notebooks/sessions/README.md). They cover topics such as:
+- Assigning reactive behaviors to agents.  
+- Controlling the environmental dynamics.  
+- Logging and analyzing simulation data.
+
 ## 🛠 Development
 
 ### gRPC Configuration 🔄
 
 The projecte uses gRPC to communicate between server and clients. If you made any changes in the .proto file, you will need to recompile the gRPC files. Here is the command line instruction to do so:
-
 
 ```bash
 python -m grpc_tools.protoc -I./vivarium/simulator/grpc_server/protos --python_out=./vivarium/simulator/grpc_server/ --pyi_out=./vivarium/simulator/grpc_server/ --grpc_python_out=./vivarium/simulator/grpc_server/ ./vivarium/simulator/grpc_server/protos/simulator.proto
