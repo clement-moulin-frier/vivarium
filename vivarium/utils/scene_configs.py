@@ -9,6 +9,7 @@ from hydra.core.global_hydra import GlobalHydra
 
 CONF_DIR_PATH = "../../conf"
 
+
 def load_default_config() -> DictConfig:
     """Load the default scene configuration
 
@@ -18,6 +19,7 @@ def load_default_config() -> DictConfig:
         cfg = compose(config_name="config")
         scene_config = OmegaConf.merge(cfg.default, cfg.scene)
     return scene_config
+
 
 def load_scene_config(scene_name: str) -> DictConfig:
     """Load a specific scene configuration
