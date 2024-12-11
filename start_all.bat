@@ -9,7 +9,7 @@ REM Check if an argument was provided
 )
 
 REM Activate the virtual environment
-@call venv\Scripts\activate
+@call env_vivarium\Scripts\activate
 
 REM Stop any running instances
 start /B cmd /C "python .\scripts\stop_all.py"

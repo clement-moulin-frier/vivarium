@@ -15,6 +15,8 @@ See a preliminary demo of the project on [this video](https://youtu.be/dnO-wo6Ns
 
 1- Clone the repository:
 
+Before following the next instructions, make sure you have Python installed with a version between 3.10 and 3.12. 
+
 ```bash
 git clone git@github.com:flowersteam/vivarium.git
 cd vivarium/
