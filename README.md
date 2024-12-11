@@ -87,7 +87,7 @@ To help you get started and explore the project, we provide a set of Jupyter not
 - **Create a custom Scene**: If you want to create your own simulations with custom parameters, check out the [create a custom scene tutorial](notebooks/tutorials/create_custom_scene_tutorial.md). This tutorial will show you how to create and use custom scene files to define the initial parameters of your simulations. 
 - **Simulator tutorial**: For a deeper understanding of the simulator backend and its capabilities, check out the [simulator tutorial](notebooks/tutorials/simulator_tutorial.ipynb). This tutorial provides insights into the underlying mechanics of the simulator and demonstrates how to leverage its features for advanced use cases
 
-## 🎓 Educationnal sessions 
+## 🎓 Educational sessions 
 
 We offer a series of educational Jupyter Notebooks designed to teach the fundamentals of multi-agent simulation. These six sessions range from assigning basic agent behaviors to building complex eco-evolutionary environments and logging data for advanced projects.You can find these sessions in the `notebooks/sessions` [directory](notebooks/sessions/README.md). They cover topics such as:
 - **Assigning reactive behaviors to agents**
