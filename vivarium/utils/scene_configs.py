@@ -7,7 +7,6 @@ from omegaconf import OmegaConf, DictConfig
 from hydra import initialize, compose
 from hydra.core.global_hydra import GlobalHydra
 
-
 abs_config_dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../conf"))
 config_dir_path = os.path.relpath(abs_config_dir_path, start=os.path.dirname(__file__))
 
